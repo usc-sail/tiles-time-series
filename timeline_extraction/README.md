@@ -1,4 +1,4 @@
-### 1. extract_work_schedule.py
+## 1. extract_work_schedule.py
 #### The script is to extract start and end recording time of om signal
 
 #### Sample usage cmd, please modify based your own usage, it is to extract start and end recording of om signal for each recording session: <br />
@@ -37,10 +37,18 @@ user_id of participant
 4.  **start_recording_time:** <br />
 5.  **end_recording_time:** <br />
 
-### 2. extract_sleep_timeline.py
+### Issues/Artifacts on output
+
+1.  **Participants are not wearing OM signal on time** <br />
+2.  **Timestamp error on OM signal output** <br />
+3.  **Other unknown artifacts** <br />
+
+<br />
+
+## 2. extract_sleep_timeline.py
 #### The script is to extract sleep timeline and sleep quality metrics
 
-#### Sample usage cmd, please modify based your own usage, it is to extract start and end recording of om signal for each recording session: <br />
+#### Sample usage cmd, please modify based your own usage, it is to extract sleep start and end time as well sleep quality(nan if there is no corresponding data for a sleep) for each recording session: <br />
 <br />
 
 ```
@@ -78,5 +86,10 @@ SleepBeginTimestamp      |  SleepEndTimestamp        |  SleepMinutesAwake  |  Sl
 7.  **SleepMinutesStageWake:** <br />
 8.  **SleepEfficiency:** <br />
 9.  **data_source:** <br />
-0, step count; 1, summary
+    0, step count; 1, summary
+
+### Issues/Artifacts on output
+
+1.  **Participants are sleeping without Fitbit** <br />
+2.  **Unknow issues on Fitbit** <br />
 
