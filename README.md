@@ -34,7 +34,7 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Authors
 
-* **Tiantian Feng** 
-* **Brandon Booth** 
+* **Tiantian Feng (Equal contribution)** 
+* **Brandon Booth (Equal contribution)** 
 
 **Feel free to contact me if you want to be a collaborator.**
