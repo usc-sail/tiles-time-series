@@ -1,0 +1,5 @@
+# Don't upload output
+/output
+# Don't commit mac auto created thing
+.idea/
+.DS_Store
