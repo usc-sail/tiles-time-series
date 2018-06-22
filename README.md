@@ -18,9 +18,9 @@ Mainly used:
 ├── Root
 ├── TILES-Daily-Inference
 │   ├── output
-│   │   ├── om_signal_timeline
-│   │   ├── sleep_routine_work
-│   │   └── sleep_timeline
+│   │   ├── om_signal_timeline                  # OM Signal recording start and end timeline in csv, output by extract_work_schedule.py
+│   │   ├── sleep_routine_work                  # work day sleep pattern data in csv, output by extract_work_day_sleep_pattern.py
+│   │   └── sleep_timeline                      # sleep timeline in csv, output by extract_sleep_timeline.py
 │   └── timeline_extraction
 |       ├── README.md                           # readme, usage of the scripts
 |       ├── extract_sleep_timeline.py           # Extract sleep timeline and summary
