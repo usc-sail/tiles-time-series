@@ -12,35 +12,24 @@ import math
 from extract_sleep_timeline import *
 from extract_work_schedule import *
 
+# add util into the file path, so we can import helper functions
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'util'))
+from files import *
+
 # current path
 current_path = os.getcwd()
 
-# fitbit_data_folder path
-fitbit_data_folder_path = os.path.join(current_path, '../../data/keck_wave1/2_preprocessed_data/fitbit/fitbit')
+# main_data_folder path
+main_data_directory = os.path.join(current_path, '../../data')
 
-# omsignal folder path
-omsignal_data_folder_path = os.path.join(current_path, '../../data/keck_wave1/2_preprocessed_data/omsignal/omsignal')
+# output_data_folder path
+output_data_folder_path = os.path.join(current_path, '../output')
 
-# ground_truth path
-ground_truth_folder_path = os.path.join(current_path, '../../data/keck_wave1/2_preprocessed_data/ground_truth')
-
-# job_shift path
-job_shift_folder_path = os.path.join(current_path, '../../data/keck_wave1/2_preprocessed_data/job shift')
-
-# job_shift path
-output_folder_path = os.path.join(current_path, '../output/sleep_routine_work')
-
-# om signal start and end recording time
-om_signal_start_end_recording_path = os.path.join(current_path, '../output/om_signal_timeline')
-
-# sleep timeline
-sleep_timeline_data_folder_path = os.path.join(current_path, '../output/sleep_timeline')
+# read_data_type
+read_data_type = 'combined'
 
 # csv's
-id_csv = 'IDs.csv'
-job_shift_csv = 'Job_Shift.csv'
-job_shift_start_end_csv = 'Job_Shift_Start_End.csv'
-job_shift_sleep_csv = 'Job_Shift_Sleep.csv'
+job_shift_sleep_csv = 'workday_sleep_routine.csv'
 
 # date_time format
 date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
@@ -65,21 +54,43 @@ sleep_df_header = ['BeginTimestamp', 'EndTimestamp',
                    'MinutesStageRem', 'MinutesStageWake', 'Efficiency']
 
 
-def extract_work_day_sleep_pattern(sleep_data_array):
+def extract_work_day_sleep_pattern_from_om_signal(sleep_data_array, om_signal_start_end_recording_path, sleep_routine_work_folder_path):
+    """
+    Read Sleep pattern for each participant on workdays
+
+    Parameters
+    ----------
+    sleep_data_array: List
+        sleep data array
+        
+    job_shift_folder_path: str
+        job shift type folder
+        
+    om_signal_start_end_recording_path: str
+        om signal recording time line data folder
+        
+    sleep_routine_work_folder_path: str
+        output folder
+
+    Returns
+    -------
+    None
+
+    """
     
-    # sleep
-    work_start_end_time_df = pd.read_csv(os.path.join(om_signal_start_end_recording_path, 'OM_Signal_Start_End.csv'))
+    # read om signal recording time line
+    om_recording_start_end_time_df = pd.read_csv(os.path.join(om_signal_start_end_recording_path, 'OM_Signal_Start_End.csv'))
     workday_sleep_schedule = []
 
-    for index, row in work_start_end_time_df.iterrows():
+    for index, row in om_recording_start_end_time_df.iterrows():
         print(row)
 
-        user_id, work_date, work_shift = row['user_id'], row['work_date'], row['work_shift_type']
-        start_work_time, end_work_time = row['start_time'], row['end_time']
+        user_id, work_date, work_shift = row['user_id'], row['recording_date'], row['work_shift_type']
+        start_recording_time, end_recording_time = row['start_recording_time'], row['end_recording_time']
 
         work_date_datetime = datetime.datetime.strptime(work_date, date_only_date_time_format)
 
-        # initialize standard work shift datetime
+        # initialize standard work shift datetime based on shift type
         if work_shift == 1:
             start_work_datetime = work_date_datetime.replace(hour=7, minute=0, second=0)
             end_work_datetime = work_date_datetime.replace(hour=19, minute=0, second=0)
@@ -113,12 +124,13 @@ def extract_work_day_sleep_pattern(sleep_data_array):
     
                     time_begin_sleep = sleep_data_df['SleepBeginTimestamp'].values[0]
                     time_end_sleep = sleep_data_df['SleepEndTimestamp'].values[0]
-    
+
+                    # After work, when sleep and wake
                     if time_begin_sleep != 0:
                         time_begin_sleep = datetime.datetime.strptime(time_begin_sleep, date_time_format)
                         
                         sleep_time_after_work = time_begin_sleep - end_work_datetime
-                        sleep_time_after_om_signal = time_begin_sleep - datetime.datetime.strptime(end_work_time, date_time_format)
+                        sleep_time_after_om_signal = time_begin_sleep - datetime.datetime.strptime(end_recording_time, date_time_format)
 
                         sleep_after_om_signal_in_hour = round(
                                 sleep_time_after_om_signal.days * 24 + sleep_time_after_om_signal.seconds / 3600, 2)
@@ -130,12 +142,12 @@ def extract_work_day_sleep_pattern(sleep_data_array):
                             min_time_after_work_om_signal = sleep_after_om_signal_in_hour
                             sleep_after_work_df = sleep_data_df
     
-                    # Before work, when sleep
+                    # Before work, when sleep and wake
                     if time_end_sleep != 0:
                         time_end_sleep = datetime.datetime.strptime(time_end_sleep, date_time_format)
                         
                         wake_time_before_work = start_work_datetime - time_end_sleep
-                        wake_time_before_om_signal = datetime.datetime.strptime(start_work_time, date_time_format) - time_end_sleep
+                        wake_time_before_om_signal = datetime.datetime.strptime(start_recording_time, date_time_format) - time_end_sleep
                         
                         wake_time_before_om_signal_in_hour = round(
                                 wake_time_before_om_signal.days * 24 + wake_time_before_om_signal.seconds / 3600, 2)
@@ -146,7 +158,8 @@ def extract_work_day_sleep_pattern(sleep_data_array):
                             min_time_before_work_standard = wake_time_before_work_in_hour
                             min_time_before_work_om_signal = wake_time_before_om_signal_in_hour
                             sleep_before_work_df = sleep_data_df
-
+                            
+                # If we can't find one, then save as nan
                 if min_time_before_work_standard is math.inf: min_time_before_work_standard = np.nan
                 if min_time_after_work_standard is math.inf: min_time_after_work_standard = np.nan
                 if min_time_before_work_om_signal is math.inf: min_time_before_work_om_signal = np.nan
@@ -158,7 +171,8 @@ def extract_work_day_sleep_pattern(sleep_data_array):
                               sleep_before_work_df['SleepBeginTimestamp'].values[0],
                               sleep_before_work_df['SleepEndTimestamp'].values[0],
                               sleep_before_work_df['data_source'].values[0],
-                              start_work_time, end_work_time,
+                              start_work_datetime, start_recording_time,
+                              end_work_datetime, end_recording_time,
                               sleep_after_work_df['SleepBeginTimestamp'].values[0],
                               sleep_after_work_df['SleepEndTimestamp'].values[0],
                               sleep_after_work_df['data_source'].values[0]]
@@ -168,12 +182,14 @@ def extract_work_day_sleep_pattern(sleep_data_array):
 
                 workday_sleep_schedule.append(frame_data)
 
+    # save the data in the format provided
     frame_header = ['user_id', 'work_date', 'work_shift_type',
                     'wake_before_work_standard_work_time', 'sleep_after_work_standard_work_time',
                     'wake_before_work_om_signal_start_time', 'sleep_after_work_om_signal_end_time',
                     'sleep_before_work_SleepBeginTimestamp', 'sleep_before_work_SleepEndTimestamp',
                     'sleep_before_work_DataResource',
-                    'start_work_time', 'end_work_time',
+                    'start_work_time', 'start_recording_time',
+                    'end_work_time', 'end_recording_time',
                     'sleep_after_work_SleepBeginTimestamp', 'sleep_after_work_SleepEndTimestamp',
                     'sleep_after_work_DataResource']
 
@@ -181,22 +197,74 @@ def extract_work_day_sleep_pattern(sleep_data_array):
     [frame_header.append('sleep_after_work_' + header) for header in output_sleep_header]
 
     workday_sleep_schedule_df = pd.DataFrame(workday_sleep_schedule, columns=frame_header)
-    workday_sleep_schedule_df.to_csv(os.path.join(output_folder_path, job_shift_sleep_csv), index=False)
+    workday_sleep_schedule_df.to_csv(os.path.join(sleep_routine_work_folder_path, job_shift_sleep_csv), index=False)
 
 
 if __name__ == '__main__':
     
+    # Define the parser
+    parser = argparse.ArgumentParser(description='Parse main data folders and output folders.')
+
+    parser.add_argument('-t', '--read_type', type=str, required=False,
+                        help='Read data type.')
+    parser.add_argument('-i', '--input_data_directory', type=str, required=False,
+                        help='Directory with source data.')
+    parser.add_argument('-o', '--output_directory', type=str, required=False,
+                        help='File with processed data.')
+    
+    args = parser.parse_args()
+    
+    print(args)
+    
+    # Read the args
+    if args.input_data_directory is not None: main_data_directory = args.input_data_directory
+    if args.output_directory is not None: output_data_folder_path = args.output_directory
+
+    # fitbit_data_folder path
+    fitbit_data_folder_path = get_fitbit_data_folder(main_data_directory)
+
+    # omsignal folder path
+    omsignal_data_folder_path = get_omsignal_data_folder(main_data_directory)
+
+    # ground_truth path
+    ground_truth_folder_path = get_ground_truth_folder(main_data_directory)
+
+    # job_shift path
+    job_shift_folder_path = get_job_shift_folder(main_data_directory)
+
+    # sleep_routine_work path
+    sleep_routine_work_folder_path = get_sleep_routine_work_folder(output_data_folder_path)
+
+    # om signal start and end recording time
+    om_signal_start_end_recording_path = get_om_signal_start_end_recording_folder(output_data_folder_path)
+
+    # sleep timeline
+    sleep_timeline_data_folder_path = get_sleep_timeline_data_folder(output_data_folder_path)
+    
     # Read sleep timeline
-    if os.path.exists(output_folder_path) is False: os.mkdir(output_folder_path)
+    if os.path.exists(sleep_routine_work_folder_path) is False: os.mkdir(sleep_routine_work_folder_path)
 
-    # Read sleep data
-    # combined sleep data
-    sleep_timeline_stepcount_data_array = read_sleep_from_fitbit_step_count(fitbit_data_folder_path,
-                                                                            ground_truth_folder_path,
-                                                                            sleep_timeline_data_folder_path)
-    sleep_summary_data_array = read_sleep_from_fitbit_sleep_summary(fitbit_data_folder_path, ground_truth_folder_path,
-                                                                    sleep_timeline_data_folder_path)
-
-    combined_sleep_data_array = combine_step_count_sleep_and_sleep_summary(sleep_timeline_stepcount_data_array, sleep_summary_data_array, sleep_timeline_data_folder_path)
-
-    extract_work_day_sleep_pattern(combined_sleep_data_array)
+    # If we used combined sleep summary input
+    if 'combined' in read_data_type:
+        # Read sleep data
+        # Combined sleep data, read step count based sleep and sleep summary data
+        sleep_timeline_stepcount_data_array = read_sleep_from_fitbit_step_count(fitbit_data_folder_path,
+                                                                                ground_truth_folder_path,
+                                                                                sleep_timeline_data_folder_path)
+        
+        sleep_summary_data_array = read_sleep_from_fitbit_sleep_summary(fitbit_data_folder_path,
+                                                                        ground_truth_folder_path,
+                                                                        sleep_timeline_data_folder_path)
+    
+        combined_sleep_data_array = combine_step_count_sleep_and_sleep_summary(sleep_timeline_stepcount_data_array,
+                                                                               sleep_summary_data_array,
+                                                                               sleep_timeline_data_folder_path)
+    
+        extract_work_day_sleep_pattern_from_om_signal(combined_sleep_data_array, om_signal_start_end_recording_path, sleep_routine_work_folder_path)
+    else:
+        sleep_summary_data_array = read_sleep_from_fitbit_sleep_summary(fitbit_data_folder_path,
+                                                                        ground_truth_folder_path,
+                                                                        sleep_timeline_data_folder_path)
+    
+        extract_work_day_sleep_pattern_from_om_signal(sleep_summary_data_array, om_signal_start_end_recording_path,
+                                                      sleep_routine_work_folder_path)

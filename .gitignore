@@ -3,3 +3,5 @@
 # Don't commit mac auto created thing
 .idea/
 .DS_Store
+# Dummy files
+*.pyc

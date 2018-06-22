@@ -492,7 +492,6 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output_directory', type=str, required=False,
                         help='File with processed data.')
     
-    
     args = parser.parse_args()
     
     # if we have these parser information, then read them
