@@ -94,7 +94,7 @@ def construct_frame_data(user_id, om_id, sleep_data):
     return frame_data
 
 
-def combine_step_count_sleep_and_sleep_summary(sleep_stepcount_data_array, sleep_summary_data_array):
+def combine_step_count_sleep_and_sleep_summary(sleep_stepcount_data_array, sleep_summary_data_array, output_data_folder_path):
     """
     Read Full Sleep data for each participant from step count data and sleep summary,
     note we don't have sleep summaries with different stages if sleep is coming from step count data
@@ -185,8 +185,6 @@ def combine_step_count_sleep_and_sleep_summary(sleep_stepcount_data_array, sleep
                         start_sleep_time_summary = datetime.datetime.strptime(sleep_timeline_summary['SleepBeginTimestamp'], date_time_format)
                         end_sleep_time_summary = datetime.datetime.strptime(sleep_timeline_summary['SleepEndTimestamp'], date_time_format)
     
-                        mid_sleep_time_summary = start_sleep_time_summary + (end_sleep_time_summary - start_sleep_time_step_count) / 2
-                        
                         # So it is a sleep
                         # if start_sleep_time_summary < mid_sleep_time_step_count < end_sleep_time_summary \
                         #        or start_sleep_time_step_count < mid_sleep_time_summary < end_sleep_time_step_count:
@@ -214,7 +212,7 @@ def combine_step_count_sleep_and_sleep_summary(sleep_stepcount_data_array, sleep
     return combine_sleep_timeline_data_array
 
 
-def read_sleep_from_fitbit_step_count():
+def read_sleep_from_fitbit_step_count(fitbit_data_folder_path, ground_truth_folder_path, output_data_folder_path):
     """
     Read Sleep timeline for each participant from step count
 
@@ -380,7 +378,7 @@ def read_sleep_from_fitbit_step_count():
     return sleep_timeline_data_array
 
 
-def read_sleep_from_fitbit_sleep_summary():
+def read_sleep_from_fitbit_sleep_summary(fitbit_data_folder_path, ground_truth_folder_path, output_data_folder_path):
     """
     Read Sleep Summary for each participant
 
@@ -435,7 +433,7 @@ def read_sleep_from_fitbit_sleep_summary():
             frame_data = {}
             frame_data['user_id'] = user_id
             frame_data['om_id'] = om_id
-            frame_data['sleep_data'] = sleep_summary_data_array
+            frame_data['sleep_data'] = sleep_summary
 
             sleep_summary_data_array.append(frame_data)
     else:
@@ -480,42 +478,40 @@ def read_sleep_from_fitbit_sleep_summary():
 
 if __name__ == '__main__':
     
-    # Create folder if not exist
-    if os.path.exists(output_data_folder_path) is False: os.mkdir(output_data_folder_path)
-
-    if 'sleep_summary' in save_type:
-        read_sleep_from_fitbit_sleep_summary()
-    elif 'step_count' in save_type:
-        read_sleep_from_fitbit_step_count()
-    else:
-        # combined sleep data
-        sleep_timeline_stepcount_data_array = read_sleep_from_fitbit_step_count()
-        sleep_summary_data_array = read_sleep_from_fitbit_sleep_summary()
-        
-        combine_step_count_sleep_and_sleep_summary(sleep_timeline_stepcount_data_array, sleep_summary_data_array)
-
     # Define the parser
     parser = argparse.ArgumentParser(description='Parse read folders and output folders.')
-
+    
     parser.add_argument('-t', '--save_type', type=str, required=False,
                         help='Save data type.')
     parser.add_argument('-f', '--fitbit_directory', type=str, required=False,
                         help='Directory with Fitbit data.')
     parser.add_argument('-g', '--ground_truth_directory', type=str, required=False,
                         help='Directory with ground truth data.')
+    parser.add_argument('-i', '--om_signal_recording_time_directory', type=str, required=False,
+                        help='Directory with OM Signal recording time.')
     parser.add_argument('-o', '--output_directory', type=str, required=False,
                         help='File with processed data.')
-    parser.add_argument('-m', '--om_signal_recording_time_directory', type=str, required=False,
-                        help='Directory with OM Signal recording time.')
-
+    
+    
     args = parser.parse_args()
-
+    
     # if we have these parser information, then read them
     if len(args.save_type) > 0: save_type = args.save_type
-    if len(args.fitbit_directory) > 0: om_signal_data_folder_path = args.om_signal_directory
+    if len(args.fitbit_directory) > 0: fitbit_data_folder_path = args.fitbit_directory
     if len(args.ground_truth_directory) > 0: ground_truth_folder_path = args.ground_truth_directory
-    if len(
-            args.om_signal_recording_time_directory) > 0: om_signal_recording_time_directory = args.om_signal_recording_time_directory
+    if len(args.om_signal_recording_time_directory) > 0: om_signal_recording_time_directory = args.om_signal_recording_time_directory
     if len(args.output_directory) > 0: output_data_folder_path = args.output_directory
-    if len(args.valid_om_signal_recording_gap_hour) > 0: valid_om_signal_recording_gap_hour = int(
-        args.valid_om_signal_recording_gap_hour)
+    
+    # Create folder if not exist
+    if os.path.exists(output_data_folder_path) is False: os.mkdir(output_data_folder_path)
+
+    if 'sleep_summary' in save_type:
+        read_sleep_from_fitbit_sleep_summary(fitbit_data_folder_path, ground_truth_folder_path, output_data_folder_path)
+    elif 'step_count' in save_type:
+        read_sleep_from_fitbit_step_count(fitbit_data_folder_path, ground_truth_folder_path, output_data_folder_path)
+    else:
+        # combined sleep data
+        sleep_timeline_stepcount_data_array = read_sleep_from_fitbit_step_count(fitbit_data_folder_path, ground_truth_folder_path, output_data_folder_path)
+        sleep_summary_data_array = read_sleep_from_fitbit_sleep_summary(fitbit_data_folder_path, ground_truth_folder_path, output_data_folder_path)
+        
+        combine_step_count_sleep_and_sleep_summary(sleep_timeline_stepcount_data_array, sleep_summary_data_array, output_data_folder_path)

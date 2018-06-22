@@ -24,6 +24,9 @@ job_shift_folder_path = os.path.join(current_path, '../../data/keck_wave1/2_prep
 # output folder path
 output_data_folder_path = os.path.join(current_path, '../output/om_signal_timeline')
 
+# om signal start and end recording time
+om_signal_start_end_recording_path = os.path.join(current_path, '../output/om_signal_timeline')
+
 # csv's
 id_csv = 'IDs.csv'
 job_shift_csv = 'Job_Shift.csv'
