@@ -248,23 +248,24 @@ if __name__ == '__main__':
     if 'combined' in read_data_type:
         # Read sleep data
         # Combined sleep data, read step count based sleep and sleep summary data
-        sleep_timeline_stepcount_data_array = read_sleep_from_fitbit_step_count(fitbit_data_folder_path,
-                                                                                ground_truth_folder_path,
-                                                                                sleep_timeline_data_folder_path)
+        sleep_timeline_stepcount_data_array = extract_sleep_from_fitbit_step_count(fitbit_data_folder_path,
+                                                                                   ground_truth_folder_path,
+                                                                                   sleep_timeline_data_folder_path)
         
-        sleep_summary_data_array = read_sleep_from_fitbit_sleep_summary(fitbit_data_folder_path,
-                                                                        ground_truth_folder_path,
-                                                                        sleep_timeline_data_folder_path)
+        sleep_summary_data_array = extract_sleep_from_fitbit_sleep_summary(fitbit_data_folder_path,
+                                                                           ground_truth_folder_path,
+                                                                           sleep_timeline_data_folder_path)
     
-        combined_sleep_data_array = combine_step_count_sleep_and_sleep_summary(sleep_timeline_stepcount_data_array,
+        combined_sleep_data_array = combine_step_count_sleep_and_sleep_summary(ground_truth_folder_path,
+                                                                               sleep_timeline_stepcount_data_array,
                                                                                sleep_summary_data_array,
                                                                                sleep_timeline_data_folder_path)
     
         extract_work_day_sleep_pattern_from_om_signal(combined_sleep_data_array, om_signal_start_end_recording_path, sleep_routine_work_folder_path)
     else:
-        sleep_summary_data_array = read_sleep_from_fitbit_sleep_summary(fitbit_data_folder_path,
-                                                                        ground_truth_folder_path,
-                                                                        sleep_timeline_data_folder_path)
+        sleep_summary_data_array = extract_sleep_from_fitbit_sleep_summary(fitbit_data_folder_path,
+                                                                           ground_truth_folder_path,
+                                                                           sleep_timeline_data_folder_path)
     
         extract_work_day_sleep_pattern_from_om_signal(sleep_summary_data_array, om_signal_start_end_recording_path,
                                                       sleep_routine_work_folder_path)
