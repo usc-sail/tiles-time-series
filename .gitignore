@@ -5,3 +5,5 @@
 .DS_Store
 # Dummy files
 *.pyc
+# Ignore pipeline
+py-spark-pipeline/
