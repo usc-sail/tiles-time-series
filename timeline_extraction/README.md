@@ -6,13 +6,9 @@
 
 ```
 
-python3.6 extract_work_schedule.py -i ../../data/keck_wave1/2_preprocessed_data/omsignal/omsignal -g ../../data/keck_wave1/2_preprocessed_data/ground_truth -j ../../data/keck_wave1/2_preprocessed_data/job\ shift -o ../output/om_signal_timeline -v 6 
+python3.6 extract_work_schedule.py -i ../../data -o ../output -v 6 
 
--i: omsignal data path
-
--g: groundtruth path
-
--j: job shift path
+-i: main_data_path
 
 -o: output path
 
@@ -55,15 +51,13 @@ user_id of participant
 
 ```
 
-python3.6 extract_sleep_timeline.py -t combined -f ../../data/keck_wave1/2_preprocessed_data/fitbit/fitbit -g ../../data/keck_wave1/2_preprocessed_data/ground_truth -i ../output/om_signal_timeline -o ../output/sleep_timeline
+python3.6 extract_sleep_timeline.py -t combined -i ../../data -o ../output
 
 -t: combined data type
 
--g: groundtruth path
+    direct reading of sleep summary; indiret inferred from Fitbit step count; combine both
 
--f: Fitbit data path
-
--i: om signal timeline
+-i: main_data_path
 
 -o: output path
  
@@ -110,7 +104,8 @@ SleepBeginTimestamp      |  SleepEndTimestamp        |  SleepMinutesAwake  |  Sl
 python3.6 extract_work_day_sleep_pattern.py -t combined -i ../../data -o ../output
 
 -t: data type
-combined or summary
+
+    combined; summary
 
 -i: main_data_path
 
