@@ -1,3 +1,17 @@
+## 0. extract_work_day_sleep_pattern.sh
+
+This script just help you to run:
+
+1. Extract work schedule -> 2. Extract sleep time line -> 3. Extract work day sleep pattern
+
+Sample usage: 
+
+```
+sh extract_work_day_sleep_pattern.sh ../../data ../output combined
+```
+
+First arg is input, second one is output, and third one is type
+
 ## 1. extract_work_schedule.py
 #### The script is to extract start and end recording time of om signal
 
