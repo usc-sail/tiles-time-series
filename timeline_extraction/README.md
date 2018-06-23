@@ -5,6 +5,7 @@
 <br />
 
 ```
+
 python3.6 extract_work_schedule.py -i ../../data/keck_wave1/2_preprocessed_data/omsignal/omsignal -g ../../data/keck_wave1/2_preprocessed_data/ground_truth -j ../../data/keck_wave1/2_preprocessed_data/job\ shift -o ../output/om_signal_timeline -v 6 
 
 -i: omsignal data path
@@ -16,6 +17,7 @@ python3.6 extract_work_schedule.py -i ../../data/keck_wave1/2_preprocessed_data/
 -o: output path
 
 -v: minimum gap between different recording
+ 
 ```
 #### Sample saved csv format
 
@@ -52,6 +54,7 @@ user_id of participant
 <br />
 
 ```
+
 python3.6 extract_sleep_timeline.py -t combined -f ../../data/keck_wave1/2_preprocessed_data/fitbit/fitbit -g ../../data/keck_wave1/2_preprocessed_data/ground_truth -i ../output/om_signal_timeline -o ../output/sleep_timeline
 
 -t: combined data type
@@ -63,7 +66,7 @@ python3.6 extract_sleep_timeline.py -t combined -f ../../data/keck_wave1/2_prepr
 -i: om signal timeline
 
 -o: output path
-
+ 
 ```
 
 #### Sample saved csv format
@@ -93,3 +96,33 @@ SleepBeginTimestamp      |  SleepEndTimestamp        |  SleepMinutesAwake  |  Sl
 1.  **Participants are sleeping without Fitbit** <br />
 2.  **Unknow issues on Fitbit** <br />
 
+ <br />
+
+## 3. extract_work_day_sleep_pattern.py
+
+#### The script is to extract sleep timeline and sleep quality metrics on workdays based on OM signal recordings
+
+#### Sample usage cmd, please modify based your own usage, it is to extract sleep start and end time as well sleep quality(nan if there is no corresponding data for a sleep) on work days: <br />
+<br />
+
+```
+
+python3.6 extract_work_day_sleep_pattern.py -t combined -i ../../data -o ../output
+
+-t: data type
+combined or summary
+
+-i: main_data_path
+
+-o: output path
+
+```
+
+#### Sample saved csv format
+
+user_id  |  work_date  |  work_shift_type  |  wake_before_work_standard_work_time  |  sleep_after_work_standard_work_time  |  wake_before_work_om_signal_start_time  |  sleep_after_work_om_signal_end_time  |  sleep_before_work_SleepBeginTimestamp  |  sleep_before_work_SleepEndTimestamp  |  sleep_before_work_DataResource  |  start_work_time  |  start_recording_time     |  end_work_time  |  end_recording_time       |  sleep_after_work_SleepBeginTimestamp  |  sleep_after_work_SleepEndTimestamp  |  sleep_after_work_DataResource  |  sleep_before_work_MinutesAwake  |  sleep_before_work_MinutesStageDeep  |  sleep_before_work_MinutesStageLight  |  sleep_before_work_MinutesStageRem  |  sleep_before_work_MinutesStageWake  |  sleep_before_work_Efficiency  |  sleep_after_work_MinutesAwake  |  sleep_after_work_MinutesStageDeep  |  sleep_after_work_MinutesStageLight  |  sleep_after_work_MinutesStageRem  |  sleep_after_work_MinutesStageWake  |  sleep_after_work_Efficiency
+---------|-------------|-------------------|---------------------------------------|---------------------------------------|-----------------------------------------|---------------------------------------|-----------------------------------------|---------------------------------------|----------------------------------|-------------------|---------------------------|-----------------|---------------------------|----------------------------------------|--------------------------------------|---------------------------------|----------------------------------|--------------------------------------|---------------------------------------|-------------------------------------|--------------------------------------|--------------------------------|---------------------------------|-------------------------------------|--------------------------------------|------------------------------------|-------------------------------------|-----------------------------
+SD1006   |  3/8/18     |  1                |  1.06                                 |  3.37                                 |  0.91                                   |  2.81                                 |  2018-03-07T23:13:00.000                |  2018-03-08T05:56:30.000              |  1                               |  3/8/18 7:00      |  2018-03-08T06:51:00.000  |  3/8/18 19:00   |  2018-03-08T19:33:24.000  |  2018-03-08T22:22:00.000               |  2018-03-09T06:12:30.000             |  1                              |  41                              |  59                                  |  194                                  |  109                                |  41                                  |  91                            |  73                             |  76                                 |  214                                 |  107                               |  73                                 |  90
+SD1006   |  3/9/18     |  1                |  0.79                                 |  6.42                                 |  0.59                                   |  5.85                                 |  2018-03-08T22:22:00.000                |  2018-03-09T06:12:30.000              |  1                               |  3/9/18 7:00      |  2018-03-09T06:47:37.000  |  3/9/18 19:00   |  2018-03-09T19:34:26.000  |  2018-03-10T01:25:30.000               |  2018-03-10T08:20:00.000             |  1                              |  73                              |  76                                  |  214                                  |  107                                |  73                                  |  90                            |  45                             |  52                                 |  216                                 |  101                               |  45                                 |  96
+SD1006   |  3/12/18    |  1                |                                       |  4.59                                 |                                         |  3.98                                 |                                         |                                       |  1                               |  3/12/18 7:00     |  2018-03-12T06:45:51.000  |  3/12/18 19:00  |  2018-03-12T19:36:45.000  |  2018-03-12T23:35:30.000               |  2018-03-13T07:10:00.000             |  1                              |                                  |                                      |                                       |                                     |                                      |                                |  60                             |  90                                 |  234                                 |  70                                |  60                                 |  88
+SD1006   |  3/13/18    |  1                |                                       |  4.92                                 |                                         |  3.84                                 |                                         |                                       |  1                               |  3/13/18 7:00     |  2018-03-13T06:51:16.000  |  3/13/18 19:00  |  2018-03-13T20:05:09.000  |  2018-03-13T23:55:30.000               |  2018-03-14T07:49:00.000             |  1                              |                                  |                                      |                                       |                                     |                                      |                                |  51                             |  76                                 |  206                                 |  140                               |  51                                 |  94
