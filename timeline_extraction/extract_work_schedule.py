@@ -2,30 +2,22 @@
 
 import os
 import sys
-import glob
-import numpy as np
 import pandas as pd
 import argparse
 import datetime
-import math
+
+# add util into the file path, so we can import helper functions
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'util'))
+from files import *
 
 # current path
 current_path = os.getcwd()
 
-# omsignal folder path
-om_signal_data_folder_path = os.path.join(current_path, '../../data/keck_wave1/2_preprocessed_data/omsignal/omsignal')
+# main_data_folder path
+main_data_directory = os.path.join(current_path, '../../data')
 
-# ground_truth path
-ground_truth_folder_path = os.path.join(current_path, '../../data/keck_wave1/2_preprocessed_data/ground_truth')
-
-# job_shift path
-job_shift_folder_path = os.path.join(current_path, '../../data/keck_wave1/2_preprocessed_data/job shift')
-
-# output folder path
-output_data_folder_path = os.path.join(current_path, '../output/om_signal_timeline')
-
-# om signal start and end recording time
-om_signal_start_end_recording_path = os.path.join(current_path, '../output/om_signal_timeline')
+# output_data_folder path
+output_data_folder_path = os.path.join(current_path, '../output')
 
 # csv's
 id_csv = 'IDs.csv'
@@ -40,7 +32,9 @@ date_only_date_time_format = '%Y-%m-%d'
 valid_om_signal_recording_gap_hour = 5
 
 
-def extract_nurse_om_signal_recording_start_end(ground_truth_folder_path, job_shift_folder_path, om_signal_data_folder_path, output_data_folder_path):
+def extract_nurse_om_signal_recording_start_end(ground_truth_folder_path, job_shift_folder_path,
+                                                om_signal_data_folder_path, output_data_folder_path,
+                                                valid_om_signal_recording_gap_hour):
     """
     Extract OM signal start recording time and end recording time
 
@@ -142,12 +136,8 @@ if __name__ == '__main__':
     
     # Define the parser
     parser = argparse.ArgumentParser(description='Parse read folders and output folders.')
-    parser.add_argument('-i', '--om_signal_directory', type=str, required=False,
-                        help='Directory with OM Signal data.')
-    parser.add_argument('-g', '--ground_truth_directory', type=str, required=False,
-                        help='Directory with ground truth data.')
-    parser.add_argument('-j', '--job_shift_directory', type=str, required=False,
-                        help='Directory with job shift data.')
+    parser.add_argument('-i', '--input_data_directory', type=str, required=False,
+                        help='Directory with source data.')
     parser.add_argument('-o', '--output_directory', type=str, required=False,
                         help='File with processed data.')
     parser.add_argument('-v', '--valid_om_signal_recording_gap_hour', type=str, required=False,
@@ -155,16 +145,27 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # if we have these parser information, then read them
-    if len(args.om_signal_directory) > 0: om_signal_data_folder_path = args.om_signal_directory
-    if len(args.ground_truth_directory) > 0: ground_truth_folder_path = args.ground_truth_directory
-    if len(args.job_shift_directory) > 0: job_shift_folder_path = args.job_shift_directory
-    if len(args.output_directory) > 0: output_data_folder_path = args.output_directory
-    if len(args.valid_om_signal_recording_gap_hour) > 0: valid_om_signal_recording_gap_hour = int(args.valid_om_signal_recording_gap_hour)
-    
+    if args.input_data_directory is not None: main_data_directory = args.input_data_directory
+    if args.output_directory is not None: output_data_folder_path = args.output_directory
+    if args.valid_om_signal_recording_gap_hour is not None: valid_om_signal_recording_gap_hour = int(args.valid_om_signal_recording_gap_hour)
+
+    # omsignal folder path
+    om_signal_data_folder_path = get_omsignal_data_folder(main_data_directory)
+
+    # ground_truth path
+    ground_truth_folder_path = get_ground_truth_folder(main_data_directory)
+
+    # job_shift path
+    job_shift_folder_path = get_job_shift_folder(main_data_directory)
+
+    # om signal start and end recording time
+    om_signal_start_end_recording_path = get_om_signal_start_end_recording_folder(output_data_folder_path)
+
     # Create output folder if not exist
     if os.path.exists(output_data_folder_path) is False: os.mkdir(output_data_folder_path)
     
     extract_nurse_om_signal_recording_start_end(ground_truth_folder_path,
                                                 job_shift_folder_path,
                                                 om_signal_data_folder_path,
-                                                output_data_folder_path)
+                                                om_signal_start_end_recording_path,
+                                                valid_om_signal_recording_gap_hour)
