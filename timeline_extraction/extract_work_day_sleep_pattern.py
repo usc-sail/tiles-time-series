@@ -2,7 +2,6 @@
 
 import os
 import sys
-import glob
 import numpy as np
 import pandas as pd
 import argparse
@@ -137,7 +136,7 @@ def extract_work_day_sleep_pattern_from_om_signal(sleep_data_array, om_signal_st
                         
                         sleep_time_after_work_in_hour = round(
                                 sleep_time_after_work.days * 24 + sleep_time_after_work.seconds / 3600, 2)
-                        if sleep_time_after_work.days > -1 and sleep_time_after_work_in_hour < min_time_after_work_standard and sleep_time_after_work_in_hour < 18:
+                        if sleep_time_after_work.days > -1 and sleep_time_after_work_in_hour < min_time_after_work_standard and sleep_time_after_work_in_hour < 15:
                             min_time_after_work_standard = sleep_time_after_work_in_hour
                             min_time_after_work_om_signal = sleep_after_om_signal_in_hour
                             sleep_after_work_df = sleep_data_df
@@ -154,7 +153,7 @@ def extract_work_day_sleep_pattern_from_om_signal(sleep_data_array, om_signal_st
                         wake_time_before_work_in_hour = round(
                                 wake_time_before_work.days * 24 + wake_time_before_work.seconds / 3600, 2)
                         
-                        if wake_time_before_work.days > -1 and wake_time_before_work_in_hour < min_time_before_work_standard and wake_time_before_work_in_hour < 18:
+                        if wake_time_before_work.days > -1 and wake_time_before_work_in_hour < min_time_before_work_standard and wake_time_before_work_in_hour < 15:
                             min_time_before_work_standard = wake_time_before_work_in_hour
                             min_time_before_work_om_signal = wake_time_before_om_signal_in_hour
                             sleep_before_work_df = sleep_data_df
@@ -171,8 +170,8 @@ def extract_work_day_sleep_pattern_from_om_signal(sleep_data_array, om_signal_st
                               sleep_before_work_df['SleepBeginTimestamp'].values[0],
                               sleep_before_work_df['SleepEndTimestamp'].values[0],
                               sleep_before_work_df['data_source'].values[0],
-                              start_work_datetime, start_recording_time,
-                              end_work_datetime, end_recording_time,
+                              start_work_datetime.strftime(date_time_format)[:-3], start_recording_time,
+                              end_work_datetime.strftime(date_time_format)[:-3], end_recording_time,
                               sleep_after_work_df['SleepBeginTimestamp'].values[0],
                               sleep_after_work_df['SleepEndTimestamp'].values[0],
                               sleep_after_work_df['data_source'].values[0]]
@@ -256,8 +255,7 @@ if __name__ == '__main__':
                                                                            ground_truth_folder_path,
                                                                            sleep_timeline_data_folder_path)
     
-        combined_sleep_data_array = combine_step_count_sleep_and_sleep_summary(ground_truth_folder_path,
-                                                                               sleep_timeline_stepcount_data_array,
+        combined_sleep_data_array = combine_step_count_sleep_and_sleep_summary(ground_truth_folder_path,sleep_timeline_stepcount_data_array,
                                                                                sleep_summary_data_array,
                                                                                sleep_timeline_data_folder_path)
     
