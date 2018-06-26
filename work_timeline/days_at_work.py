@@ -11,6 +11,7 @@ import pandas as pd
 from dateutil import rrule
 from datetime import datetime, timedelta
 
+is_use_hospital_information = False
 
 def getParticipantIDsFromFiles(files):
     slash_index = files[0].rfind('/')
@@ -51,8 +52,18 @@ def getDatesFromFiles(files):
     start_dates = []
     end_dates = []
     for file in files:
+        print('--------- getDatesFromFiles ---------')
+        print('Read:' + file)
+        
         data = getDataFrame(file)
-        start_dates.append(data.index[0])
+
+        # If there is something with timestamp
+        for i in range(100):
+            if data.index[i].year > 2017:
+                start_date = data.index[i]
+                break
+        
+        start_dates.append(start_date)
         end_dates.append(data.index[-1])
     
     return min(start_dates), max(end_dates)
@@ -102,12 +113,12 @@ def sideBySide(series1, series2):
     return pd.DataFrame(dict(s1=series1, s2=series2))
 
 
-def main(data_directory, features_directory):
+def main(data_directory, output_directory):
     stream = os.path.basename(data_directory)
     streams = ['omsignal', 'owl_in_one', 'phone_events', 'ground_truth']
     assert (stream in streams), "Stream " + stream + " not found in " + str(streams) + ". Please check data directory."
     
-    csv_file = os.path.join(features_directory, stream + '_days_at_work.csv')
+    csv_file = os.path.join(output_directory, stream + '_days_at_work.csv')
     
     if not os.path.exists(csv_file):
         # Obtain participant IDs from file names
@@ -145,19 +156,21 @@ def main(data_directory, features_directory):
                         if date.date() in dates_worked:
                             days_at_work.loc[date.date(), participant] = 1
                 
+                
                 elif stream == 'phone_events':
-                    hospitals_file = './hospitals.csv'
-                    hospitals = pd.read_csv(hospitals_file)
-                    
-                    for index, row in data.iterrows():
-                        # Check if the participant was at Keck
-                        if isKeck(row):
-                            # Take only the date in 'Timestamp' and use it as index
-                            days_at_work.loc[index.date(), participant] = 1.0
-                        # Check if the participant was at another hospital, will assume that they were working
-                        # TODO: Check if the participant has visited another hospital multiple times
-                        elif isAnotherHospital(index, row, participant):
-                            days_at_work.loc[index.date(), participant] = 1.0
+                    if is_use_hospital_information is True:
+                        hospitals_file = './hospitals.csv'
+                        hospitals = pd.read_csv(hospitals_file)
+                        
+                        for index, row in data.iterrows():
+                            # Check if the participant was at Keck
+                            if isKeck(row):
+                                # Take only the date in 'Timestamp' and use it as index
+                                days_at_work.loc[index.date(), participant] = 1.0
+                            # Check if the participant was at another hospital, will assume that they were working
+                            # TODO: Check if the participant has visited another hospital multiple times
+                            elif isAnotherHospital(index, row, participant):
+                                days_at_work.loc[index.date(), participant] = 1.0
         
         elif stream == 'ground_truth':
             MGT = pd.read_csv(os.path.join(data_directory, 'MGT.csv'), index_col=2)
@@ -183,29 +196,44 @@ def main(data_directory, features_directory):
                 except KeyError:
                     print('Participant ' + row['uid'] + ' is not in participant list from IDs.csv.')
         
-        if not os.path.exists(features_directory):
+        if not os.path.exists(output_directory):
             try:
-                print('Creating directory ' + features_directory)
-                os.makedirs(features_directory)
+                print('Creating directory ' + output_directory)
+                os.makedirs(output_directory)
             except OSError as e:
                 if e.errno != errno.EEXIST:
                     raise
         
-        days_at_work.to_csv(os.path.join(features_directory, stream + '_days_at_work.csv'), index_label='Timestamp')
+        days_at_work.to_csv(os.path.join(output_directory, stream + '_days_at_work.csv'), index_label='Timestamp')
     
     else:
         print('File ' + csv_file + ' already exists. Exiting.')
 
 
 if __name__ == "__main__":
+    
+    """
+        Parse the args:
+        1. main_data_directory: directory to store keck data
+        2. days_at_work_directory: directory to store days at work data using different modalities
+    """
     parser = argparse.ArgumentParser(description='Create a dataframe of worked days.')
-    parser.add_argument('-d', '--data_directory', type=str, required=True,
+    parser.add_argument('-i', '--main_data_directory', type=str, required=True,
                         help='Directory for data.')
-    parser.add_argument('-f', '--features_directory', type=str, required=True,
+    parser.add_argument('-d', '--days_at_work_directory', type=str, required=True,
                         help='Directory with processed data.')
     args = parser.parse_args()
     
-    data_directory = os.path.expanduser(os.path.normpath(args.data_directory))
-    features_directory = os.path.expanduser(os.path.normpath(args.features_directory))
+    main_data_directory = os.path.expanduser(os.path.normpath(args.main_data_directory))
+    days_at_work_directory = os.path.expanduser(os.path.normpath(args.days_at_work_directory))
     
-    main(data_directory, features_directory)
+    # if path not exist, create the path
+    if os.path.exists(days_at_work_directory): os.mkdir(days_at_work_directory)
+
+    # Not using phone_events, since I don't have hospital.csv
+    # stream_types = ['omsignal', 'owl_in_one', 'phone_events', 'ground_truth']
+    stream_types = ['omsignal', 'owl_in_one', 'ground_truth']
+    
+    for steam in stream_types:
+        data_directory = os.path.join(main_data_directory, steam)
+        main(data_directory, days_at_work_directory)
