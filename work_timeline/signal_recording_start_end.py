@@ -167,8 +167,8 @@ def getWorkTimeline(recording_timeline_directory, data_directory, participant_id
                         end_work_date = index.replace(hour=19, minute=0, second=0)
                     # Night shift nurse
                     else:
-                        start_work_date = index.replace(hour=19, minute=0, second=0)
-                        end_work_date = (index + timedelta(days=1)).replace(hour=7, minute=0, second=0)
+                        start_work_date = (index - timedelta(days=1)).replace(hour=19, minute=0, second=0)
+                        end_work_date = index.replace(hour=7, minute=0, second=0)
 
                     work_time_df = constructRecordingFrame(index, work_time_df, start_work_date, end_work_date)
                     
@@ -186,35 +186,33 @@ if __name__ == "__main__":
     """
         Parse the args:
         1. main_data_directory: directory to store keck data
-        2. days_at_work_directory: directory to store days at work data using different modalities
-        3. recording_timeline_directory: directory to store timeline of recording
+        2. output_directory: main output directory
+
     """
     parser = argparse.ArgumentParser(description='Create a dataframe of worked days.')
     parser.add_argument('-i', '--main_data_directory', type=str, required=True,
                         help='Directory for data.')
-    parser.add_argument('-d', '--days_at_work_directory', type=str, required=True,
-                        help='Directory with days at work.')
-    parser.add_argument('-r', '--recording_timeline_directory', type=str, required=True,
-                        help='Directory with recording timeline.')
+    parser.add_argument('-o', '--output_directory', type=str, required=True,
+                        help='Directory for output.')
     
     stream_types = ['omsignal', 'owl_in_one', 'ground_truth']
     
-    """
     args = parser.parse_args()
 
-    main_data_directory = os.path.expanduser(os.path.normpath(args.main_data_directory))
-    days_at_work_directory = os.path.expanduser(os.path.normpath(args.days_at_work_directory))
-    recording_timeline_directory = os.path.expanduser(os.path.normpath(args.recording_timeline_directory))
+    """
+        days_at_work_directory = '../output/days_at_work'
+        main_data_directory = '../../data/keck_wave1/2_preprocessed_data'
+        recording_timeline_directory = '../output/recording_timeline'
+    """
+
+    main_data_directory = os.path.join(os.path.expanduser(os.path.normpath(args.main_data_directory)), 'keck_wave1/2_preprocessed_data')
+    days_at_work_directory = os.path.join(os.path.expanduser(os.path.normpath(args.output_directory)), 'days_at_work')
+    recording_timeline_directory = os.path.join(os.path.expanduser(os.path.normpath(args.output_directory)), 'recording_timeline')
     
     print('main_data_directory: ' + main_data_directory)
     print('days_at_work_directory: ' + days_at_work_directory)
     print('recording_timeline_directory: ' + recording_timeline_directory)
-    """
     
-    days_at_work_directory = '../output/days_at_work'
-    main_data_directory = '../../data/keck_wave1/2_preprocessed_data'
-    recording_timeline_directory = '../output/recording_timeline'
-
     participant_id_job_shift_df = getParticipantIDJobShift(main_data_directory)
     
     if os.path.exists(recording_timeline_directory) is False: os.mkdir(recording_timeline_directory)

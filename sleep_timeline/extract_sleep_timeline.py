@@ -494,21 +494,21 @@ def extract_sleep_from_fitbit_sleep_summary(fitbit_data_folder_path, ground_trut
 if __name__ == '__main__':
     
     # Define the parser
-    parser = argparse.ArgumentParser(description='Parse read folders and output folders.')
+    parser = argparse.ArgumentParser(description='Parse sleep timeline.')
     
     parser.add_argument('-t', '--save_type', type=str, required=False,
                         help='Save data type.')
-    parser.add_argument('-i', '--input_data_directory', type=str, required=False,
+    parser.add_argument('-i', '--main_data_directory', type=str, required=False,
                         help='Directory with source data.')
-    parser.add_argument('-o', '--output_directory', type=str, required=False,
+    parser.add_argument('-o', '--sleep_directory', type=str, required=False,
                         help='File with processed data.')
     
-    # args = parser.parse_args()
+    args = parser.parse_args()
     
     # if we have these parser information, then read them
-    # if args.save_type is not None: save_type = args.save_type
-    # if args.input_data_directory is not None: main_data_directoryn = args.input_data_directory
-    # if args.output_data_folder_path is not None: output_data_folder_path = args.output_data_folder_path
+    if args.save_type is not None: save_type = args.save_type
+    if args.main_data_directory is not None: main_data_directory = args.main_data_directory
+    if args.sleep_directory is not None: sleep_directory = args.sleep_directory
 
     # fitbit_data_folder path
     fitbit_data_folder_path = get_fitbit_data_folder(main_data_directory)
@@ -517,10 +517,10 @@ if __name__ == '__main__':
     ground_truth_folder_path = get_ground_truth_folder(main_data_directory)
 
     # om signal start and end recording time
-    om_signal_start_end_recording_path = get_om_signal_start_end_recording_folder(output_data_folder_path)
+    om_signal_start_end_recording_path = get_om_signal_start_end_recording_folder(sleep_directory)
 
     # sleep timeline
-    sleep_timeline_data_folder_path = get_sleep_timeline_data_folder(output_data_folder_path)
+    sleep_timeline_data_folder_path = get_sleep_timeline_data_folder(sleep_directory)
 
     # Create folder if not exist
     if os.path.exists(sleep_timeline_data_folder_path) is False: os.mkdir(sleep_timeline_data_folder_path)

@@ -220,15 +220,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Create a dataframe of worked days.')
     parser.add_argument('-i', '--main_data_directory', type=str, required=True,
                         help='Directory for data.')
-    parser.add_argument('-d', '--days_at_work_directory', type=str, required=True,
+    parser.add_argument('-o', '--output_directory', type=str, required=True,
                         help='Directory with processed data.')
     args = parser.parse_args()
     
-    main_data_directory = os.path.expanduser(os.path.normpath(args.main_data_directory))
-    days_at_work_directory = os.path.expanduser(os.path.normpath(args.days_at_work_directory))
+    main_data_directory = os.path.join(os.path.expanduser(os.path.normpath(args.main_data_directory)), 'keck_wave1/2_preprocessed_data')
+    days_at_work_directory = os.path.join(os.path.expanduser(os.path.normpath(args.output_directory)), 'days_at_work')
     
     # if path not exist, create the path
-    if os.path.exists(days_at_work_directory): os.mkdir(days_at_work_directory)
+    if os.path.exists(days_at_work_directory) is False: os.mkdir(days_at_work_directory)
 
     # Not using phone_events, since I don't have hospital.csv
     # stream_types = ['omsignal', 'owl_in_one', 'phone_events', 'ground_truth']
