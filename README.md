@@ -15,19 +15,19 @@ Mainly used:
 
 ```
 .
-├── Root
-  ├── TILES-Daily-Inference
-  │   ├── output
-  │   │   ├── om_signal_timeline                  # OM Signal recording start and end timeline in csv, output by    extract_work_schedule.py
-  │   │   ├── sleep_routine_work                  # work day sleep pattern data in csv, output by extract_work_day_sleep_pattern.py
-  │   │   └── sleep_timeline                      # sleep timeline in csv, output by extract_sleep_timeline.py
-  │   └── timeline_extraction
-  |       ├── README.md                           # ReadME, usage of the scripts
-  |       ├── extract_work_day_sleep_pattern.sh   # Extract work day sleep pattern bash script
-  |       ├── extract_sleep_timeline.py           # Extract sleep timeline and summary
-  |       ├── extract_work_day_sleep_pattern.py   # Extract work day sleep pattern
-  |       ├── extract_work_schedule.py            # Extract work related recording timeline
-  └── data
+├── 
+├── TILES-Daily-Inference
+│   ├── output
+│   │   ├── om_signal_timeline                  # OM Signal recording start and end timeline in csv, output by    extract_work_schedule.py
+│   │   ├── sleep_routine_work                  # work day sleep pattern data in csv, output by extract_work_day_sleep_pattern.py
+│   │   └── sleep_timeline                      # sleep timeline in csv, output by extract_sleep_timeline.py
+│   └── timeline_extraction
+|       ├── README.md                           # ReadME, usage of the scripts
+|       ├── extract_work_day_sleep_pattern.sh   # Extract work day sleep pattern bash script
+|       ├── extract_sleep_timeline.py           # Extract sleep timeline and summary
+|       ├── extract_work_day_sleep_pattern.py   # Extract work day sleep pattern
+|       ├── extract_work_schedule.py            # Extract work related recording timeline
+└── data
 ```
 ## License
 
