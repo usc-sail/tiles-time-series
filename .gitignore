@@ -5,5 +5,7 @@
 .DS_Store
 # Dummy files
 *.pyc
+.ipynb_checkpoints
+
 # Ignore pipeline
 py-spark-pipeline/
