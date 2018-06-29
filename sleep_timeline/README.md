@@ -38,7 +38,8 @@ SleepBeginTimestamp      |  SleepEndTimestamp        |  SleepMinutesAwake  |  Sl
 7.  **SleepMinutesStageWake:** <br />
 8.  **SleepEfficiency:** <br />
 9.  **data_source:** <br />
-    0, step count; 1, summary
+    0: step count + summary
+    1: summary
 
 ### Issues/Artifacts on output
 
