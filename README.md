@@ -17,16 +17,29 @@ Mainly used:
 .
 ├── 
 ├── TILES-Daily-Inference
-│   ├── output
-│   │   ├── om_signal_timeline                  # OM Signal recording start and end timeline in csv, output by    extract_work_schedule.py
-│   │   ├── sleep_routine_work                  # work day sleep pattern data in csv, output by extract_work_day_sleep_pattern.py
-│   │   └── sleep_timeline                      # sleep timeline in csv, output by extract_sleep_timeline.py
-│   └── timeline_extraction
-|       ├── README.md                           # ReadME, usage of the scripts
-|       ├── extract_work_day_sleep_pattern.sh   # Extract work day sleep pattern bash script
-|       ├── extract_sleep_timeline.py           # Extract sleep timeline and summary
-|       ├── extract_work_day_sleep_pattern.py   # Extract work day sleep pattern
-|       ├── extract_work_schedule.py            # Extract work related recording timeline
+├── run.sh                                      # Sample usage: sh run.sh ../../data ../output
+│   ├── output
+│   │   ├── individual_timeline                 # individual timeline
+│   │   ├── recording_timeline                  # om, owl-in-one, ground-truth based start and end time
+│   │   ├── days_at_work                        # which dates people is at work
+│   │   └── sleep_timeline                      # sleep timeline in csv
+│   │
+│   └── sleep_timeline
+|   │   ├── README.md                           # ReadME, usage of the scripts
+|   │   ├── extract_sleep_timeline.py           # Extract sleep timeline and summary
+│   │
+│   └── work_timeline (recording_timeline)
+|   |   ├── README.md                           # ReadME, usage of the scripts
+|   |   ├── signal_recording_start_end.py       # Extract recording start and end
+|   |   ├── days_at_work.py                     # Extract days at work
+│   │
+│   └── individual_timeline
+|   |   ├── README.md                           # ReadME, usage of the scripts
+|   |   ├── individual_timeline.py              # Extract individual timeline
+│   │
+│   └── util (recording_timeline)
+|       ├── files.py                            # Get common files path
+|       ├── load_data_basic.py                  # Load basic information like participant id - user id mapping
 └── data
 ```
 ## License
