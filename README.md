@@ -42,6 +42,12 @@ Mainly used:
 |       ├── load_data_basic.py                  # Load basic information like participant id - user id mapping
 └── data
 ```
+
+### Quick Run:
+```
+sh run.sh ../../data ../output
+```
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
