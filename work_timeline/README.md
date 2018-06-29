@@ -7,10 +7,10 @@ Extract days at work using different modalities
 Sample usage: 
 
 ```
-sh days_at_work.sh ../../data/keck_wave1/2_preprocessed_data ../output/work_timeline
+sh days_at_work.sh ../../data ../output
 ```
 
-First arg is main data path, second one is days at work path
+First arg is main data path, second one is output main folder
 
 ## 1. days_at_work.py
 #### The script is to extract days at work using different modalities
@@ -19,5 +19,15 @@ First arg is main data path, second one is days at work path
 <br />
 
 ```
-python3.6 days_at_work.py -i ../../data/keck_wave1/2_preprocessed_data -o ../output/work_timeline
+python3.6 days_at_work.py -i ../../data -o ../output
+```
+
+## 1. signal_recording_start_end.py
+#### The script is to extract sensor recording start and end; ground truth based start work and end work time
+
+#### Sample usage cmd, please modify based your own usage: <br />
+<br />
+
+```
+python3.6 signal_recording_start_end.py -i ../../data -o ../output
 ```
