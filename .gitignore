@@ -9,3 +9,7 @@
 
 # Ignore pipeline
 py-spark-pipeline/
+
+# ignore plot
+plot/
+

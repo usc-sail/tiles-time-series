@@ -20,10 +20,10 @@ def getParticipantIDJobShift(main_data_directory):
     participant_id_job_shift_df = []
     
     # job shift
-    job_shift_df = pd.read_csv(os.path.join('../../data/keck_wave1/2_preprocessed_data/', 'job shift/Job_Shift.csv'))
+    job_shift_df = pd.read_csv(os.path.join(main_data_directory, 'job shift/Job_Shift.csv'))
     
     # read id
-    id_data_df = pd.read_csv(os.path.join('../../data/keck_wave1/2_preprocessed_data/', 'ground_truth/IDs.csv'))
+    id_data_df = pd.read_csv(os.path.join(main_data_directory, 'ground_truth/IDs.csv'))
     
     for index, id_data in id_data_df.iterrows():
         # get job shift and participant id
@@ -62,7 +62,7 @@ def constructRecordingFrame(index, recording_time_df, start_recording_time, end_
     return recording_time_df
 
 
-def getRecordingTimeline(recording_timeline_directory, data_directory, days_at_work_df, stream):
+def getWorkingOnlySensorRecordingTimeline(recording_timeline_directory, data_directory, days_at_work_df, stream):
     
     # Read participant id array
     participant_id_array = days_at_work_df.columns.values
@@ -181,37 +181,124 @@ def getWorkTimeline(recording_timeline_directory, data_directory, participant_id
         print('End processing for participant: ' + participant_id)
 
 
+def getAllTimeSensorRecordingTimeline(recording_timeline_directory, data_directory, participant_id_job_shift_df, stream):
+    
+    participant_id_array = participant_id_job_shift_df.index.values
+
+    recording_timeline = pd.DataFrame()
+
+    if stream == 'fitbit':
+        for participant_id in participant_id_array:
+    
+            print('Start processing for participant (fitbit recording timeline): ' + participant_id)
+            file_name = os.path.join(data_directory, participant_id + '_heartRate.csv')
+            
+            if os.path.exists(file_name) is True:
+                
+                data_df = getDataFrame(file_name)
+                data_df.index = pd.to_datetime(data_df.index)
+                
+                last_timestamp = pd.to_datetime(data_df.index.values[0])
+                start_recording_timestamp = pd.to_datetime(data_df.index.values[0])
+                
+                recording_timeline = pd.DataFrame()
+                
+                for index, row in data_df.iterrows():
+                    if (pd.to_datetime(index) - last_timestamp).total_seconds() > 3600 * 1.5:
+                        frame = pd.DataFrame(index=[start_recording_timestamp.strftime(date_only_date_time_format)], columns=['date', 'start_recording_time', 'end_recording_time'])
+                        frame['date'] = start_recording_timestamp.strftime(date_only_date_time_format)
+                        frame['start_recording_time'] = start_recording_timestamp.strftime(date_time_format)[:-3]
+                        frame['end_recording_time'] = last_timestamp.strftime(date_time_format)[:-3]
+                        start_recording_timestamp = index
+
+                        recording_timeline = recording_timeline.append(frame)
+                    
+                    last_timestamp = index
+                
+                if (pd.to_datetime(last_timestamp) - pd.to_datetime(start_recording_timestamp)).total_seconds() > 3600:
+                    frame = pd.DataFrame(index=[start_recording_timestamp.strftime(date_only_date_time_format)],
+                                         columns=['date', 'start_recording_time', 'end_recording_time'])
+                    frame['date'] = start_recording_timestamp.strftime(date_only_date_time_format)
+                    frame['start_recording_time'] = start_recording_timestamp.strftime(date_time_format)[:-3]
+                    frame['end_recording_time'] = last_timestamp.strftime(date_time_format)[:-3]
+                    
+                    recording_timeline = recording_timeline.append(frame)
+
+                if len(recording_timeline) > 0:
+                    recording_timeline = recording_timeline.sort_values('start_recording_time')
+                    recording_timeline.to_csv(os.path.join(recording_timeline_directory, participant_id + '.csv'), index=False)
+                    
+                print('Finish processing for participant (fitbit recording timeline): ' + participant_id)
+                
+    elif stream == 'realizd':
+        for participant_id in participant_id_array:
+    
+            print('Start processing for participant (RealizD recording timeline): ' + participant_id)
+            file_name = os.path.join(data_directory, participant_id + '_realizd.csv')
+        
+            if os.path.exists(file_name) is True:
+    
+                recording_timeline = pd.DataFrame()
+                
+                data_df = getDataFrame(file_name)
+                data_df.index = pd.to_datetime(data_df.index)
+                
+                for index, row in data_df.iterrows():
+                    frame = pd.DataFrame(index=[index.strftime(date_only_date_time_format)], columns=['date', 'start_recording_time', 'end_recording_time'])
+                    frame['date'] = index.strftime(date_only_date_time_format)
+                    frame['start_recording_time'] = index.strftime(date_time_format)[:-3]
+                    frame['end_recording_time'] = row['TimestampEnd']
+                    recording_timeline = recording_timeline.append(frame)
+
+                if len(recording_timeline) > 0:
+                    recording_timeline = recording_timeline.sort_values('start_recording_time')
+                    recording_timeline.to_csv(os.path.join(recording_timeline_directory, participant_id + '.csv'), index=False)
+
+            print('Finish processing for participant (RealizD recording timeline): ' + participant_id)
+
+
 if __name__ == "__main__":
     
-    """
-        Parse the args:
-        1. main_data_directory: directory to store keck data
-        2. output_directory: main output directory
-
-    """
-    parser = argparse.ArgumentParser(description='Create a dataframe of worked days.')
-    parser.add_argument('-i', '--main_data_directory', type=str, required=True,
-                        help='Directory for data.')
-    parser.add_argument('-o', '--output_directory', type=str, required=True,
-                        help='Directory for output.')
+    DEBUG = 1
     
-    stream_types = ['omsignal', 'owl_in_one', 'ground_truth']
+    if DEBUG == 0:
+        """
+            Parse the args:
+            1. main_data_directory: directory to store keck data
+            2. output_directory: main output directory
     
-    args = parser.parse_args()
-
-    """
+        """
+        parser = argparse.ArgumentParser(description='Create a dataframe of worked days.')
+        parser.add_argument('-i', '--main_data_directory', type=str, required=True,
+                            help='Directory for data.')
+        parser.add_argument('-o', '--output_directory', type=str, required=True,
+                            help='Directory for output.')
+        
+        # stream_types = ['omsignal', 'owl_in_one', 'ground_truth']
+        
+        args = parser.parse_args()
+    
+        """
+            days_at_work_directory = '../output/days_at_work'
+            main_data_directory = '../../data/keck_wave1/2_preprocessed_data'
+            recording_timeline_directory = '../output/recording_timeline'
+        """
+    
+        main_data_directory = os.path.join(os.path.expanduser(os.path.normpath(args.main_data_directory)), 'keck_wave1/2_preprocessed_data')
+        days_at_work_directory = os.path.join(os.path.expanduser(os.path.normpath(args.output_directory)), 'days_at_work')
+        recording_timeline_directory = os.path.join(os.path.expanduser(os.path.normpath(args.output_directory)), 'recording_timeline')
+        
+        print('main_data_directory: ' + main_data_directory)
+        print('days_at_work_directory: ' + days_at_work_directory)
+        print('recording_timeline_directory: ' + recording_timeline_directory)
+    
+    else:
         days_at_work_directory = '../output/days_at_work'
         main_data_directory = '../../data/keck_wave1/2_preprocessed_data'
         recording_timeline_directory = '../output/recording_timeline'
-    """
 
-    main_data_directory = os.path.join(os.path.expanduser(os.path.normpath(args.main_data_directory)), 'keck_wave1/2_preprocessed_data')
-    days_at_work_directory = os.path.join(os.path.expanduser(os.path.normpath(args.output_directory)), 'days_at_work')
-    recording_timeline_directory = os.path.join(os.path.expanduser(os.path.normpath(args.output_directory)), 'recording_timeline')
-    
-    print('main_data_directory: ' + main_data_directory)
-    print('days_at_work_directory: ' + days_at_work_directory)
-    print('recording_timeline_directory: ' + recording_timeline_directory)
+    # stream_types = ['fitbit']
+    stream_types = ['realizd']
     
     participant_id_job_shift_df = getParticipantIDJobShift(main_data_directory)
     
@@ -219,13 +306,22 @@ if __name__ == "__main__":
     
     for stream in stream_types:
         
-        # Read days at work dataframe
-        days_at_work_df = getDataFrame(os.path.join(days_at_work_directory, stream + '_days_at_work.csv'))
-        
-        if stream == 'omsignal' or stream == 'owl_in_one':
+        # Recording can happen anytime during data collection
+        if stream == 'fitbit' or stream == 'realizd':
             if os.path.exists(os.path.join(recording_timeline_directory, stream)) is False: os.mkdir(os.path.join(recording_timeline_directory, stream))
-            getRecordingTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, stream), days_at_work_df, stream)
+            getAllTimeSensorRecordingTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, stream), participant_id_job_shift_df, stream)
         
-        elif stream == 'ground_truth':
-            if os.path.exists(os.path.join(recording_timeline_directory, stream)) is False: os.mkdir(os.path.join(recording_timeline_directory, stream))
-            getWorkTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, stream), participant_id_job_shift_df)
+        # Recording only happens during work
+        else:
+            # Read days at work dataframe
+            days_at_work_df = getDataFrame(os.path.join(days_at_work_directory, stream + '_days_at_work.csv'))
+            
+            if stream == 'omsignal' or stream == 'owl_in_one':
+                if os.path.exists(os.path.join(recording_timeline_directory, stream)) is False: os.mkdir(os.path.join(recording_timeline_directory, stream))
+                getWorkingOnlySensorRecordingTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, stream), days_at_work_df, stream)
+            
+            elif stream == 'ground_truth':
+                if os.path.exists(os.path.join(recording_timeline_directory, stream)) is False: os.mkdir(os.path.join(recording_timeline_directory, stream))
+                getWorkTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, stream), participant_id_job_shift_df)
+    
+    print('End extracting recording timeline for sensors or app use!')

@@ -33,15 +33,19 @@ save_type = 'combined'
 sleep_header = ['Timestamp',
                 'Sleep1BeginTimestamp', 'Sleep1Efficiency', 'Sleep1EndTimestamp', 'Sleep1MinutesAwake',
                 'Sleep1MinutesStageDeep', 'Sleep1MinutesStageLight', 'Sleep1MinutesStageRem', 'Sleep1MinutesStageWake',
+                'Sleep1Main_Sleep', 'Sleep1Time_In_Bed',
                 'Sleep2BeginTimestamp', 'Sleep2Efficiency', 'Sleep2EndTimestamp', 'Sleep2MinutesAwake',
                 'Sleep2MinutesStageDeep', 'Sleep2MinutesStageLight', 'Sleep2MinutesStageRem', 'Sleep2MinutesStageWake',
+                'Sleep2Main_Sleep', 'Sleep2Time_In_Bed',
                 'Sleep3BeginTimestamp', 'Sleep3Efficiency', 'Sleep3EndTimestamp', 'Sleep3MinutesAwake',
                 'Sleep3MinutesStageDeep', 'Sleep3MinutesStageLight', 'Sleep3MinutesStageRem', 'Sleep3MinutesStageWake',
+                'Sleep3Main_Sleep', 'Sleep3Time_In_Bed',
                 'SleepMinutesAsleep', 'SleepMinutesInBed',
                 'SleepPerDay']
 
 # output df sleep header
 sleep_df_header = ['BeginTimestamp', 'EndTimestamp',
+                   'Main_Sleep', 'Time_In_Bed',
                    'MinutesAwake', 'MinutesStageDeep', 'MinutesStageLight',
                    'MinutesStageRem', 'MinutesStageWake', 'Efficiency']
 
