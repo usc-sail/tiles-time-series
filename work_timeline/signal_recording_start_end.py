@@ -16,28 +16,6 @@ date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
 date_only_date_time_format = '%Y-%m-%d'
 
 
-def getParticipantIDJobShift(main_data_directory):
-    participant_id_job_shift_df = []
-    
-    # job shift
-    job_shift_df = pd.read_csv(os.path.join(main_data_directory, 'job shift/Job_Shift.csv'))
-    
-    # read id
-    id_data_df = pd.read_csv(os.path.join(main_data_directory, 'ground_truth/IDs.csv'))
-    
-    for index, id_data in id_data_df.iterrows():
-        # get job shift and participant id
-        job_shift = job_shift_df.loc[job_shift_df['uid'] == id_data['user_id']]['job_shift'].values[0]
-        participant_id = id_data['OMuser_id']
-        
-        frame_df = pd.DataFrame(job_shift, index=['job_shift'], columns=[participant_id]).transpose()
-        
-        participant_id_job_shift_df = frame_df if len(
-            participant_id_job_shift_df) == 0 else participant_id_job_shift_df.append(frame_df)
-
-    return participant_id_job_shift_df
-
-
 def getDataFrame(file):
     
     # Read and prepare owl data per participant
@@ -62,6 +40,25 @@ def constructRecordingFrame(index, recording_time_df, start_recording_time, end_
     return recording_time_df
 
 
+def constructSurveyFrame(index, recording_time_df, start_recording_time, end_recording_time,
+                         workBeforeSurvey=0, surveyAtWork=0):
+    # if duration if larger than 5 hours, it is a valid recording
+    if (end_recording_time - start_recording_time).total_seconds() > 3600 * 1:
+        # Construct frame data
+        frame_df = pd.DataFrame([index.strftime(date_only_date_time_format),
+                                 index.strftime(date_time_format)[:-3],
+                                 start_recording_time.strftime(date_time_format)[:-3],
+                                 end_recording_time.strftime(date_time_format)[:-3],
+                                 workBeforeSurvey, surveyAtWork],
+                                 index=['date', 'survey_time',
+                                        'start_recording_time', 'end_recording_time',
+                                        'workBeforeSurvey', 'surveyAtWork']).transpose()
+        
+        recording_time_df = frame_df if len(recording_time_df) is 0 else recording_time_df.append(frame_df)
+    
+    return recording_time_df
+
+
 def getWorkingOnlySensorRecordingTimeline(recording_timeline_directory, data_directory, days_at_work_df, stream):
     
     # Read participant id array
@@ -76,105 +73,115 @@ def getWorkingOnlySensorRecordingTimeline(recording_timeline_directory, data_dir
             file_name = os.path.join(data_directory, participant_id + '_bleProximity.csv')
         elif stream == 'omsignal':
             file_name = os.path.join(data_directory, participant_id + '_omsignal.csv')
-           
-        data_df = getDataFrame(file_name)
-        participant_days_at_work_df = days_at_work_df[participant_id].to_frame()
         
-        # Save data frame
-        recording_time_df = []
-        
-        for index, is_recording in participant_days_at_work_df.iterrows():
-            # There is an recording
-            if is_recording.values[0] == 1:
-                
-                # Initialize start and end date
-                start_date, end_date = index, index + timedelta(days=1)
-                date_at_work_data_df = data_df[start_date.strftime(date_time_format) : end_date.strftime(date_time_format)]
-                datetime_at_work = pd.to_datetime(date_at_work_data_df.index)
-                
-                start_recording_time = datetime_at_work[0]
-                last_recording_time = datetime_at_work[0]
-                
-                for time in datetime_at_work:
-                    current_recording_time = time
-                    
-                    if (current_recording_time - last_recording_time).total_seconds() > 3600 * 2:
-                        
-                        # Construct frame and append
-                        recording_time_df = constructRecordingFrame(index, recording_time_df,
-                                                                    start_recording_time,
-                                                                    last_recording_time)
-                        start_recording_time = current_recording_time
-                    last_recording_time = current_recording_time
-
-                # Construct frame and append
-                recording_time_df = constructRecordingFrame(index, recording_time_df,
-                                                            start_recording_time,
-                                                            last_recording_time)
-        if len(recording_time_df) > 0:
-            last_row = []
-            save_df = []
+        if os.path.exists(file_name):
+            data_df = getDataFrame(file_name)
+            data_df = data_df.sort_index()
+            participant_days_at_work_df = days_at_work_df[participant_id].to_frame()
             
-            for index, row in recording_time_df.iterrows():
-                if len(last_row) == 0:
-                    last_row = row
-                else:
-                    last_end_time = datetime.strptime(last_row['end_recording_time'], date_time_format)
-                    current_start_time = datetime.strptime(row['start_recording_time'], date_time_format)
-                    if (current_start_time - last_end_time).total_seconds() >  3600 * 2:
-                        save_df = last_row.to_frame().transpose() if len(save_df) == 0 else save_df.append(last_row.to_frame().transpose())
+            # Save data frame
+            recording_time_df = []
+            
+            for index, is_recording in participant_days_at_work_df.iterrows():
+                # There is an recording
+                if is_recording.values[0] == 1:
+                    
+                    # Initialize start and end date
+                    start_date, end_date = index, index + timedelta(days=1)
+                    date_at_work_data_df = data_df[start_date.strftime(date_time_format) : end_date.strftime(date_time_format)]
+                    datetime_at_work = pd.to_datetime(date_at_work_data_df.index)
+                    
+                    start_recording_time = datetime_at_work[0]
+                    last_recording_time = datetime_at_work[0]
+                    
+                    for time in datetime_at_work:
+                        current_recording_time = time
+                        
+                        if (current_recording_time - last_recording_time).total_seconds() > 3600 * 2:
+                            
+                            # Construct frame and append
+                            recording_time_df = constructRecordingFrame(index, recording_time_df,
+                                                                        start_recording_time,
+                                                                        last_recording_time)
+                            start_recording_time = current_recording_time
+                        last_recording_time = current_recording_time
+    
+                    # Construct frame and append
+                    recording_time_df = constructRecordingFrame(index, recording_time_df,
+                                                                start_recording_time,
+                                                                last_recording_time)
+            if len(recording_time_df) > 0:
+                last_row = []
+                save_df = pd.DataFrame()
+                
+                for index, row in recording_time_df.iterrows():
+                    if len(last_row) == 0:
                         last_row = row
                     else:
-                        last_row['end_recording_time'] = row['end_recording_time']
+                        last_end_time = datetime.strptime(last_row['end_recording_time'], date_time_format)
+                        current_start_time = datetime.strptime(row['start_recording_time'], date_time_format)
+                        if (current_start_time - last_end_time).total_seconds() > 3600 * 2:
+                            save_df = last_row.to_frame().transpose() if len(save_df) == 0 else save_df.append(last_row.to_frame().transpose())
+                            last_row = row
+                        else:
+                            last_row['end_recording_time'] = row['end_recording_time']
+    
+                save_df.to_csv(os.path.join(recording_timeline_directory, participant_id + '.csv'), index=False)
+            print('End processing for participant: ' + participant_id)
+        else:
+            print('File not found!')
 
-            save_df.to_csv(os.path.join(recording_timeline_directory, participant_id + '.csv'), index=False)
-        print('End processing for participant: ' + participant_id)
+
+def getStartEndTime(index, shift='day'):
+    
+    if shift == 'day':
+        start_work_date = index.replace(hour=7, minute=0, second=0)
+        end_work_date = index.replace(hour=19, minute=0, second=0)
+    else:
+        start_work_date = (index - timedelta(days=1)).replace(hour=19, minute=0, second=0)
+        end_work_date = index.replace(hour=7, minute=0, second=0)
+        
+    return start_work_date, end_work_date
 
 
-def getWorkTimeline(recording_timeline_directory, data_directory, participant_id_job_shift_df):
+def getWorkTimeline(recording_timeline_directory, data_directory, main_data_directory):
+    
+    # Read ID
+    IDs = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'IDs.csv'), index_col=1)
+    participantIDs = list(IDs['participant_id'])
     
     # We need to see when nurse is responding to the survey and based on that decide whether people worked that day
-    MGT = pd.read_csv(os.path.join(data_directory, 'MGT.csv'), index_col=2)
-    IDs = pd.read_csv(os.path.join(data_directory, 'IDs.csv'), index_col=1)
-    IDs.columns = ['Evidation_id']
-    IDs.index.names = ['MITRE_id']
-
+    MGT = pd.read_csv(os.path.join(main_data_directory, 'ground_truth','MGT.csv'), index_col=2)
     MGT.index = pd.to_datetime(MGT.index)
-
-    participantIDs = sorted(list(IDs['Evidation_id'].unique()))
 
     for participant_id in participantIDs:
         
         print('Start processing for participant (ground_truth): ' + participant_id)
         
-        # Get the job shift
-        participant_job_shift = participant_id_job_shift_df.loc[participant_id]['job_shift']
-
-        # Get the job shift
-        user_id = IDs.loc[IDs['Evidation_id'] == participant_id].index.values[0]
+        # Get the user id
+        user_id = IDs.loc[IDs['participant_id'] == participant_id].index.values[0]
         MGT_per_participant = MGT.loc[MGT['uid'] == user_id]
         
         MGT_job_per_participant = MGT_per_participant.loc[MGT_per_participant['survey_type'] == 'job']
 
-        work_time_df = []
+        work_time_df = pd.DataFrame()
         
+        # Wave1 survey
         for index, row in MGT_job_per_participant.iterrows():
             try:
                 if row['location_mgt'] == 2.0:  # At work when answering the survey according to MGT, question 1
                     # Day shift nurse
                     if 17 < index.hour < 24:
-                        start_work_date = index.replace(hour=7, minute=0, second=0)
-                        end_work_date = index.replace(hour=19, minute=0, second=0)
+                        start_work_date, end_work_date = getStartEndTime(index, shift='day')
                     # Night shift nurse
                     else:
-                        start_work_date = (index - timedelta(days=1)).replace(hour=19, minute=0, second=0)
-                        end_work_date = index.replace(hour=7, minute=0, second=0)
+                        start_work_date, end_work_date = getStartEndTime(index, shift='night')
 
-                    work_time_df = constructRecordingFrame(index, work_time_df, start_work_date, end_work_date)
+                    work_time_df = constructSurveyFrame(index, work_time_df, start_work_date, end_work_date)
                     
             except KeyError:
                 print('Participant ' + row['uid'] + ' is not in participant list from IDs.csv.')
-            
+
         if len(work_time_df) > 0:
             work_time_df = work_time_df.sort_values('date')
             work_time_df.to_csv(os.path.join(recording_timeline_directory, participant_id + '.csv'), index=False)
@@ -183,12 +190,12 @@ def getWorkTimeline(recording_timeline_directory, data_directory, participant_id
 
 def getAllTimeSensorRecordingTimeline(recording_timeline_directory, data_directory, participant_id_job_shift_df, stream):
     
-    participant_id_array = participant_id_job_shift_df.index.values
-
-    recording_timeline = pd.DataFrame()
+    # Read ID
+    IDs = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'mitreids.csv'), index_col=1)
+    participantIDs = list(IDs['participant_id'])
 
     if stream == 'fitbit':
-        for participant_id in participant_id_array:
+        for participant_id in participantIDs:
     
             print('Start processing for participant (fitbit recording timeline): ' + participant_id)
             file_name = os.path.join(data_directory, participant_id + '_heartRate.csv')
@@ -197,41 +204,43 @@ def getAllTimeSensorRecordingTimeline(recording_timeline_directory, data_directo
                 
                 data_df = getDataFrame(file_name)
                 data_df.index = pd.to_datetime(data_df.index)
+                data_df = data_df.sort_index()
                 
-                last_timestamp = pd.to_datetime(data_df.index.values[0])
-                start_recording_timestamp = pd.to_datetime(data_df.index.values[0])
-                
-                recording_timeline = pd.DataFrame()
-                
-                for index, row in data_df.iterrows():
-                    if (pd.to_datetime(index) - last_timestamp).total_seconds() > 3600 * 1.5:
-                        frame = pd.DataFrame(index=[start_recording_timestamp.strftime(date_only_date_time_format)], columns=['date', 'start_recording_time', 'end_recording_time'])
+                if len(data_df) > 0:
+                    last_timestamp = pd.to_datetime(data_df.index.values[0])
+                    start_recording_timestamp = pd.to_datetime(data_df.index.values[0])
+                    
+                    recording_timeline = pd.DataFrame()
+                    
+                    for index, row in data_df.iterrows():
+                        if (pd.to_datetime(index) - last_timestamp).total_seconds() > 3600 * 1.5:
+                            frame = pd.DataFrame(index=[start_recording_timestamp.strftime(date_only_date_time_format)], columns=['date', 'start_recording_time', 'end_recording_time'])
+                            frame['date'] = start_recording_timestamp.strftime(date_only_date_time_format)
+                            frame['start_recording_time'] = start_recording_timestamp.strftime(date_time_format)[:-3]
+                            frame['end_recording_time'] = last_timestamp.strftime(date_time_format)[:-3]
+                            start_recording_timestamp = index
+    
+                            recording_timeline = recording_timeline.append(frame)
+                        
+                        last_timestamp = index
+                    
+                    if (pd.to_datetime(last_timestamp) - pd.to_datetime(start_recording_timestamp)).total_seconds() > 3600:
+                        frame = pd.DataFrame(index=[start_recording_timestamp.strftime(date_only_date_time_format)],
+                                             columns=['date', 'start_recording_time', 'end_recording_time'])
                         frame['date'] = start_recording_timestamp.strftime(date_only_date_time_format)
                         frame['start_recording_time'] = start_recording_timestamp.strftime(date_time_format)[:-3]
                         frame['end_recording_time'] = last_timestamp.strftime(date_time_format)[:-3]
-                        start_recording_timestamp = index
-
+                        
                         recording_timeline = recording_timeline.append(frame)
-                    
-                    last_timestamp = index
-                
-                if (pd.to_datetime(last_timestamp) - pd.to_datetime(start_recording_timestamp)).total_seconds() > 3600:
-                    frame = pd.DataFrame(index=[start_recording_timestamp.strftime(date_only_date_time_format)],
-                                         columns=['date', 'start_recording_time', 'end_recording_time'])
-                    frame['date'] = start_recording_timestamp.strftime(date_only_date_time_format)
-                    frame['start_recording_time'] = start_recording_timestamp.strftime(date_time_format)[:-3]
-                    frame['end_recording_time'] = last_timestamp.strftime(date_time_format)[:-3]
-                    
-                    recording_timeline = recording_timeline.append(frame)
-
-                if len(recording_timeline) > 0:
-                    recording_timeline = recording_timeline.sort_values('start_recording_time')
-                    recording_timeline.to_csv(os.path.join(recording_timeline_directory, participant_id + '.csv'), index=False)
-                    
-                print('Finish processing for participant (fitbit recording timeline): ' + participant_id)
+    
+                    if len(recording_timeline) > 0:
+                        recording_timeline = recording_timeline.sort_values('start_recording_time')
+                        recording_timeline.to_csv(os.path.join(recording_timeline_directory, participant_id + '.csv'), index=False)
+                        
+                    print('Finish processing for participant (fitbit recording timeline): ' + participant_id)
                 
     elif stream == 'realizd':
-        for participant_id in participant_id_array:
+        for participant_id in participantIDs:
     
             print('Start processing for participant (RealizD recording timeline): ' + participant_id)
             file_name = os.path.join(data_directory, participant_id + '_realizd.csv')
@@ -242,12 +251,14 @@ def getAllTimeSensorRecordingTimeline(recording_timeline_directory, data_directo
                 
                 data_df = getDataFrame(file_name)
                 data_df.index = pd.to_datetime(data_df.index)
+                data_df = data_df.sort_index()
                 
                 for index, row in data_df.iterrows():
                     frame = pd.DataFrame(index=[index.strftime(date_only_date_time_format)], columns=['date', 'start_recording_time', 'end_recording_time'])
                     frame['date'] = index.strftime(date_only_date_time_format)
                     frame['start_recording_time'] = index.strftime(date_time_format)[:-3]
-                    frame['end_recording_time'] = row['TimestampEnd']
+                    # frame['end_recording_time'] = row['TimestampEnd']
+                    frame['end_recording_time'] = (timedelta(seconds=int(row['SecondsOnPhone'])) + index).strftime(date_time_format)[:-3]
                     recording_timeline = recording_timeline.append(frame)
 
                 if len(recording_timeline) > 0:
@@ -298,9 +309,11 @@ if __name__ == "__main__":
         recording_timeline_directory = '../output/recording_timeline'
 
     # stream_types = ['fitbit']
-    stream_types = ['realizd']
+    # stream_types = ['realizd', 'tiles_app_surveys', 'omsignal', 'owl_in_one', 'ground_truth']
+    stream_types = ['ground_truth']
     
-    participant_id_job_shift_df = getParticipantIDJobShift(main_data_directory)
+    # participant_id_job_shift_df = getParticipantIDJobShift(main_data_directory)
+    participant_id_job_shift_df = pd.DataFrame()
     
     if os.path.exists(recording_timeline_directory) is False: os.mkdir(recording_timeline_directory)
     
@@ -320,8 +333,12 @@ if __name__ == "__main__":
                 if os.path.exists(os.path.join(recording_timeline_directory, stream)) is False: os.mkdir(os.path.join(recording_timeline_directory, stream))
                 getWorkingOnlySensorRecordingTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, stream), days_at_work_df, stream)
             
+            elif stream == 'tiles_app_surveys':
+                if os.path.exists(os.path.join(recording_timeline_directory, stream)) is False: os.mkdir(os.path.join(recording_timeline_directory, stream))
+                getWorkTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, stream), main_data_directory)
+
             elif stream == 'ground_truth':
                 if os.path.exists(os.path.join(recording_timeline_directory, stream)) is False: os.mkdir(os.path.join(recording_timeline_directory, stream))
-                getWorkTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, stream), participant_id_job_shift_df)
-    
+                getWorkTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, stream), main_data_directory)
+
     print('End extracting recording timeline for sensors or app use!')

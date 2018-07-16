@@ -15,18 +15,19 @@ date_only_date_time_format = '%Y-%m-%d'
 
 # sleep after work duration thereshold
 sleep_after_work_duration_threshold = 12
+sleep_after_sleep_duration_threshold = 2
 
 
 def getExpectedStartEndWorkFromRecording(shift_type, start_recording, end_recording):
     
     # index is the start recording time
-    if 4 <= start_recording.hour <= 14 and shift_type == 1:
+    if 4 <= start_recording.hour <= 14:
         work_start_time = start_recording.replace(hour=7, minute=0, second=0, microsecond=0)
         work_end_time = start_recording.replace(hour=19, minute=0, second=0, microsecond=0)
-    elif 0 <= start_recording.hour < 4 and shift_type == 0:
+    elif 0 <= start_recording.hour < 4:
         work_start_time = (start_recording - timedelta(days=1)).replace(hour=19, minute=0, second=0, microsecond=0)
         work_end_time = start_recording.replace(hour=7, minute=0, second=0, microsecond=0)
-    elif shift_type == 0:
+    elif 19 <= start_recording.hour < 24:
         work_start_time = start_recording.replace(hour=19, minute=0, second=0, microsecond=0)
         work_end_time = (start_recording + timedelta(days=1)).replace(hour=7, minute=0, second=0, microsecond=0)
     else:
@@ -45,14 +46,15 @@ def getExpectedStartEndWorkFromRecording(shift_type, start_recording, end_record
 
 def getTimelineDataFrame(timeline_directory, participant_id, stream):
     timeline = []
-    timeline_header = ['start_recording_time', 'end_recording_time', 'is_main_sleep', 'time_in_bed', 'data_source']
+    # timeline_header = ['start_recording_time', 'end_recording_time', 'is_main_sleep', 'time_in_bed', 'data_source']
+    timeline_header = ['start_recording_time', 'end_recording_time', 'data_source']
     
     if stream == 'sleep':
         try:
             if os.path.isfile(os.path.join(timeline_directory, participant_id + '_Sleep_Summary.csv')) is True:
                 timeline = pd.read_csv(os.path.join(timeline_directory,
                                                     participant_id + '_Sleep_Summary.csv'))[['SleepBeginTimestamp', 'SleepEndTimestamp',
-                                                                                             'SleepMain_Sleep', 'SleepTime_In_Bed',
+                                                                                             # 'SleepMain_Sleep', 'SleepTime_In_Bed',
                                                                                              'data_source']]
                 timeline.columns = timeline_header
                 timeline['type'] = 'sleep'
@@ -64,8 +66,8 @@ def getTimelineDataFrame(timeline_directory, participant_id, stream):
             if os.path.isfile(os.path.join(timeline_directory, stream, participant_id + '.csv')) is True:
                 timeline = pd.read_csv(os.path.join(timeline_directory, stream, participant_id + '.csv'))[timeline_header[0:2]]
                 timeline['type'] = stream
-                timeline['is_main_sleep'] = np.nan
-                timeline['time_in_bed'] = np.nan
+                # timeline['is_main_sleep'] = np.nan
+                # timeline['time_in_bed'] = np.nan
                 timeline['data_source'] = 0
                 
         except ValueError:
@@ -82,7 +84,8 @@ def getFullTimeline(individual_timeline):
                'arrive_before_work', 'leave_after_work',
                'time_to_work_after_sleep', 'time_to_sleep_after_work',
                'is_sleep_before_work', 'is_sleep_after_work',
-               'is_main_sleep', 'time_in_bed',
+               'is_sleep_after_sleep',
+               # 'is_main_sleep', 'time_in_bed',
                'work_status', 'duration_in_seconds',
                'survey_type', 'survey_timestamp', 'itp_mgt', 'irb_mgt', 'ocb_mgt',
                'cwb_mgt', 'neu_mgt', 'con_mgt', 'ext_mgt', 'agr_mgt',
@@ -127,14 +130,18 @@ def getFullTimeline(individual_timeline):
             # row type sleep
             if row['type'] == 'sleep':
     
-                frame['is_main_sleep'] = row['is_main_sleep']
-                frame['time_in_bed'] = row['time_in_bed']
+                # frame['is_main_sleep'] = row['is_main_sleep']
+                # frame['time_in_bed'] = row['time_in_bed']
                 
                 if last_work_end_time is not None:
                     if (index - last_work_end_time).total_seconds() < 3600 * sleep_after_work_duration_threshold:
                         frame['is_sleep_after_work'] = 1
                         frame['time_to_sleep_after_work'] = int((index - last_work_end_time).total_seconds())
-            
+                        
+                if last_sleep_end_time is not None:
+                    if (index - last_sleep_end_time).total_seconds() < 3600 * sleep_after_sleep_duration_threshold:
+                        frame['is_sleep_after_sleep'] = 1
+                
                 last_sleep_end_time = pd.to_datetime(row['end_recording_time'])
                 last_sleep_end_time_index = index
                 
@@ -166,7 +173,6 @@ def getFullTimeline(individual_timeline):
                         frame['arrive_before_work'] = int((work_start_time - index).total_seconds())
                     if (pd.to_datetime(row['end_recording_time']) - work_end_time).total_seconds() > 0:
                         frame['leave_after_work'] = int((pd.to_datetime(row['end_recording_time']) - work_end_time).total_seconds())
-
                 
                 if last_sleep_end_time is not None:
                     if (index - last_sleep_end_time).total_seconds() < 3600 * sleep_after_work_duration_threshold:
@@ -183,7 +189,6 @@ def getFullTimeline(individual_timeline):
 def combineDailySurvey(main_data_directory, participant_id, user_id, individual_timeline):
     
     survey_data = pd.read_csv(os.path.join(main_data_directory, 'ground_truth/MGT.csv'), index_col=0)
-    survey_data = survey_data.loc[user_id]
     
     print('Read Participant Survey: ' + participant_id)
 
@@ -196,24 +201,32 @@ def combineDailySurvey(main_data_directory, participant_id, user_id, individual_
 
     individual_timeline_df = pd.DataFrame()
 
-    for index, timeline in individual_timeline.iterrows():
-    
-        if timeline['type'] == 'sleep':
-            for survey_index, survey in survey_data.iterrows():
-                
-                survey_time = pd.to_datetime(survey['timestamp'])
-                start_recording_time = pd.to_datetime(timeline['start_recording_time'])
-                
-                start_diff = (survey_time - start_recording_time).total_seconds()
-                
-                if start_diff < 24 * 3600:
-                    # timeline['survey_type'] = survey['survey_type']
-                    # timeline['survey_timestamp'] = survey['timestamp']
-    
-                    for colunm in daily_survey:
-                        timeline[colunm] = survey[colunm]
-                        
-        individual_timeline_df = individual_timeline_df.append(timeline)
+    if user_id in survey_data.index:
+        survey_data = survey_data.loc[user_id]
+
+        for index, timeline in individual_timeline.iterrows():
+        
+            if timeline['type'] == 'sleep':
+                for survey_index, survey in survey_data.iterrows():
+                    
+                    survey_time = pd.to_datetime(survey['timestamp'])
+                    start_recording_time = pd.to_datetime(timeline['start_recording_time'])
+                    
+                    start_diff = (survey_time - start_recording_time).total_seconds()
+                    
+                    if start_diff < 24 * 3600:
+                        for colunm in daily_survey:
+                            timeline[colunm] = survey[colunm]
+                            
+            individual_timeline_df = individual_timeline_df.append(timeline)
+    else:
+        
+        for index, timeline in individual_timeline.iterrows():
+            if timeline['type'] == 'sleep':
+                for colunm in daily_survey:
+                    timeline[colunm] = np.nan
+            individual_timeline_df = individual_timeline_df.append(timeline)
+
     individual_timeline_df = individual_timeline_df[individual_timeline.columns]
     
     return individual_timeline_df
@@ -221,11 +234,9 @@ def combineDailySurvey(main_data_directory, participant_id, user_id, individual_
 
 def main(main_data_directory, recording_timeline_directory, sleep_timeline_directory, individual_timeline_directory):
     
+    # stream_types = ['sleep', 'omsignal', 'owl_in_one', 'tiles_app_surveys', 'fitbit', 'realizd']
     stream_types = ['sleep', 'omsignal', 'owl_in_one', 'ground_truth', 'fitbit', 'realizd']
 
-    # Get participant job shift type
-    job_shift = getParticipantIDJobShift(main_data_directory)
-    
     # Get participant ID
     IDs = getParticipantID(main_data_directory)
     
@@ -247,7 +258,8 @@ def main(main_data_directory, recording_timeline_directory, sleep_timeline_direc
                     individual_timeline = timeline
                 else:
                     individual_timeline = individual_timeline.append(timeline, ignore_index=True)
-        individual_timeline['shift_type'] = job_shift.loc[participant_id].values[0]
+                    
+                individual_timeline['shift_type'] = IDs.loc[user_id].values[2]
         
         if len(individual_timeline) != 0:
             individual_timeline = individual_timeline.sort_values('start_recording_time')
@@ -298,6 +310,6 @@ if __name__ == "__main__":
     
     if os.path.exists(individual_timeline_directory) is False: os.mkdir(individual_timeline_directory)
 
-    participant_id_job_shift_df = getParticipantIDJobShift(main_data_directory)
+    # participant_id_job_shift_df = getParticipantIDJobShift(main_data_directory)
 
     main(main_data_directory, recording_timeline_directory, sleep_timeline_directory, individual_timeline_directory)

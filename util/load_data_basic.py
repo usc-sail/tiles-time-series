@@ -19,7 +19,7 @@ def getParticipantIDJobShift(main_data_directory):
     for index, id_data in id_data_df.iterrows():
         # get job shift and participant id
         job_shift = job_shift_df.loc[job_shift_df['uid'] == id_data['user_id']]['job_shift'].values[0]
-        participant_id = id_data['OMuser_id']
+        participant_id = id_data['user_id']
         
         frame_df = pd.DataFrame(job_shift, index=['job_shift'], columns=[participant_id]).transpose()
         
@@ -31,7 +31,7 @@ def getParticipantIDJobShift(main_data_directory):
 
 def getParticipantID(main_data_directory):
     IDs = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'IDs.csv'), index_col=1)
-    IDs.columns = ['Evidation_id']
+    IDs.columns = ['participant_id', 'wave', 'shift']
     IDs.index.names = ['MITRE_id']
     return IDs
 
@@ -41,5 +41,5 @@ def getParticipantStartTime():
 
 
 def getParticipantEndTime():
-    return datetime(year=2018, month=4, day=6)
+    return datetime(year=2018, month=6, day=10)
 

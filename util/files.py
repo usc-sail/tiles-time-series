@@ -1,10 +1,10 @@
 import os
 
 def get_fitbit_data_folder(main_data_folder):
-    return os.path.join(main_data_folder, 'keck_wave1/2_preprocessed_data/fitbit/fitbit')
+    return os.path.join(main_data_folder, 'keck_wave1/2_preprocessed_data/fitbit')
 
 def get_omsignal_data_folder(main_data_folder):
-    return os.path.join(main_data_folder, 'keck_wave1/2_preprocessed_data/omsignal/omsignal')
+    return os.path.join(main_data_folder, 'keck_wave1/2_preprocessed_data/omsignal')
 
 def get_ground_truth_folder(main_data_folder):
     return os.path.join(main_data_folder, 'keck_wave1/2_preprocessed_data/ground_truth')

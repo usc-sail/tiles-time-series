@@ -26,8 +26,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'util'))
 from load_data_basic import getParticipantIDJobShift, getParticipantID
 from load_data_basic import getParticipantStartTime, getParticipantEndTime
 
-start_data_collection_date = datetime.datetime(year=2018, month=3, day=5)
-end_data_collection_date = datetime.datetime(year=2018, month=4, day=6)
+start_data_collection_date = datetime.datetime(year=2018, month=2, day=20)
+end_data_collection_date = datetime.datetime(year=2018, month=6, day=10)
 
 
 def getDataFrame(file):
@@ -38,7 +38,7 @@ def getDataFrame(file):
     return data
 
 
-def plot_timeline(ax, timeline, color, offset, expected_work=False, alpha=0.75, stream='sleep'):
+def plot_timeline(ax, timeline, color, offset, expected_work=False, alpha=0.75, stream='sleep', wave_number=1):
     
     if expected_work is False:
         start_str = 'start_recording_time'
@@ -48,16 +48,23 @@ def plot_timeline(ax, timeline, color, offset, expected_work=False, alpha=0.75, 
         end_str = 'expected_end_work_time'
         
     is_initialize_label = False
-    
+
+    if wave_number == 1:
+        start_data_collection_date = datetime.datetime(year=2018, month=3, day=5)
+        end_data_collection_date = datetime.datetime(year=2018, month=5, day=15)
+    elif wave_number == 2:
+        start_data_collection_date = datetime.datetime(year=2018, month=4, day=5)
+        end_data_collection_date = datetime.datetime(year=2018, month=6, day=10)
+    else:
+        start_data_collection_date = datetime.datetime(year=2018, month=5, day=1)
+        end_data_collection_date = datetime.datetime(year=2018, month=6, day=10)
+
     timeline_plot = pd.DataFrame()
     if len(timeline) > 0:
         
         for index, row in timeline.iterrows():
             
-            diff_month = pd.to_datetime(row[start_str]).month - pd.to_datetime(row[end_str]).month
-
             diff = (pd.to_datetime(row[end_str]).replace(hour=0, minute=0, second=0, microsecond=0) - pd.to_datetime(row[start_str]).replace(hour=0, minute=0, second=0, microsecond=0)).days
-            
             
             if stream == 'sleep':
                 if row['is_sleep_before_work'] == 1 and row['is_sleep_after_work'] == 1:
@@ -140,26 +147,39 @@ def plot_timeline(ax, timeline, color, offset, expected_work=False, alpha=0.75, 
 
 def main(main_data_directory, recording_timeline_directory, individual_timeline_directory, plot_timeline_directory):
     
-    job_shift = getParticipantIDJobShift(main_data_directory)
+    # job_shift = getParticipantIDJobShift(main_data_directory)
     IDs = getParticipantID(main_data_directory)
-    
-    data_collection_days = (end_data_collection_date - start_data_collection_date).days
-
-    data_collection_date = []
-    for i in range(data_collection_days):
-        data_collection_date.append((start_data_collection_date + timedelta(days=i)).strftime(date_only_date_time_format))
     
     colors = ['b', 'g', 'r', 'y', 'black', 'purple', 'lime']
     
+    shift_type = ['day', 'night', 'unknown']
+    
     for user_id in IDs.index:
+    
         participant_id = IDs.loc[user_id].values[0]
+        wave_number = IDs.loc[user_id].values[1]
+        shift = int(IDs.loc[user_id].values[2])
+        
+        if wave_number == 1:
+            start_data_collection_date = datetime.datetime(year=2018, month=3, day=5)
+            end_data_collection_date = datetime.datetime(year=2018, month=5, day=15)
+        elif wave_number == 2:
+            start_data_collection_date = datetime.datetime(year=2018, month=4, day=5)
+            end_data_collection_date = datetime.datetime(year=2018, month=6, day=10)
+        else:
+            start_data_collection_date = datetime.datetime(year=2018, month=5, day=1)
+            end_data_collection_date = datetime.datetime(year=2018, month=6, day=10)
+
+        data_collection_days = (end_data_collection_date - start_data_collection_date).days
+
+        data_collection_date = []
+        for i in range(data_collection_days):
+            data_collection_date.append((start_data_collection_date + timedelta(days=i)).strftime(date_only_date_time_format))
     
         print('Start Processing (Individual timeline): ' + participant_id)
     
         if os.path.exists(os.path.join(individual_timeline_directory, participant_id + '.csv')) is True:
             individual_timeline = getDataFrame(os.path.join(individual_timeline_directory, participant_id + '.csv'))
-            
-            shift_type = pd.unique(individual_timeline['shift_type'])[0]
             
             sleep_timeline = individual_timeline.loc[individual_timeline['type'] == 'sleep']
             sleep_timeline.index = pd.to_datetime(sleep_timeline['start_recording_time'])
@@ -178,7 +198,6 @@ def main(main_data_directory, recording_timeline_directory, individual_timeline_
 
             realizd_timeline = individual_timeline.loc[individual_timeline['type'] == 'realizd']
             realizd_timeline.index = pd.to_datetime(realizd_timeline['start_recording_time'])
-            # realizd_timeline = []
 
             if len(sleep_timeline) > 0 or len(owl_in_one_timeline) > 0 or len(ground_truth_timeline) > 0:
                 fig = plt.figure(figsize=(15, 12))
@@ -190,25 +209,25 @@ def main(main_data_directory, recording_timeline_directory, individual_timeline_
                 ax.set_xlim(xmin=0, xmax=24)
 
             if len(sleep_timeline) > 0:
-                plot_timeline(ax, sleep_timeline, colors[0], 0, alpha=0.75, stream='sleep')
+                plot_timeline(ax, sleep_timeline, colors[0], 0, alpha=0.75, stream='sleep', wave_number=wave_number)
 
             if len(owl_in_one_timeline) > 0:
-                plot_timeline(ax, owl_in_one_timeline, colors[1], 0, expected_work=True, alpha=1, stream='expected_work')
-                plot_timeline(ax, owl_in_one_timeline, colors[6], 1, alpha=0.6, stream='owl_in_one')
+                plot_timeline(ax, owl_in_one_timeline, colors[1], 0, expected_work=True, alpha=1, stream='expected_work', wave_number=wave_number)
+                plot_timeline(ax, owl_in_one_timeline, colors[6], 1, alpha=0.6, stream='owl_in_one', wave_number=wave_number)
                 
             if len(ground_truth_timeline) > 0:
-                plot_timeline(ax, ground_truth_timeline, colors[1], 0, expected_work=True, alpha=1, stream='')
-                plot_timeline(ax, ground_truth_timeline, colors[2], 1, alpha=0.6, stream='survey')
+                plot_timeline(ax, ground_truth_timeline, colors[1], 0, expected_work=True, alpha=1, stream='', wave_number=wave_number)
+                plot_timeline(ax, ground_truth_timeline, colors[2], 1, alpha=0.6, stream='survey', wave_number=wave_number)
                 
             if len(om_signal_timeline) > 0:
-                plot_timeline(ax, om_signal_timeline, colors[1], 0, expected_work=True, alpha=1, stream='')
-                plot_timeline(ax, om_signal_timeline, colors[5], 1, alpha=0.6, stream='om_signal')
+                plot_timeline(ax, om_signal_timeline, colors[1], 0, expected_work=True, alpha=1, stream='', wave_number=wave_number)
+                plot_timeline(ax, om_signal_timeline, colors[5], 1, alpha=0.6, stream='om_signal', wave_number=wave_number)
                 
             if len(fitbit_timeline) > 0:
-                plot_timeline(ax, fitbit_timeline, colors[3], 2, alpha=1, stream='fitbit')
+                plot_timeline(ax, fitbit_timeline, colors[3], 2, alpha=1, stream='fitbit', wave_number=wave_number)
 
             if len(realizd_timeline) > 0:
-                plot_timeline(ax, realizd_timeline, colors[4], 0, alpha=1, stream='RealizD')
+                plot_timeline(ax, realizd_timeline, colors[4], 0, alpha=1, stream='RealizD', wave_number=wave_number)
 
             if len(sleep_timeline) > 0 or len(owl_in_one_timeline) > 0:
                 for i in np.arange(-0.5, len(data_collection_date) * 3 + 1, 3):
@@ -216,7 +235,9 @@ def main(main_data_directory, recording_timeline_directory, individual_timeline_
                 
                 legend = ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
                 yticks(range(1, len(data_collection_date) * 3 + 1, 3), data_collection_date)
-                plt.savefig(os.path.join(plot_timeline_directory, 'output', participant_id + '.png'),
+                if os.path.exists(os.path.join(plot_timeline_directory, shift_type[shift-1])) is False:
+                    os.mkdir(os.path.join(plot_timeline_directory, shift_type[shift - 1]))
+                plt.savefig(os.path.join(plot_timeline_directory, shift_type[shift-1], participant_id + '.png'),
                             bbox_extra_artists=(legend,),
                             bbox_inches='tight')
                 plt.close()

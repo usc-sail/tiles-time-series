@@ -20,7 +20,7 @@ main_data_directory = os.path.join(current_path, '../../data')
 output_data_folder_path = os.path.join(current_path, '../output')
 
 # csv's
-id_csv = 'IDs.csv'
+id_csv = 'mitreids.csv'
 
 # date_time format
 date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
@@ -33,13 +33,13 @@ save_type = 'combined'
 sleep_header = ['Timestamp',
                 'Sleep1BeginTimestamp', 'Sleep1Efficiency', 'Sleep1EndTimestamp', 'Sleep1MinutesAwake',
                 'Sleep1MinutesStageDeep', 'Sleep1MinutesStageLight', 'Sleep1MinutesStageRem', 'Sleep1MinutesStageWake',
-                'Sleep1Main_Sleep', 'Sleep1Time_In_Bed',
+                # 'Sleep1Main_Sleep', 'Sleep1Time_In_Bed',
                 'Sleep2BeginTimestamp', 'Sleep2Efficiency', 'Sleep2EndTimestamp', 'Sleep2MinutesAwake',
                 'Sleep2MinutesStageDeep', 'Sleep2MinutesStageLight', 'Sleep2MinutesStageRem', 'Sleep2MinutesStageWake',
-                'Sleep2Main_Sleep', 'Sleep2Time_In_Bed',
+                # 'Sleep2Main_Sleep', 'Sleep2Time_In_Bed',
                 'Sleep3BeginTimestamp', 'Sleep3Efficiency', 'Sleep3EndTimestamp', 'Sleep3MinutesAwake',
                 'Sleep3MinutesStageDeep', 'Sleep3MinutesStageLight', 'Sleep3MinutesStageRem', 'Sleep3MinutesStageWake',
-                'Sleep3Main_Sleep', 'Sleep3Time_In_Bed',
+                # 'Sleep3Main_Sleep', 'Sleep3Time_In_Bed',
                 'SleepMinutesAsleep', 'SleepMinutesInBed',
                 'SleepPerDay']
 
@@ -442,23 +442,22 @@ def extract_sleep_from_fitbit_sleep_summary(fitbit_data_folder_path, ground_trut
     # if we have extract the feature before and save as csv file
     if len(sleep_summary_file_array) > 20:
         for file_name in sleep_summary_file_array:
-            om_id = file_name.split('_Sleep_Summary')[0]
-            user_id = id_data_df.loc[id_data_df['OMuser_id'] == om_id]['user_id'].values[0]
-            sleep_summary = pd.read_csv(os.path.join(output_data_folder_path,
-                                                      om_id + '_Sleep_Summary.csv'))
+            participant_id = file_name.split('_Sleep_Summary')[0]
+            user_id = id_data_df.loc[id_data_df['participant_id'] == participant_id]['mitre_id'].values[0]
+            sleep_summary = pd.read_csv(os.path.join(output_data_folder_path, participant_id + '_Sleep_Summary.csv'))
         
             print('Read data for ' + user_id)
         
             frame_data = {}
             frame_data['user_id'] = user_id
-            frame_data['om_id'] = om_id
+            frame_data['participant_id'] = participant_id
             frame_data['sleep_data'] = sleep_summary
 
             sleep_summary_data_array.append(frame_data)
     else:
         for individual_summary_data in summary_data_array:
-            user_id = id_data_df.loc[id_data_df['OMuser_id'] == individual_summary_data[0]]['user_id'].values[0]
-            om_id = individual_summary_data[0]
+            user_id = id_data_df.loc[id_data_df['participant_id'] == individual_summary_data[0]]['mitre_id'].values[0]
+            participant_id = individual_summary_data[0]
             sleep_data = []
     
             print('Extract data for ' + user_id)
@@ -467,7 +466,8 @@ def extract_sleep_from_fitbit_sleep_summary(fitbit_data_folder_path, ground_trut
                 # if we have more than one sleep per day
                 if row['SleepPerDay'] != 0:
                     # iterate each sleep for that day
-                    for i in range(row['SleepPerDay']):
+                    sleep_per_day = row['SleepPerDay'] if row['SleepPerDay'] <= 3 else 3
+                    for i in range(sleep_per_day):
                         extract_header = ['Sleep' + str(i + 1) + header for header in sleep_df_header]
                         
                         # Aggregate each sleep data
@@ -484,35 +484,45 @@ def extract_sleep_from_fitbit_sleep_summary(fitbit_data_folder_path, ground_trut
             # Construct the frame level data per sleep
             frame_data = {}
             frame_data['user_id'] = user_id
-            frame_data['om_id'] = individual_summary_data[0]
+            frame_data['participant_id'] = individual_summary_data[0]
             frame_data['sleep_data'] = sleep_data
             
             # if sleep data is not null, we add the frame data
             if len(sleep_data) > 0:
                 sleep_summary_data_array.append(frame_data)
-                sleep_data.to_csv(os.path.join(output_data_folder_path, om_id + '_Sleep_Summary.csv'), index=False)
+                sleep_data = sleep_data.sort_values('SleepBeginTimestamp')
+                sleep_data.to_csv(os.path.join(output_data_folder_path, participant_id + '_Sleep_Summary.csv'), index=False)
 
     return sleep_summary_data_array
 
 
 if __name__ == '__main__':
     
-    # Define the parser
-    parser = argparse.ArgumentParser(description='Parse sleep timeline.')
+    DEBUG = 1
     
-    parser.add_argument('-t', '--save_type', type=str, required=False,
-                        help='Save data type.')
-    parser.add_argument('-i', '--main_data_directory', type=str, required=False,
-                        help='Directory with source data.')
-    parser.add_argument('-o', '--sleep_directory', type=str, required=False,
-                        help='File with processed data.')
-    
-    args = parser.parse_args()
-    
-    # if we have these parser information, then read them
-    if args.save_type is not None: save_type = args.save_type
-    if args.main_data_directory is not None: main_data_directory = args.main_data_directory
-    if args.sleep_directory is not None: sleep_directory = args.sleep_directory
+    if DEBUG == 0:
+        # Define the parser
+        parser = argparse.ArgumentParser(description='Parse sleep timeline.')
+        
+        parser.add_argument('-t', '--save_type', type=str, required=False,
+                            help='Save data type.')
+        parser.add_argument('-i', '--main_data_directory', type=str, required=False,
+                            help='Directory with source data.')
+        parser.add_argument('-o', '--sleep_directory', type=str, required=False,
+                            help='File with processed data.')
+        
+        args = parser.parse_args()
+        
+        # if we have these parser information, then read them
+        if args.save_type is not None: save_type = args.save_type
+        if args.main_data_directory is not None: main_data_directory = args.main_data_directory
+        if args.sleep_directory is not None: sleep_directory = args.sleep_directory
+        
+    else:
+        main_data_directory = '../../data'
+        save_type = 'sleep_summary'
+        sleep_directory = '../output'
+        
 
     # fitbit_data_folder path
     fitbit_data_folder_path = get_fitbit_data_folder(main_data_directory)
