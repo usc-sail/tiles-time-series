@@ -67,13 +67,13 @@ def plot_timeline(ax, timeline, color, offset, expected_work=False, alpha=0.75, 
             diff = (pd.to_datetime(row[end_str]).replace(hour=0, minute=0, second=0, microsecond=0) - pd.to_datetime(row[start_str]).replace(hour=0, minute=0, second=0, microsecond=0)).days
             
             if stream == 'sleep':
-                if row['is_sleep_before_work'] == 1 and row['is_sleep_after_work'] == 1:
+                if row['is_sleep_before_work'] == 1 or row['is_sleep_after_work'] == 1:
                     # plot_color = 'y'
                     alpha = 1
-                elif row['is_sleep_before_work'] == 1:
+                elif row['is_sleep_adaption'] == 1:
                     alpha = 1
                 else:
-                    alpha = 0.5
+                    alpha = 0.75
             
             if diff > 0 or diff < -20:
                 
@@ -177,9 +177,9 @@ def main(main_data_directory, recording_timeline_directory, individual_timeline_
             data_collection_date.append((start_data_collection_date + timedelta(days=i)).strftime(date_only_date_time_format))
     
         print('Start Processing (Individual timeline): ' + participant_id)
-    
-        if os.path.exists(os.path.join(individual_timeline_directory, participant_id + '.csv')) is True:
-            individual_timeline = getDataFrame(os.path.join(individual_timeline_directory, participant_id + '.csv'))
+        
+        if os.path.exists(os.path.join(individual_timeline_directory, shift_type[shift-1], participant_id + '.csv')) is True:
+            individual_timeline = getDataFrame(os.path.join(individual_timeline_directory, shift_type[shift-1], participant_id + '.csv'))
             
             sleep_timeline = individual_timeline.loc[individual_timeline['type'] == 'sleep']
             sleep_timeline.index = pd.to_datetime(sleep_timeline['start_recording_time'])

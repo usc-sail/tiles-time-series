@@ -121,7 +121,8 @@ def main(main_data_directory, data_directory, output_directory):
     csv_file = os.path.join(output_directory, stream + '_days_at_work.csv')
     
     # Read ID
-    IDs = pd.read_csv(os.path.join(main_data_directory, 'ground_truth' , 'IDs.csv'), index_col=1)
+    # IDs = pd.read_csv(os.path.join(main_data_directory, 'ground_truth' , 'IDs.csv'), index_col=1)
+    IDs = pd.read_csv(os.path.join(main_data_directory, 'id-mapping', 'mitreids.csv'), index_col=1)
     participantIDs = list(IDs['participant_id'])
 
     # Define start and end date
@@ -215,22 +216,25 @@ if __name__ == "__main__":
                             help='Directory with processed data.')
         args = parser.parse_args()
 
-        main_data_directory = os.path.join(os.path.expanduser(os.path.normpath(args.main_data_directory)), 'keck_wave1/2_preprocessed_data')
+        main_data_directory = os.path.join(os.path.expanduser(os.path.normpath(args.main_data_directory)), 'keck_wave2/3_preprocessed_data')
         days_at_work_directory = os.path.join(os.path.expanduser(os.path.normpath(args.output_directory)), 'days_at_work')
 
     else:
-        main_data_directory = '../../data/keck_wave1/2_preprocessed_data'
+        main_data_directory = '../../data/keck_wave2/'
         days_at_work_directory = '../output/days_at_work'
         
-    
     # if path not exist, create the path
     if os.path.exists(days_at_work_directory) is False: os.mkdir(days_at_work_directory)
 
     # Not using phone_events, since I don't have hospital.csv
     # stream_types = ['omsignal', 'owl_in_one', 'phone_events', 'ground_truth']
     # stream_types = ['omsignal', 'owl_in_one', 'tiles_app_surveys']
-    stream_types = ['ground_truth']
+    stream_types = ['owl_in_one']
     
-    for steam in stream_types:
-        data_directory = os.path.join(main_data_directory, steam)
+    for stream in stream_types:
+        if 'ground_truth' in stream:
+            data_directory = os.path.join(main_data_directory, stream)
+        else:
+            data_directory = os.path.join(main_data_directory, '3_preprocessed_data', stream)
+            
         main(main_data_directory, data_directory, days_at_work_directory)

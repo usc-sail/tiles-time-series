@@ -20,6 +20,9 @@ def getDataFrame(file):
     
     # Read and prepare owl data per participant
     data = pd.read_csv(file, index_col=0)
+    # Drop last line for now
+    data = data.drop(data.index[len(data) - 1])
+    
     data.index = pd.to_datetime(data.index)
     
     return data
@@ -147,7 +150,7 @@ def getStartEndTime(index, shift='day'):
 def getWorkTimeline(recording_timeline_directory, data_directory, main_data_directory):
     
     # Read ID
-    IDs = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'IDs.csv'), index_col=1)
+    IDs = pd.read_csv(os.path.join(main_data_directory, 'id-mapping', 'mitreids.csv'), index_col=1)
     participantIDs = list(IDs['participant_id'])
     
     # We need to see when nurse is responding to the survey and based on that decide whether people worked that day
@@ -191,7 +194,7 @@ def getWorkTimeline(recording_timeline_directory, data_directory, main_data_dire
 def getAllTimeSensorRecordingTimeline(recording_timeline_directory, data_directory, participant_id_job_shift_df, stream):
     
     # Read ID
-    IDs = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'mitreids.csv'), index_col=1)
+    IDs = pd.read_csv(os.path.join(main_data_directory, 'id-mapping', 'mitreids.csv'), index_col=1)
     participantIDs = list(IDs['participant_id'])
 
     if stream == 'fitbit':
@@ -305,12 +308,13 @@ if __name__ == "__main__":
     
     else:
         days_at_work_directory = '../output/days_at_work'
-        main_data_directory = '../../data/keck_wave1/2_preprocessed_data'
+        # main_data_directory = '../../data/keck_wave1/2_preprocessed_data'
+        main_data_directory = '../../data/keck_wave2'
         recording_timeline_directory = '../output/recording_timeline'
 
     # stream_types = ['fitbit']
     # stream_types = ['realizd', 'tiles_app_surveys', 'omsignal', 'owl_in_one', 'ground_truth']
-    stream_types = ['ground_truth']
+    stream_types = ['fitbit']
     
     # participant_id_job_shift_df = getParticipantIDJobShift(main_data_directory)
     participant_id_job_shift_df = pd.DataFrame()
@@ -322,7 +326,7 @@ if __name__ == "__main__":
         # Recording can happen anytime during data collection
         if stream == 'fitbit' or stream == 'realizd':
             if os.path.exists(os.path.join(recording_timeline_directory, stream)) is False: os.mkdir(os.path.join(recording_timeline_directory, stream))
-            getAllTimeSensorRecordingTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, stream), participant_id_job_shift_df, stream)
+            getAllTimeSensorRecordingTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, '3_preprocessed_data', stream), participant_id_job_shift_df, stream)
         
         # Recording only happens during work
         else:
@@ -331,11 +335,11 @@ if __name__ == "__main__":
             
             if stream == 'omsignal' or stream == 'owl_in_one':
                 if os.path.exists(os.path.join(recording_timeline_directory, stream)) is False: os.mkdir(os.path.join(recording_timeline_directory, stream))
-                getWorkingOnlySensorRecordingTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, stream), days_at_work_df, stream)
+                getWorkingOnlySensorRecordingTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, '3_preprocessed_data', stream), days_at_work_df, stream)
             
             elif stream == 'tiles_app_surveys':
                 if os.path.exists(os.path.join(recording_timeline_directory, stream)) is False: os.mkdir(os.path.join(recording_timeline_directory, stream))
-                getWorkTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, stream), main_data_directory)
+                getWorkTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, '3_preprocessed_data', stream), main_data_directory)
 
             elif stream == 'ground_truth':
                 if os.path.exists(os.path.join(recording_timeline_directory, stream)) is False: os.mkdir(os.path.join(recording_timeline_directory, stream))
