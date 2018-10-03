@@ -11,7 +11,7 @@ from scipy import stats
 from scipy.stats import ttest_ind
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'util'))
-from load_data_basic import getParticipantIDJobShift, getParticipantID, read_MGT, read_pre_study_info
+from load_data_basic import getParticipantIDJobShift, getParticipantInfo, read_MGT, read_pre_study_info
 from load_data_basic import getParticipantStartTime, getParticipantEndTime
 
 # date_time format
@@ -62,6 +62,7 @@ output_colunms = [ 'participant_id', 'sleep_transition_number', 'night_shift_typ
 def getDataFrame(file):
     # Read and prepare owl data per participant
     data = pd.read_csv(file, index_col=0)
+    data = data.drop(data.index[len(data) - 1])
     data.index = pd.to_datetime(data.index)
     
     return data
@@ -116,7 +117,9 @@ def get_sleep_survey_data(individual_timeline_directory):
     shift_type = ['day', 'night', 'unknown']
     
     # Get participant ID
-    IDs = getParticipantID(main_data_directory)
+    # IDs = getParticipantID(main_data_directory)
+    participant_info = getParticipantInfo(main_data_directory)
+    participant_info = participant_info.set_index('MitreID')
     
     # Read Pre-Study info
     PreStudyInfo = read_pre_study_info(main_data_directory)
@@ -143,225 +146,230 @@ def get_sleep_survey_data(individual_timeline_directory):
 
     else:
         # Read timeline for each participant
-        for user_id in IDs.index:
-            participant_id = IDs.loc[user_id].values[0]
-            shift = IDs.loc[user_id].values[2]
+        for user_id in participant_info.index:
+            
+            participant_id = participant_info.loc[user_id]['ParticipantID']
+            shift = 1 if participant_info.loc[user_id]['Shift'] == 'Day shift' else 2
+            wave_number = participant_info.loc[user_id]['Wave']
 
             user_pre_study_info = PreStudyInfo.loc[PreStudyInfo['uid'] == user_id]
             
-            print('Start Processing (Individual timeline): ' + participant_id)
-
-            file_name = os.path.join(main_data_directory, 'fitbit', participant_id + '_heartRate.csv')
-            fitbit_data_df = pd.DataFrame()
-            
-            if os.path.exists(file_name) is True:
-                fitbit_data_df = getDataFrame(file_name)
-                fitbit_data_df.index = pd.to_datetime(fitbit_data_df.index)
-                fitbit_data_df = fitbit_data_df.sort_index()
-            
-            timeline = pd.read_csv(os.path.join(individual_timeline_directory, shift_type[shift-1], participant_id + '.csv'))
-            timeline = timeline.loc[timeline['type'] == 'sleep']
-            
-            if len(timeline) > 0:
+            if wave_number != 3:
+                print('Start Processing (Individual timeline): ' + participant_id)
     
-                timeline_df = pd.DataFrame()
-    
-                timeline = timeline[colunms]
-                timeline['participant_id'] = participant_id
+                file_name = os.path.join(main_data_directory, 'keck_wave2/3_preprocessed_data/fitbit', participant_id + '_heartRate.csv')
+                fitbit_data_df = pd.DataFrame()
                 
-                timeline['sleep_transition'] = np.nan
-                timeline['sleep_heart_rate_max'] = np.nan
-                timeline['sleep_heart_rate_min'] = np.nan
-                timeline['sleep_heart_rate_mean'] = np.nan
-                timeline['sleep_heart_rate_std'] = np.nan
-                timeline['sleep_heart_rate_percentile_10'] = np.nan
-                timeline['sleep_heart_rate_percentile_90'] = np.nan
-                timeline['sleep_heart_rate_kurtosis'] = np.nan
-                timeline['sleep_heart_rate_moment'] = np.nan
-
-                timeline['before_sleep_heart_rate_max'] = np.nan
-                timeline['before_sleep_heart_rate_min'] = np.nan
-                timeline['before_sleep_heart_rate_mean'] = np.nan
-                timeline['before_sleep_heart_rate_std'] = np.nan
-                timeline['before_sleep_heart_rate_percentile_10'] = np.nan
-                timeline['before_sleep_heart_rate_percentile_90'] = np.nan
-                timeline['before_sleep_heart_rate_kurtosis'] = np.nan
-                timeline['before_sleep_heart_rate_moment'] = np.nan
-
-                timeline['after_sleep_heart_rate_max'] = np.nan
-                timeline['after_sleep_heart_rate_min'] = np.nan
-                timeline['after_sleep_heart_rate_mean'] = np.nan
-                timeline['after_sleep_heart_rate_std'] = np.nan
-                timeline['after_sleep_heart_rate_percentile_10'] = np.nan
-                timeline['after_sleep_heart_rate_percentile_90'] = np.nan
-                timeline['after_sleep_heart_rate_kurtosis'] = np.nan
-                timeline['after_sleep_heart_rate_moment'] = np.nan
-
-                timeline['sleep_transition'] = np.nan
-                timeline['night_shift_type'] = np.nan
-                timeline['sleep_transition_number'] = np.nan
-                timeline['nap_proxy'] = np.nan
-                timeline['switcher_sleep'] = np.nan
-                timeline['night_stay'] = np.nan
-                timeline['incomplete_shifter'] = np.nan
-                
-                timeline['nurse_years'] = user_pre_study_info['nurse_years_pre-study'].values[0] if len(user_pre_study_info['nurse_years_pre-study']) > 0 else np.nan
-                timeline['general_health'] = user_pre_study_info['general_health_pre-study'].values[0] if len(user_pre_study_info['general_health_pre-study']) > 0 else np.nan
-                timeline['life_satisfaction'] = user_pre_study_info['life_satisfaction_pre-study'].values[0] if len(user_pre_study_info['life_satisfaction_pre-study']) > 0 else np.nan
-
-                for i in range(sleep_duration_max_in_minute):
-                    timeline['minute_' + str(i)] = np.nan
+                if os.path.exists(file_name) is True:
+                    fitbit_data_df = getDataFrame(file_name)
+                    fitbit_data_df.index = pd.to_datetime(fitbit_data_df.index)
+                    fitbit_data_df = fitbit_data_df.sort_index()
                     
-                if len(fitbit_data_df) > 0:
-                    for index, row in timeline.iterrows():
-                        
-                        print('Process: ' + pd.to_datetime(row['start_recording_time']).strftime(date_only_date_time_format))
-                        
-                        # Initialize start and end recording time
-                        start_recording_time = row['start_recording_time']
-                        end_recording_time = row['end_recording_time']
-
-                        # decide which type of switch the participant is
-                        # 3: Switcher sleep
-                        # 5: Incomplete switcher
-                        # 2: Nap Proxy
-                        # 4: No Sleep
-                        if row['shift_type'] == 2 and row['is_sleep_transition_before_work'] == 1:
-                            start_recording_datetime = pd.to_datetime(row['start_recording_time'])
-                            end_recording_datetime = pd.to_datetime(row['end_recording_time'])
+                
+                timeline = pd.read_csv(os.path.join(individual_timeline_directory, shift_type[shift-1], participant_id + '.csv'))
+                timeline = timeline.loc[timeline['type'] == 'sleep']
+                
+                if len(timeline) > 0:
+        
+                    timeline_df = pd.DataFrame()
+        
+                    timeline = timeline[colunms]
+                    timeline['participant_id'] = participant_id
+                    
+                    timeline['sleep_transition'] = np.nan
+                    timeline['sleep_heart_rate_max'] = np.nan
+                    timeline['sleep_heart_rate_min'] = np.nan
+                    timeline['sleep_heart_rate_mean'] = np.nan
+                    timeline['sleep_heart_rate_std'] = np.nan
+                    timeline['sleep_heart_rate_percentile_10'] = np.nan
+                    timeline['sleep_heart_rate_percentile_90'] = np.nan
+                    timeline['sleep_heart_rate_kurtosis'] = np.nan
+                    timeline['sleep_heart_rate_moment'] = np.nan
     
-                            if 2 <= start_recording_datetime.hour <= 18:
-                                if (end_recording_datetime - start_recording_datetime).total_seconds() > 3600 * 6:
-                                    row['sleep_transition'] = 5
-                                else:
-                                    row['sleep_transition'] = 2
-                            elif start_recording_datetime.hour <= 1 or start_recording_datetime.hour >= 20:
-                                if (end_recording_datetime - start_recording_datetime).total_seconds() > 3600 * 6:
-                                    row['sleep_transition'] = 3
+                    timeline['before_sleep_heart_rate_max'] = np.nan
+                    timeline['before_sleep_heart_rate_min'] = np.nan
+                    timeline['before_sleep_heart_rate_mean'] = np.nan
+                    timeline['before_sleep_heart_rate_std'] = np.nan
+                    timeline['before_sleep_heart_rate_percentile_10'] = np.nan
+                    timeline['before_sleep_heart_rate_percentile_90'] = np.nan
+                    timeline['before_sleep_heart_rate_kurtosis'] = np.nan
+                    timeline['before_sleep_heart_rate_moment'] = np.nan
+    
+                    timeline['after_sleep_heart_rate_max'] = np.nan
+                    timeline['after_sleep_heart_rate_min'] = np.nan
+                    timeline['after_sleep_heart_rate_mean'] = np.nan
+                    timeline['after_sleep_heart_rate_std'] = np.nan
+                    timeline['after_sleep_heart_rate_percentile_10'] = np.nan
+                    timeline['after_sleep_heart_rate_percentile_90'] = np.nan
+                    timeline['after_sleep_heart_rate_kurtosis'] = np.nan
+                    timeline['after_sleep_heart_rate_moment'] = np.nan
+    
+                    timeline['sleep_transition'] = np.nan
+                    timeline['night_shift_type'] = np.nan
+                    timeline['sleep_transition_number'] = np.nan
+                    timeline['nap_proxy'] = np.nan
+                    timeline['switcher_sleep'] = np.nan
+                    timeline['night_stay'] = np.nan
+                    timeline['incomplete_shifter'] = np.nan
+                    
+                    timeline['nurse_years'] = user_pre_study_info['nurse_years_pre-study'].values[0] if len(user_pre_study_info['nurse_years_pre-study']) > 0 else np.nan
+                    timeline['general_health'] = user_pre_study_info['general_health_pre-study'].values[0] if len(user_pre_study_info['general_health_pre-study']) > 0 else np.nan
+                    timeline['life_satisfaction'] = user_pre_study_info['life_satisfaction_pre-study'].values[0] if len(user_pre_study_info['life_satisfaction_pre-study']) > 0 else np.nan
+    
+                    for i in range(sleep_duration_max_in_minute):
+                        timeline['minute_' + str(i)] = np.nan
+                        
+                    if len(fitbit_data_df) > 0:
+                        for index, row in timeline.iterrows():
+                            
+                            print('Process: ' + pd.to_datetime(row['start_recording_time']).strftime(date_only_date_time_format))
+                            
+                            # Initialize start and end recording time
+                            start_recording_time = row['start_recording_time']
+                            end_recording_time = row['end_recording_time']
+    
+                            # decide which type of switch the participant is
+                            # 3: Switcher sleep
+                            # 5: Incomplete switcher
+                            # 2: Nap Proxy
+                            # 4: No Sleep
+                            if row['shift_type'] == 2 and row['is_sleep_transition_before_work'] == 1:
+                                start_recording_datetime = pd.to_datetime(row['start_recording_time'])
+                                end_recording_datetime = pd.to_datetime(row['end_recording_time'])
+        
+                                if 2 <= start_recording_datetime.hour <= 18:
+                                    if (end_recording_datetime - start_recording_datetime).total_seconds() > 3600 * 6:
+                                        row['sleep_transition'] = 5
+                                    else:
+                                        row['sleep_transition'] = 2
+                                elif start_recording_datetime.hour <= 1 or start_recording_datetime.hour >= 20:
+                                    if (end_recording_datetime - start_recording_datetime).total_seconds() > 3600 * 6:
+                                        row['sleep_transition'] = 3
+                                    else:
+                                        row['sleep_transition'] = 4
                                 else:
                                     row['sleep_transition'] = 4
-                            else:
-                                row['sleep_transition'] = 4
-
-                        # Fitbit stat during the sleep
-                        # heart rate: mean, min, max, std, etc.
-                        fitbit_row_df = pd.DataFrame()
-                        fitbit_row_df = fitbit_data_df[start_recording_time:end_recording_time]
-
-                        end_recording_time_after_sleep = (pd.to_datetime(end_recording_time) + timedelta(hours=2)).strftime(date_time_format)[:-3]
-                        start_recording_time_before_sleep = (pd.to_datetime(start_recording_time) - timedelta(hours=2)).strftime(date_time_format)[:-3]
-
-                        fitbit_row_before_sleep_df = fitbit_data_df[start_recording_time_before_sleep:start_recording_time]
-                        fitbit_row_after_sleep_df  = fitbit_data_df[end_recording_time:end_recording_time_after_sleep]
-                        
-                        if len(fitbit_row_df) > 150:
-                            row['sleep_heart_rate_max'] = np.max(np.array(fitbit_row_df))
-                            row['sleep_heart_rate_min'] = np.min(np.array(fitbit_row_df))
-                            row['sleep_heart_rate_mean'] = np.mean(np.array(fitbit_row_df))
-                            row['sleep_heart_rate_std'] = np.std(np.array(fitbit_row_df))
-                            row['sleep_heart_rate_percentile_10'] = np.percentile(np.array(fitbit_row_df), 10)
-                            row['sleep_heart_rate_percentile_90'] = np.percentile(np.array(fitbit_row_df), 90)
-                            row['sleep_heart_rate_kurtosis'] = kurtosis(np.array(fitbit_row_df))[0]
-                            row['sleep_heart_rate_moment'] = moment(np.array(fitbit_row_df))[0]
+    
+                            # Fitbit stat during the sleep
+                            # heart rate: mean, min, max, std, etc.
+                            fitbit_data_df['HeartRate'] = fitbit_data_df['HeartRate'].apply(pd.to_numeric)
+                            fitbit_row_df = pd.DataFrame()
+                            fitbit_row_df = fitbit_data_df[start_recording_time:end_recording_time]
+    
+                            end_recording_time_after_sleep = (pd.to_datetime(end_recording_time) + timedelta(hours=2)).strftime(date_time_format)[:-3]
+                            start_recording_time_before_sleep = (pd.to_datetime(start_recording_time) - timedelta(hours=2)).strftime(date_time_format)[:-3]
+    
+                            fitbit_row_before_sleep_df = fitbit_data_df[start_recording_time_before_sleep:start_recording_time]
+                            fitbit_row_after_sleep_df  = fitbit_data_df[end_recording_time:end_recording_time_after_sleep]
                             
-                            # We want to get minute level HR as well
-                            # heart_rate_frame_df = pd.DataFrame(columns=heart_rate_df_col)
-                            start_time = pd.to_datetime(start_recording_time).replace(second=0)
+                            if len(fitbit_row_df) > 150:
+                                row['sleep_heart_rate_max'] = np.max(np.array(fitbit_row_df, dtype=int))
+                                row['sleep_heart_rate_min'] = np.min(np.array(fitbit_row_df, dtype=int))
+                                row['sleep_heart_rate_mean'] = np.mean(np.array(fitbit_row_df, dtype=int))
+                                row['sleep_heart_rate_std'] = np.std(np.array(fitbit_row_df, dtype=int))
+                                row['sleep_heart_rate_percentile_10'] = np.percentile(np.array(fitbit_row_df, dtype=int), 10)
+                                row['sleep_heart_rate_percentile_90'] = np.percentile(np.array(fitbit_row_df, dtype=int), 90)
+                                row['sleep_heart_rate_kurtosis'] = kurtosis(np.array(fitbit_row_df, dtype=int))[0]
+                                row['sleep_heart_rate_moment'] = moment(np.array(fitbit_row_df, dtype=int))[0]
+                                
+                                # We want to get minute level HR as well
+                                # heart_rate_frame_df = pd.DataFrame(columns=heart_rate_df_col)
+                                start_time = pd.to_datetime(start_recording_time).replace(second=0)
+                                
+                                for i in range(0, sleep_duration_max_in_minute, minute_offset):
+                                    minute_start = pd.to_datetime(start_time) + timedelta(minutes=i)
+                                    minute_end = pd.to_datetime(start_time) + timedelta(minutes=i+1)
+                                    heart_rate_minute_data = pd.DataFrame()
+                                    
+                                    if (pd.to_datetime(end_recording_time) - minute_end).total_seconds() > 0:
+                                        heart_rate_minute_data = fitbit_data_df[minute_start:minute_end]
+                                    
+                                    if len(heart_rate_minute_data) > 0:
+                                        heart_rate_minute_data = heart_rate_minute_data.loc[(heart_rate_minute_data['HeartRate'] <= 180) & (heart_rate_minute_data['HeartRate'] >= 30)]
+                                    
+                                    row['minute_' + str(i)] = np.mean(fitbit_data_df[minute_start:minute_end].values) if len(heart_rate_minute_data) > 0 else np.nan
                             
-                            for i in range(0, sleep_duration_max_in_minute, minute_offset):
-                                minute_start = pd.to_datetime(start_time) + timedelta(minutes=i)
-                                minute_end = pd.to_datetime(start_time) + timedelta(minutes=i+1)
-                                heart_rate_minute_data = pd.DataFrame()
-                                
-                                if (pd.to_datetime(end_recording_time) - minute_end).total_seconds() > 0:
-                                    heart_rate_minute_data = fitbit_data_df[minute_start:minute_end]
-                                
-                                if len(heart_rate_minute_data) > 0:
-                                    heart_rate_minute_data = heart_rate_minute_data.loc[(heart_rate_minute_data['HeartRate'] <= 180) & (heart_rate_minute_data['HeartRate'] >= 30)]
-                                
-                                row['minute_' + str(i)] = np.mean(fitbit_data_df[minute_start:minute_end].values) if len(heart_rate_minute_data) > 0 else np.nan
-                        
-                        # Fitbit data before sleep
-                        if len(fitbit_row_before_sleep_df) > 100:
-                            row['before_sleep_heart_rate_max'] = np.max(np.array(fitbit_row_before_sleep_df))
-                            row['before_sleep_heart_rate_min'] = np.min(np.array(fitbit_row_before_sleep_df))
-                            row['before_sleep_heart_rate_mean'] = np.mean(np.array(fitbit_row_before_sleep_df))
-                            row['before_sleep_heart_rate_std'] = np.std(np.array(fitbit_row_before_sleep_df))
-                            row['before_sleep_heart_rate_percentile_10'] = np.percentile(np.array(fitbit_row_before_sleep_df), 10)
-                            row['before_sleep_heart_rate_percentile_90'] = np.percentile(np.array(fitbit_row_before_sleep_df), 90)
-                            row['before_sleep_heart_rate_kurtosis'] = kurtosis(np.array(fitbit_row_before_sleep_df))[0]
-                            row['before_sleep_heart_rate_moment'] = moment(np.array(fitbit_row_before_sleep_df), moment=1)[0]
-
-                            # We want to get minute level HR as well
-                            # heart_rate_frame_df = pd.DataFrame(columns=heart_rate_df_col)
-                            start_time = pd.to_datetime(start_recording_time_before_sleep).replace(second=0)
-
-                            for i in range(before_sleep_duration_max_in_minute):
-                                minute_start = pd.to_datetime(start_time) + timedelta(minutes=i)
-                                minute_end = pd.to_datetime(start_time) + timedelta(minutes=i+1)
-                                heart_rate_minute_data = pd.DataFrame()
+                            # Fitbit data before sleep
+                            if len(fitbit_row_before_sleep_df) > 100:
+                                row['before_sleep_heart_rate_max'] = np.max(np.array(fitbit_row_before_sleep_df))
+                                row['before_sleep_heart_rate_min'] = np.min(np.array(fitbit_row_before_sleep_df))
+                                row['before_sleep_heart_rate_mean'] = np.mean(np.array(fitbit_row_before_sleep_df))
+                                row['before_sleep_heart_rate_std'] = np.std(np.array(fitbit_row_before_sleep_df))
+                                row['before_sleep_heart_rate_percentile_10'] = np.percentile(np.array(fitbit_row_before_sleep_df), 10)
+                                row['before_sleep_heart_rate_percentile_90'] = np.percentile(np.array(fitbit_row_before_sleep_df), 90)
+                                row['before_sleep_heart_rate_kurtosis'] = kurtosis(np.array(fitbit_row_before_sleep_df))[0]
+                                row['before_sleep_heart_rate_moment'] = moment(np.array(fitbit_row_before_sleep_df), moment=1)[0]
     
-                                if (pd.to_datetime(start_recording_time) - minute_end).total_seconds() > 0:
-                                    heart_rate_minute_data = fitbit_row_before_sleep_df[minute_start:minute_end]
+                                # We want to get minute level HR as well
+                                # heart_rate_frame_df = pd.DataFrame(columns=heart_rate_df_col)
+                                start_time = pd.to_datetime(start_recording_time_before_sleep).replace(second=0)
     
-                                if len(heart_rate_minute_data) > 0:
-                                    heart_rate_minute_data = heart_rate_minute_data.loc[(heart_rate_minute_data['HeartRate'] <= 180) & (heart_rate_minute_data['HeartRate'] >= 30)]
+                                for i in range(before_sleep_duration_max_in_minute):
+                                    minute_start = pd.to_datetime(start_time) + timedelta(minutes=i)
+                                    minute_end = pd.to_datetime(start_time) + timedelta(minutes=i+1)
+                                    heart_rate_minute_data = pd.DataFrame()
+        
+                                    if (pd.to_datetime(start_recording_time) - minute_end).total_seconds() > 0:
+                                        heart_rate_minute_data = fitbit_row_before_sleep_df[minute_start:minute_end]
+        
+                                    if len(heart_rate_minute_data) > 0:
+                                        heart_rate_minute_data = heart_rate_minute_data.loc[(heart_rate_minute_data['HeartRate'] <= 180) & (heart_rate_minute_data['HeartRate'] >= 30)]
+        
+                                    row['before_minute_' + str(i)] = np.mean(heart_rate_minute_data[minute_start:minute_end].values) if len(heart_rate_minute_data) > 0 else np.nan
     
-                                row['before_minute_' + str(i)] = np.mean(heart_rate_minute_data[minute_start:minute_end].values) if len(heart_rate_minute_data) > 0 else np.nan
-
-                        if len(fitbit_row_after_sleep_df) > 100:
-                            row['after_sleep_heart_rate_max'] = np.max(np.array(fitbit_row_after_sleep_df))
-                            row['after_sleep_heart_rate_min'] = np.min(np.array(fitbit_row_after_sleep_df))
-                            row['after_sleep_heart_rate_mean'] = np.mean(np.array(fitbit_row_after_sleep_df))
-                            row['after_sleep_heart_rate_std'] = np.std(np.array(fitbit_row_after_sleep_df))
-                            row['after_sleep_heart_rate_percentile_10'] = np.percentile(np.array(fitbit_row_after_sleep_df), 10)
-                            row['after_sleep_heart_rate_percentile_90'] = np.percentile(np.array(fitbit_row_after_sleep_df), 90)
-                            row['after_sleep_heart_rate_kurtosis'] = kurtosis(np.array(fitbit_row_after_sleep_df))[0]
-                            row['after_sleep_heart_rate_moment'] = moment(np.array(fitbit_row_after_sleep_df), moment=1)[0]
-
-                            # We want to get minute level HR as well
-                            # heart_rate_frame_df = pd.DataFrame(columns=heart_rate_df_col)
-                            start_time = pd.to_datetime(end_recording_time).replace(second=0)
-
-                            for i in range(after_sleep_duration_max_in_minute):
-                                minute_start = pd.to_datetime(start_time) + timedelta(minutes=i)
-                                minute_end = pd.to_datetime(start_time) + timedelta(minutes=i+1)
-                                heart_rate_minute_data = pd.DataFrame()
+                            if len(fitbit_row_after_sleep_df) > 100:
+                                row['after_sleep_heart_rate_max'] = np.max(np.array(fitbit_row_after_sleep_df))
+                                row['after_sleep_heart_rate_min'] = np.min(np.array(fitbit_row_after_sleep_df))
+                                row['after_sleep_heart_rate_mean'] = np.mean(np.array(fitbit_row_after_sleep_df))
+                                row['after_sleep_heart_rate_std'] = np.std(np.array(fitbit_row_after_sleep_df))
+                                row['after_sleep_heart_rate_percentile_10'] = np.percentile(np.array(fitbit_row_after_sleep_df), 10)
+                                row['after_sleep_heart_rate_percentile_90'] = np.percentile(np.array(fitbit_row_after_sleep_df), 90)
+                                row['after_sleep_heart_rate_kurtosis'] = kurtosis(np.array(fitbit_row_after_sleep_df))[0]
+                                row['after_sleep_heart_rate_moment'] = moment(np.array(fitbit_row_after_sleep_df), moment=1)[0]
     
-                                if (pd.to_datetime(end_recording_time_after_sleep) - minute_end).total_seconds() > 0:
-                                    heart_rate_minute_data = fitbit_row_after_sleep_df[minute_start:minute_end]
+                                # We want to get minute level HR as well
+                                # heart_rate_frame_df = pd.DataFrame(columns=heart_rate_df_col)
+                                start_time = pd.to_datetime(end_recording_time).replace(second=0)
     
-                                if len(heart_rate_minute_data) > 0:
-                                    heart_rate_minute_data = heart_rate_minute_data.loc[(heart_rate_minute_data['HeartRate'] <= 180) & (heart_rate_minute_data['HeartRate'] >= 30)]
+                                for i in range(after_sleep_duration_max_in_minute):
+                                    minute_start = pd.to_datetime(start_time) + timedelta(minutes=i)
+                                    minute_end = pd.to_datetime(start_time) + timedelta(minutes=i+1)
+                                    heart_rate_minute_data = pd.DataFrame()
+        
+                                    if (pd.to_datetime(end_recording_time_after_sleep) - minute_end).total_seconds() > 0:
+                                        heart_rate_minute_data = fitbit_row_after_sleep_df[minute_start:minute_end]
+        
+                                    if len(heart_rate_minute_data) > 0:
+                                        heart_rate_minute_data = heart_rate_minute_data.loc[(heart_rate_minute_data['HeartRate'] <= 180) & (heart_rate_minute_data['HeartRate'] >= 30)]
+        
+                                    row['after_minute_' + str(i)] = np.mean(heart_rate_minute_data[minute_start:minute_end].values) if len(heart_rate_minute_data) > 0 else np.nan
     
-                                row['after_minute_' + str(i)] = np.mean(heart_rate_minute_data[minute_start:minute_end].values) if len(heart_rate_minute_data) > 0 else np.nan
-
-                        timeline_df = timeline_df.append(row)
-                else:
-                    timeline_df = timeline
-                
-                if len(timeline_df) > 0:
-                    number_of_transition = len(timeline_df.loc[timeline_df['sleep_transition'] > 0])
-                    if number_of_transition > 0:
-                        timeline_df['sleep_transition_number'] = number_of_transition
-                        
-                        night_shift_distribution = [len(timeline_df.loc[timeline_df['sleep_transition'] == 2]),
-                                                    len(timeline_df.loc[timeline_df['sleep_transition'] == 3]),
-                                                    len(timeline_df.loc[timeline_df['sleep_transition'] == 4]),
-                                                    len(timeline_df.loc[timeline_df['sleep_transition'] == 5])]
-                        
-                        timeline_df['nap_proxy'] = night_shift_distribution[0]
-                        timeline_df['switcher_sleep'] = night_shift_distribution[1]
-                        timeline_df['night_stay'] = night_shift_distribution[2]
-                        timeline_df['incomplete_shifter'] = night_shift_distribution[3]
-                        timeline_df['night_shift_type'] = np.argmax(night_shift_distribution) + 2
-                        
-                        timeline_df = timeline_df[output_colunms]
+                            timeline_df = timeline_df.append(row)
+                    else:
+                        timeline_df = timeline
                     
-                final_df = final_df.append(timeline_df)
-
-            final_df = final_df[output_colunms]
-            final_df.to_csv(os.path.join('output', 'sleep_survey_full.csv'), index=False)
+                    if len(timeline_df) > 0:
+                        number_of_transition = len(timeline_df.loc[timeline_df['sleep_transition'] > 0])
+                        if number_of_transition > 0:
+                            timeline_df['sleep_transition_number'] = number_of_transition
+                            
+                            night_shift_distribution = [len(timeline_df.loc[timeline_df['sleep_transition'] == 2]),
+                                                        len(timeline_df.loc[timeline_df['sleep_transition'] == 3]),
+                                                        len(timeline_df.loc[timeline_df['sleep_transition'] == 4]),
+                                                        len(timeline_df.loc[timeline_df['sleep_transition'] == 5])]
+                            
+                            timeline_df['nap_proxy'] = night_shift_distribution[0]
+                            timeline_df['switcher_sleep'] = night_shift_distribution[1]
+                            timeline_df['night_stay'] = night_shift_distribution[2]
+                            timeline_df['incomplete_shifter'] = night_shift_distribution[3]
+                            timeline_df['night_shift_type'] = np.argmax(night_shift_distribution) + 2
+                            
+                            timeline_df = timeline_df[output_colunms]
+                        
+                    final_df = final_df.append(timeline_df)
+    
+                final_df = final_df[output_colunms]
+                final_df.to_csv(os.path.join('../output', 'sleep_survey_full.csv'), index=False)
                 
         # final_df = final_df[output_colunms]
         # final_df.to_csv(os.path.join('output', 'sleep_survey_full.csv'), index=False)
@@ -425,10 +433,10 @@ if __name__ == "__main__":
     
     else:
         
-        main_data_directory = '../data/keck_wave1/2_preprocessed_data'
+        main_data_directory = '../../data/'
         recording_timeline_directory = '../output/recording_timeline'
         sleep_timeline_directory = '../output/sleep_timeline'
-        individual_timeline_directory = 'output/individual_timeline'
+        individual_timeline_directory = '../output/individual_timeline'
     
     print('main_data_directory: ' + main_data_directory)
     print('sleep_timeline_directory: ' + sleep_timeline_directory)
@@ -439,8 +447,10 @@ if __name__ == "__main__":
     data = get_sleep_survey_data(individual_timeline_directory)
 
     # Read some basic information
-    # Read ID
-    IDs = getParticipantID(main_data_directory)
+    # Read participant info
+    participant_info = getParticipantInfo(main_data_directory)
+    participant_info = participant_info.set_index('MitreID')
+    
     # Read MGT
     MGT = read_MGT(main_data_directory)
     # Read Pre-Study info

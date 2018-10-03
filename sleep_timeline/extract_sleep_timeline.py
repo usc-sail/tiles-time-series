@@ -4,11 +4,11 @@ import os
 import numpy as np
 import pandas as pd
 import argparse
-import datetime
 
 # add util into the file path, so we can import helper functions
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'util'))
 from files import *
+from load_data_basic import *
 
 # current path
 current_path = os.getcwd()
@@ -131,7 +131,8 @@ def extract_sleep_from_fitbit_sleep_summary(fitbit_data_folder_path, main_data_f
     
     # Construct id file path
     # id_data_df = pd.read_csv(os.path.join(ground_truth_folder_path, id_csv))
-    id_data_df = pd.read_csv(os.path.join(main_data_folder_path, 'keck_wave2/id-mapping', 'mitreids.csv'))
+    # id_data_df = pd.read_csv(os.path.join(main_data_folder_path, 'keck_wave2/id-mapping', 'mitreids.csv'))
+    id_data_df = getParticipantInfo(main_data_directory)
     
     # read daily summary
     summary_data_array = [[file_name.split('_dailySummary.csv')[0],
@@ -149,7 +150,7 @@ def extract_sleep_from_fitbit_sleep_summary(fitbit_data_folder_path, main_data_f
     if len(sleep_summary_file_array) > 20:
         for file_name in sleep_summary_file_array:
             participant_id = file_name.split('_Sleep_Summary')[0]
-            user_id = id_data_df.loc[id_data_df['participant_id'] == participant_id]['mitre_id'].values[0]
+            user_id = id_data_df.loc[id_data_df['ParticipantID'] == participant_id]['MitreID'].values[0]
             sleep_summary = pd.read_csv(os.path.join(output_data_folder_path, participant_id + '_Sleep_Summary.csv'))
         
             print('Read data for ' + user_id)
@@ -162,7 +163,7 @@ def extract_sleep_from_fitbit_sleep_summary(fitbit_data_folder_path, main_data_f
             sleep_summary_data_array.append(frame_data)
     else:
         for individual_summary_data in summary_data_array:
-            user_id = id_data_df.loc[id_data_df['participant_id'] == individual_summary_data[0]]['mitre_id'].values[0]
+            user_id = id_data_df.loc[id_data_df['ParticipantID'] == individual_summary_data[0]]['MitreID'].values[0]
             participant_id = individual_summary_data[0]
             sleep_data = []
     

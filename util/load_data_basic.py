@@ -61,7 +61,7 @@ def getParticipantEndTime():
 
 # Load mgt data
 def read_MGT(main_data_directory):
-    MGT = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'MGT.csv'), index_col=2)
+    MGT = pd.read_csv(os.path.join(main_data_directory, 'keck_wave2/ground_truth', 'MGT.csv'), index_col=2)
     MGT.index = pd.to_datetime(MGT.index)
     
     return MGT
@@ -69,7 +69,7 @@ def read_MGT(main_data_directory):
 
 # Load pre study data
 def read_pre_study_info(main_data_directory):
-    PreStudyInfo = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'Pre-Study.csv'), index_col=1)
+    PreStudyInfo = pd.read_csv(os.path.join(main_data_directory, 'keck_wave2/ground_truth', 'Pre-Study.csv'), index_col=1)
     PreStudyInfo.index = pd.to_datetime(PreStudyInfo.index)
     
     return PreStudyInfo
@@ -77,7 +77,7 @@ def read_pre_study_info(main_data_directory):
 
 # Load IGTB data
 def read_IGTB(main_data_directory):
-    IGTB = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'IGTB.csv'), index_col=1)
+    IGTB = pd.read_csv(os.path.join(main_data_directory, 'keck_wave2/ground_truth', 'IGTB.csv'), index_col=1)
     IGTB.index = pd.to_datetime(IGTB.index)
     
     return IGTB
@@ -85,7 +85,7 @@ def read_IGTB(main_data_directory):
 
 # Load IGTB data
 def read_Demographic(main_data_directory):
-    DemoGraphic = pd.read_csv(os.path.join(main_data_directory, 'demographic', 'Demographic.csv'))
+    DemoGraphic = pd.read_csv(os.path.join(main_data_directory, 'keck_wave2/demographic', 'Demographic.csv'))
     DemoGraphic.index = pd.to_datetime(DemoGraphic.index)
     
     return DemoGraphic
@@ -93,7 +93,7 @@ def read_Demographic(main_data_directory):
 
 # Load IGTB data
 def read_IGTB_Raw(main_data_directory):
-    IGTB = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'IGTB_R.csv'), index_col=False)
+    IGTB = pd.read_csv(os.path.join(main_data_directory, 'keck_wave2/ground_truth', 'IGTB_R.csv'), index_col=False)
     IGTB.index = pd.to_datetime(IGTB.index)
     
     return IGTB

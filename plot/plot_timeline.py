@@ -23,7 +23,7 @@ date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
 date_only_date_time_format = '%Y-%m-%d'
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'util'))
-from load_data_basic import getParticipantIDJobShift, getParticipantID
+from load_data_basic import getParticipantIDJobShift, getParticipantInfo
 from load_data_basic import getParticipantStartTime, getParticipantEndTime
 
 start_data_collection_date = datetime.datetime(year=2018, month=2, day=20)
@@ -148,29 +148,28 @@ def plot_timeline(ax, timeline, color, offset, expected_work=False, alpha=0.75, 
 def main(main_data_directory, recording_timeline_directory, individual_timeline_directory, plot_timeline_directory):
     
     # job_shift = getParticipantIDJobShift(main_data_directory)
-    IDs = getParticipantID(main_data_directory)
+    participant_info = getParticipantInfo(main_data_directory)
+    participant_info = participant_info.set_index('MitreID')
     
     colors = ['b', 'g', 'r', 'y', 'black', 'purple', 'lime']
     
     shift_type = ['day', 'night', 'unknown']
     
-    for user_id in IDs.index:
+    for user_id in participant_info.index:
     
-        participant_id = IDs.loc[user_id].values[0]
-        wave_number = IDs.loc[user_id].values[1]
-        shift = int(IDs.loc[user_id].values[2])
+        participant_id = participant_info.loc[user_id]['ParticipantID']
+        shift = 1 if participant_info.loc[user_id]['Shift'] == 'Day shift' else 2
+        wave_number = participant_info.loc[user_id]['Wave']
         
         if wave_number == 1:
             start_data_collection_date = datetime.datetime(year=2018, month=3, day=5)
-            end_data_collection_date = datetime.datetime(year=2018, month=5, day=15)
         elif wave_number == 2:
             start_data_collection_date = datetime.datetime(year=2018, month=4, day=5)
-            end_data_collection_date = datetime.datetime(year=2018, month=6, day=10)
         else:
             start_data_collection_date = datetime.datetime(year=2018, month=5, day=1)
-            end_data_collection_date = datetime.datetime(year=2018, month=6, day=10)
 
-        data_collection_days = (end_data_collection_date - start_data_collection_date).days
+        # 10 weeks data collection
+        data_collection_days = 70
 
         data_collection_date = []
         for i in range(data_collection_days):
@@ -178,7 +177,7 @@ def main(main_data_directory, recording_timeline_directory, individual_timeline_
     
         print('Start Processing (Individual timeline): ' + participant_id)
         
-        if os.path.exists(os.path.join(individual_timeline_directory, shift_type[shift-1], participant_id + '.csv')) is True:
+        if wave_number != 3 and os.path.exists(os.path.join(individual_timeline_directory, shift_type[shift-1], participant_id + '.csv')) is True:
             individual_timeline = getDataFrame(os.path.join(individual_timeline_directory, shift_type[shift-1], participant_id + '.csv'))
             
             sleep_timeline = individual_timeline.loc[individual_timeline['type'] == 'sleep']
@@ -282,7 +281,8 @@ if __name__ == "__main__":
     
     else:
         days_at_work_directory = '../output/days_at_work'
-        main_data_directory = '../../data/keck_wave1/2_preprocessed_data'
+        # main_data_directory = '../../data/keck_wave1/2_preprocessed_data'
+        main_data_directory = '../../data'
         recording_timeline_directory = '../output/recording_timeline'
         individual_timeline_directory = '../output/individual_timeline'
         plot_timeline_directory = '../plot'

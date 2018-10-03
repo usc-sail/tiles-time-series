@@ -248,6 +248,8 @@ def getSleepAdaptionTimeline(individual_timeline):
                         individual_timeline_df = individual_timeline_df.append(timeline)
                 else:
                     individual_timeline_df = individual_timeline_df.append(timeline)
+            else:
+                individual_timeline_df = individual_timeline_df.append(timeline)
                 
             last_sleep_df = timeline
             
@@ -340,6 +342,7 @@ def main(main_data_directory, recording_timeline_directory, sleep_timeline_direc
     # stream_types = ['sleep', 'omsignal', 'owl_in_one', 'tiles_app_surveys', 'fitbit', 'realizd']
     stream_types = ['sleep', 'omsignal', 'owl_in_one', 'ground_truth', 'fitbit', 'realizd']
     # stream_types = ['sleep', 'omsignal', 'owl_in_one', 'ground_truth', 'fitbit']
+    # stream_types = ['sleep', 'omsignal']
     
     # Get participant ID
     participant_info = getParticipantInfo(main_data_directory)
@@ -348,11 +351,14 @@ def main(main_data_directory, recording_timeline_directory, sleep_timeline_direc
     # Read timeline for each participant
     for user_id in participant_info.index:
         
-        # temp = participant_info.loc[user_id]
-    
         participant_id = participant_info.loc[user_id]['ParticipantID']
-        shift_type = 1 if participant_info.loc[user_id]['Shift'] == 'Day shift' else 2
         
+        if len(participant_info.loc[user_id]) > 0:
+            if participant_info.loc[user_id]['Shift'] == 'Day shift':
+                shift_type = 1
+            else:
+                shift_type = 2
+
         print('Start Processing (Individual timeline): ' + participant_id)
 
         individual_timeline = []
