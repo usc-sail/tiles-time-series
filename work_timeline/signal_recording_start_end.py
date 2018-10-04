@@ -92,27 +92,25 @@ def getWorkingOnlySensorRecordingTimeline(recording_timeline_directory, data_dir
                     # Initialize start and end date
                     start_date, end_date = index, index + timedelta(days=1)
                     date_at_work_data_df = data_df[start_date.strftime(date_time_format) : end_date.strftime(date_time_format)]
-                    datetime_at_work = pd.to_datetime(date_at_work_data_df.index)
-                    
-                    start_recording_time = datetime_at_work[0]
-                    last_recording_time = datetime_at_work[0]
-                    
-                    for time in datetime_at_work:
-                        current_recording_time = time
+                    if len(date_at_work_data_df) > 0:
+                        datetime_at_work = pd.to_datetime(date_at_work_data_df.index)
                         
-                        if (current_recording_time - last_recording_time).total_seconds() > 3600 * 2:
+                        start_recording_time = datetime_at_work[0]
+                        last_recording_time = datetime_at_work[0]
+                        
+                        for time in datetime_at_work:
+                            current_recording_time = time
                             
-                            # Construct frame and append
-                            recording_time_df = constructRecordingFrame(index, recording_time_df,
-                                                                        start_recording_time,
-                                                                        last_recording_time)
-                            start_recording_time = current_recording_time
-                        last_recording_time = current_recording_time
-    
-                    # Construct frame and append
-                    recording_time_df = constructRecordingFrame(index, recording_time_df,
-                                                                start_recording_time,
-                                                                last_recording_time)
+                            if (current_recording_time - last_recording_time).total_seconds() > 3600 * 4:
+                                
+                                # Construct frame and append
+                                recording_time_df = constructRecordingFrame(index, recording_time_df, start_recording_time, last_recording_time)
+                                start_recording_time = current_recording_time
+                            last_recording_time = current_recording_time
+        
+                        # Construct frame and append
+                        recording_time_df = constructRecordingFrame(index, recording_time_df, start_recording_time, last_recording_time)
+                        
             if len(recording_time_df) > 0:
                 last_row = []
                 save_df = pd.DataFrame()
@@ -154,7 +152,7 @@ def getWorkTimeline(recording_timeline_directory, data_directory, main_data_dire
     participantIDs = list(IDs['participant_id'])
     
     # We need to see when nurse is responding to the survey and based on that decide whether people worked that day
-    MGT = pd.read_csv(os.path.join(main_data_directory, 'ground_truth','MGT.csv'), index_col=2)
+    MGT = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'MGT', 'MGT.csv'), index_col=2)
     MGT.index = pd.to_datetime(MGT.index)
 
     for participant_id in participantIDs:
@@ -172,7 +170,7 @@ def getWorkTimeline(recording_timeline_directory, data_directory, main_data_dire
         # Wave1 survey
         for index, row in MGT_job_per_participant.iterrows():
             try:
-                if row['location_mgt'] == 2.0:  # At work when answering the survey according to MGT, question 1
+                if row['location_mgt'] == 2.0 or row['itp_mgt'] > -1:  # At work when answering the survey according to MGT, question 1
                     # Day shift nurse
                     if 17 < index.hour < 24:
                         start_work_date, end_work_date = getStartEndTime(index, shift='day')
@@ -298,7 +296,7 @@ if __name__ == "__main__":
             recording_timeline_directory = '../output/recording_timeline'
         """
     
-        main_data_directory = os.path.join(os.path.expanduser(os.path.normpath(args.main_data_directory)), 'keck_wave1/2_preprocessed_data')
+        main_data_directory = os.path.join(os.path.expanduser(os.path.normpath(args.main_data_directory)), 'keck_wave_all/2_preprocessed_data')
         days_at_work_directory = os.path.join(os.path.expanduser(os.path.normpath(args.output_directory)), 'days_at_work')
         recording_timeline_directory = os.path.join(os.path.expanduser(os.path.normpath(args.output_directory)), 'recording_timeline')
         
@@ -309,12 +307,13 @@ if __name__ == "__main__":
     else:
         days_at_work_directory = '../output/days_at_work'
         # main_data_directory = '../../data/keck_wave1/2_preprocessed_data'
-        main_data_directory = '../../data/keck_wave2'
+        main_data_directory = '../../data/keck_wave_all'
         recording_timeline_directory = '../output/recording_timeline'
 
     # stream_types = ['fitbit']
     # stream_types = ['realizd', 'tiles_app_surveys', 'omsignal', 'owl_in_one', 'ground_truth']
-    stream_types = ['fitbit']
+    # stream_types = ['owl_in_one', 'ground_truth']
+    stream_types = ['owl_in_one']
     
     # participant_id_job_shift_df = getParticipantIDJobShift(main_data_directory)
     participant_id_job_shift_df = pd.DataFrame()
@@ -326,7 +325,7 @@ if __name__ == "__main__":
         # Recording can happen anytime during data collection
         if stream == 'fitbit' or stream == 'realizd':
             if os.path.exists(os.path.join(recording_timeline_directory, stream)) is False: os.mkdir(os.path.join(recording_timeline_directory, stream))
-            getAllTimeSensorRecordingTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, '3_preprocessed_data', stream), participant_id_job_shift_df, stream)
+            getAllTimeSensorRecordingTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, '2_raw_csv_data', stream), participant_id_job_shift_df, stream)
         
         # Recording only happens during work
         else:
@@ -335,11 +334,11 @@ if __name__ == "__main__":
             
             if stream == 'omsignal' or stream == 'owl_in_one':
                 if os.path.exists(os.path.join(recording_timeline_directory, stream)) is False: os.mkdir(os.path.join(recording_timeline_directory, stream))
-                getWorkingOnlySensorRecordingTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, '3_preprocessed_data', stream), days_at_work_df, stream)
+                getWorkingOnlySensorRecordingTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, '2_raw_csv_data', stream), days_at_work_df, stream)
             
             elif stream == 'tiles_app_surveys':
                 if os.path.exists(os.path.join(recording_timeline_directory, stream)) is False: os.mkdir(os.path.join(recording_timeline_directory, stream))
-                getWorkTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, '3_preprocessed_data', stream), main_data_directory)
+                getWorkTimeline(os.path.join(recording_timeline_directory, stream), os.path.join(main_data_directory, '2_raw_csv_data', stream), main_data_directory)
 
             elif stream == 'ground_truth':
                 if os.path.exists(os.path.join(recording_timeline_directory, stream)) is False: os.mkdir(os.path.join(recording_timeline_directory, stream))

@@ -340,13 +340,15 @@ def combineDailySurvey(main_data_directory, participant_id, user_id, individual_
 def main(main_data_directory, recording_timeline_directory, sleep_timeline_directory, individual_timeline_directory):
     
     # stream_types = ['sleep', 'omsignal', 'owl_in_one', 'tiles_app_surveys', 'fitbit', 'realizd']
-    stream_types = ['sleep', 'omsignal', 'owl_in_one', 'ground_truth', 'fitbit', 'realizd']
+    # stream_types = ['sleep', 'omsignal', 'owl_in_one', 'ground_truth', 'fitbit', 'realizd']
+    stream_types = ['owl_in_one', 'ground_truth']
     # stream_types = ['sleep', 'omsignal', 'owl_in_one', 'ground_truth', 'fitbit']
     # stream_types = ['sleep', 'omsignal']
     
     # Get participant ID
     participant_info = getParticipantInfo(main_data_directory)
     participant_info = participant_info.set_index('MitreID')
+    participant_info = participant_info[~participant_info.index.duplicated(keep='first')]
     
     # Read timeline for each participant
     for user_id in participant_info.index:
@@ -354,6 +356,9 @@ def main(main_data_directory, recording_timeline_directory, sleep_timeline_direc
         participant_id = participant_info.loc[user_id]['ParticipantID']
         
         if len(participant_info.loc[user_id]) > 0:
+            # if participant_id == '7145fd25-94b9-49d3-b570-cf77f0221213':
+            #    print()
+            # temp = participant_info.loc[user_id]
             if participant_info.loc[user_id]['Shift'] == 'Day shift':
                 shift_type = 1
             else:
@@ -390,13 +395,11 @@ def main(main_data_directory, recording_timeline_directory, sleep_timeline_direc
             elif shift_type == 2:
                 if os.path.exists(os.path.join(individual_timeline_directory, 'night')) is False:
                     os.mkdir(os.path.join(individual_timeline_directory, 'night'))
-                individual_daily_survey.to_csv(os.path.join(individual_timeline_directory, 'night',
-                                                            participant_id + '.csv'), index=False)
+                individual_daily_survey.to_csv(os.path.join(individual_timeline_directory, 'night', participant_id + '.csv'), index=False)
             else:
                 if os.path.exists(os.path.join(individual_timeline_directory, 'unknown')) is False:
                     os.mkdir(os.path.join(individual_timeline_directory, 'unknown'))
-                individual_daily_survey.to_csv(os.path.join(individual_timeline_directory, 'unknown',
-                                                            participant_id + '.csv'), index=False)
+                individual_daily_survey.to_csv(os.path.join(individual_timeline_directory, 'unknown', participant_id + '.csv'), index=False)
             
             
 if __name__ == "__main__":
@@ -404,21 +407,19 @@ if __name__ == "__main__":
     DEBUG = 1
     
     if DEBUG == 0:
+        
         """
             Parse the args:
             1. main_data_directory: directory to store keck data
             2. sleep_timeline_directory: directory to store sleep timeline
             3. recording_timeline_directory: directory to store timeline of recording
         """
+        
         parser = argparse.ArgumentParser(description='Create a dataframe of worked days.')
-        parser.add_argument('-i', '--main_data_directory', type=str, required=True,
-                            help='Directory for data.')
-        parser.add_argument('-s', '--sleep_timeline_directory', type=str, required=True,
-                            help='Directory with days at work.')
-        parser.add_argument('-r', '--recording_timeline_directory', type=str, required=True,
-                            help='Directory with recording timeline.')
-        parser.add_argument('-t', '--individual_timeline_directory', type=str, required=True,
-                            help='Directory with recording timeline.')
+        parser.add_argument('-i', '--main_data_directory', type=str, required=True, help='Directory for data.')
+        parser.add_argument('-s', '--sleep_timeline_directory', type=str, required=True, help='Directory with days at work.')
+        parser.add_argument('-r', '--recording_timeline_directory', type=str, required=True, help='Directory with recording timeline.')
+        parser.add_argument('-t', '--individual_timeline_directory', type=str, required=True, help='Directory with recording timeline.')
         
         args = parser.parse_args()
     

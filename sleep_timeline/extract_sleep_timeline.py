@@ -211,12 +211,9 @@ if __name__ == '__main__':
         # Define the parser
         parser = argparse.ArgumentParser(description='Parse sleep timeline.')
         
-        parser.add_argument('-t', '--save_type', type=str, required=False,
-                            help='Save data type.')
-        parser.add_argument('-i', '--main_data_directory', type=str, required=False,
-                            help='Directory with source data.')
-        parser.add_argument('-o', '--sleep_directory', type=str, required=False,
-                            help='File with processed data.')
+        parser.add_argument('-t', '--save_type', type=str, required=False, help='Save data type.')
+        parser.add_argument('-i', '--main_data_directory', type=str, required=False, help='Directory with source data.')
+        parser.add_argument('-o', '--sleep_directory', type=str, required=False, help='File with processed data.')
         
         args = parser.parse_args()
         
@@ -230,19 +227,18 @@ if __name__ == '__main__':
         save_type = 'sleep_summary'
         sleep_directory = '../output'
         
-
     # fitbit_data_folder path
-    fitbit_data_folder_path = get_fitbit_data_folder(main_data_directory)
+    fitbit_data_folder_path = os.path.join(main_data_directory, 'keck_wave_all/2_raw_csv_data/fitbit')
 
     # ground_truth path
     # ground_truth_folder_path = get_ground_truth_folder(main_data_directory)
 
     # om signal start and end recording time
-    om_signal_start_end_recording_path = get_om_signal_start_end_recording_folder(sleep_directory)
+    # om_signal_start_end_recording_path = get_om_signal_start_end_recording_folder(sleep_directory)
 
     # sleep timeline
-    sleep_timeline_data_folder_path = get_sleep_timeline_data_folder(sleep_directory)
-
+    sleep_timeline_data_folder_path = os.path.join(sleep_directory, 'sleep_timeline')
+    
     # Create folder if not exist
     if os.path.exists(sleep_timeline_data_folder_path) is False: os.mkdir(sleep_timeline_data_folder_path)
 

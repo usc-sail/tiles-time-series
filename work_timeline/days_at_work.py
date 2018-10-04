@@ -126,8 +126,8 @@ def main(main_data_directory, data_directory, output_directory):
     participantIDs = list(IDs['participant_id'])
 
     # Define start and end date
-    start_date = datetime(year=2018, month=2, day=20)
-    end_date = datetime(year=2018, month=6, day=5)
+    start_date = datetime(year=2018, month=2, day=15)
+    end_date = datetime(year=2018, month=7, day=10)
 
     # Create a time range for the data to be used. We read through all the
     # files and obtain the earliest and latest dates. This is the time range
@@ -171,7 +171,7 @@ def main(main_data_directory, data_directory, output_directory):
         elif stream == 'ground_truth':
            
             # MGT 1 data processing
-            MGT = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'MGT.csv'), index_col=2)
+            MGT = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'MGT', 'MGT.csv'), index_col=2)
             MGT.index = pd.to_datetime(MGT.index)
             
             for index, row in MGT.iterrows():
@@ -210,17 +210,15 @@ if __name__ == "__main__":
             2. days_at_work_directory: directory to store days at work data using different modalities
         """
         parser = argparse.ArgumentParser(description='Create a dataframe of worked days.')
-        parser.add_argument('-i', '--main_data_directory', type=str, required=True,
-                            help='Directory for data.')
-        parser.add_argument('-o', '--output_directory', type=str, required=True,
-                            help='Directory with processed data.')
+        parser.add_argument('-i', '--main_data_directory', type=str, required=True, help='Directory for data.')
+        parser.add_argument('-o', '--output_directory', type=str, required=True, help='Directory with processed data.')
         args = parser.parse_args()
 
         main_data_directory = os.path.join(os.path.expanduser(os.path.normpath(args.main_data_directory)), 'keck_wave2/3_preprocessed_data')
         days_at_work_directory = os.path.join(os.path.expanduser(os.path.normpath(args.output_directory)), 'days_at_work')
 
     else:
-        main_data_directory = '../../data/keck_wave2/'
+        main_data_directory = '../../data/keck_wave_all/'
         days_at_work_directory = '../output/days_at_work'
         
     # if path not exist, create the path
@@ -229,12 +227,12 @@ if __name__ == "__main__":
     # Not using phone_events, since I don't have hospital.csv
     # stream_types = ['omsignal', 'owl_in_one', 'phone_events', 'ground_truth']
     # stream_types = ['omsignal', 'owl_in_one', 'tiles_app_surveys']
-    stream_types = ['owl_in_one']
+    stream_types = ['ground_truth']
     
     for stream in stream_types:
         if 'ground_truth' in stream:
             data_directory = os.path.join(main_data_directory, stream)
         else:
-            data_directory = os.path.join(main_data_directory, '3_preprocessed_data', stream)
+            data_directory = os.path.join(main_data_directory, '2_raw_csv_data', stream)
             
         main(main_data_directory, data_directory, days_at_work_directory)

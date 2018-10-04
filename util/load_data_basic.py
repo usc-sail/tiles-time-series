@@ -34,8 +34,8 @@ def getParticipantInfo(main_data_directory, index=1):
     # IDs = pd.read_csv(os.path.join(main_data_directory, 'keck_wave2/id-mapping', 'mitreids.csv'), index_col=index)
     # participant_info = pd.read_csv(os.path.join(main_data_directory, 'keck_wave2/participant_info', 'participant_info.csv'), index_col=index)
 
-    IDs = pd.read_csv(os.path.join(main_data_directory, 'keck_wave2/id-mapping', 'mitreids.csv'))
-    participant_info = pd.read_csv(os.path.join(main_data_directory, 'keck_wave2/participant_info', 'participant_info.csv'))
+    IDs = pd.read_csv(os.path.join(main_data_directory, 'keck_wave_all', 'id-mapping', 'mitreids.csv'))
+    participant_info = pd.read_csv(os.path.join(main_data_directory, 'keck_wave_all/participant_info', 'participant_info.csv'))
     participant_info = participant_info.fillna("")
     
     for index, row in participant_info.iterrows():
