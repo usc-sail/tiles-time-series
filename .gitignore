@@ -1,15 +1,6 @@
-# Don't upload output
-/output
-# Don't commit mac auto created thing
-.idea/
-.DS_Store
-# Dummy files
 *.pyc
-.ipynb_checkpoints
-
-# Ignore pipeline
-py-spark-pipeline/
-
-# ignore plot
-plot/
-
+DS_S
+archive/
+*.gitkeep
+clustering/SOM-VAE/data
+*.gz
