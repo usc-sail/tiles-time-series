@@ -4,3 +4,4 @@ archive/
 *.gitkeep
 clustering/SOM-VAE/data
 *.gz
+data/

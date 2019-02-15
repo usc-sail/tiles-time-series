@@ -3,6 +3,18 @@ Top level classes for the preprocess model.
 """
 from __future__ import print_function
 
+import os
+import sys
+
+###########################################################
+# Change to your own pyspark path
+###########################################################
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'preprocess')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'segmentation')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'util')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'plot')))
+
+
 from om_signal.helper import *
 from fitbit.helper import *
 from realizd.helper import *

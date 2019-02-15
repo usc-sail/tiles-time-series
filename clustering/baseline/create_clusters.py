@@ -1,10 +1,20 @@
-import config
 import os
+import pandas as pd
+import sys
+
+###########################################################
+# Add package path
+###########################################################
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'config')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'segmentation')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'util')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'plot')))
+
+import config
 import segmentation
 import load_sensor_data
 import load_data_basic
-import plot
-import pandas as pd
+
 
 # date_time format
 date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
@@ -46,24 +56,17 @@ def main(main_folder):
     ###########################################################
     # 1. Create Config
     ###########################################################
-    fitbit_config = config.Config(data_type='preprocess_data', sensor='fitbit',
-                                  read_folder=os.path.abspath(os.path.join(os.pardir, '../..')),
-                                  return_full_feature=False, process_hyper=preprocess_hype,
-                                  signal_hyper=default_signal)
+    fitbit_config = config.Config(data_type='preprocess_data', sensor='fitbit', read_folder=os.path.abspath(os.path.join(os.pardir, '../data')),
+                                  return_full_feature=False, process_hyper=preprocess_hype, signal_hyper=default_signal)
     
-    owl_in_one_config = config.Config(data_type='preprocess_data', sensor='owl_in_one',
-                                      read_folder=os.path.abspath(os.path.join(os.pardir, '../..')),
-                                      return_full_feature=False, process_hyper=owl_in_one_hype,
-                                      signal_hyper=default_signal)
+    owl_in_one_config = config.Config(data_type='preprocess_data', sensor='owl_in_one', read_folder=os.path.abspath(os.path.join(os.pardir, '../data')),
+                                      return_full_feature=False, process_hyper=owl_in_one_hype, signal_hyper=default_signal)
     
-    ggs_config = config.Config(data_type='segmentation_by_sleep', sensor='fitbit',
-                               read_folder=os.path.abspath(os.path.join(os.pardir, '../..')),
-                               return_full_feature=False, process_hyper=segmentation_hype,
-                               signal_hyper=default_signal)
+    ggs_config = config.Config(data_type='segmentation', sensor='fitbit', read_folder=os.path.abspath(os.path.join(os.pardir, '../data')),
+                               return_full_feature=False, process_hyper=segmentation_hype, signal_hyper=default_signal)
 
-    fitbit_summary_config = config.Config(data_type='3_preprocessed_data', sensor='fitbit',
-                                          read_folder=main_folder, return_full_feature=False,
-                                          process_hyper=preprocess_hype, signal_hyper=default_signal)
+    fitbit_summary_config = config.Config(data_type='3_preprocessed_data', sensor='fitbit', read_folder=main_folder,
+                                          return_full_feature=False, process_hyper=preprocess_hype, signal_hyper=default_signal)
     
     ###########################################################
     # 2. Get participant id list
@@ -92,9 +95,6 @@ def main(main_folder):
         save_folder = os.path.join(ggs_segmentation.save_config.process_folder)
         if os.path.exists(os.path.join(save_folder, participant_id + '.csv.gz')) is False:
             continue
-        
-        # if os.path.exists(os.path.join(save_folder, participant_id + '_fitbit.csv.gz')) is True:
-        #    continue
 
         ###########################################################
         # 4.2 Read owl_data
@@ -124,6 +124,6 @@ def main(main_folder):
 
 if __name__ == '__main__':
     # Main Data folder
-    main_folder = '../../../../data/keck_wave_all/'
+    main_folder = '../../../../../data/keck_wave_all/'
     
     main(main_folder)
