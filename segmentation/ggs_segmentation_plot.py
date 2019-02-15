@@ -1,5 +1,18 @@
-import config
+#!/usr/bin/env python3
+
 import os
+import sys
+
+###########################################################
+# Add package path
+###########################################################
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'segmentation')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'util')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'plot')))
+
+
+import config
 import segmentation
 import load_sensor_data
 import load_data_basic

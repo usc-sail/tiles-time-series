@@ -1,10 +1,18 @@
-import os, sys
+#!/usr/bin/env python3
+
+import os
+import sys
+import pandas as pd
+
+###########################################################
+# Add package path
+###########################################################
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'util')))
 
 # date_time format
 date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
 date_only_date_time_format = '%Y-%m-%d'
 
-sys.path.append(os.path.join(os.path.curdir, '../', 'utils'))
 from load_data_basic import *
 from preprocess import Preprocess
 
