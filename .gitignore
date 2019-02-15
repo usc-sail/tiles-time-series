@@ -5,3 +5,4 @@ archive/
 clustering/SOM-VAE/data
 *.gz
 data/
+**.swp
