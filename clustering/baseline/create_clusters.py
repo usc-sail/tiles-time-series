@@ -1,6 +1,9 @@
+#!/usr/bin/env python3
+
 import os
-import pandas as pd
 import sys
+import argparse
+import pandas as pd
 
 ###########################################################
 # Add package path
@@ -82,7 +85,7 @@ def main(main_folder):
     igtb_df = igtb_df.drop_duplicates(keep='first')
     mgt_df = load_data_basic.read_MGT(main_folder)
     
-    for idx, participant_id in enumerate(top_participant_id_list[80:]):
+    for idx, participant_id in enumerate(top_participant_id_list):
         print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(participant_id_list)))
         ###########################################################
         # 3. Create segmentation class
@@ -97,33 +100,47 @@ def main(main_folder):
             continue
 
         ###########################################################
-        # 4.2 Read owl_data
+        # 4.1 Read basic data for each participant
         ###########################################################
         uid = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].index)[0]
         primary_unit = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit[0]
-        current_position = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].currentposition[0]
+        current_job_position = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].currentposition[0]
         
         participant_mgt = mgt_df.loc[mgt_df['uid'] == uid]
         
+        ###########################################################
+        # 4.2 Read owl_in_one data
+        ###########################################################
         owl_in_one_df = load_sensor_data.read_processed_owl_in_one(owl_in_one_config, participant_id)
 
         ###########################################################
-        # 4.2 Read fitbit summary data
+        # 4.3 Read fitbit summary data
         ###########################################################
         fitbit_data_dict = load_sensor_data.read_fitbit(fitbit_summary_config, participant_id)
         fitbit_summary_df = fitbit_data_dict['summary']
 
         ###########################################################
-        # 4.3 Read fitbit data
+        # 4.4 Read fitbit data
         ###########################################################
         fitbit_df = load_sensor_data.read_processed_fitbit_with_pad(fitbit_config, participant_id)
         
+        ###########################################################
+        # 4.5 Read segment data
+        ###########################################################
+        ggs_folder = os.path.join(ggs_segmentation.save_config.process_folder)
+        if os.path.exists(os.path.join(ggs_folder, participant_id + '.csv.gz')) is False:
+            continue
+        
+        ggs_df = pd.read_csv(os.path.join(ggs_folder, participant_id + '.csv.gz'), index_col=0)
+
         
         del ggs_segmentation
 
 
 if __name__ == '__main__':
-    # Main Data folder
-    main_folder = '../../../../../data/keck_wave_all/'
-    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("tiles_data_path", help="Path to the root folder containing TILES data")
+    args = parser.parse_args()
+
+    main_folder = args.tiles_data_path
     main(main_folder)
