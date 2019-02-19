@@ -159,10 +159,11 @@ def ComputeClusters(tiles_data_path, cluster_config_path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--tiles_path", required=True, help="Path to the root folder containing TILES data")
-    parser.add_argument("--config", required=True, help="Path to a config file specifying how to perform the clustering")
+    parser.add_argument("--tiles_path", required=False, help="Path to the root folder containing TILES data")
+    parser.add_argument("--config", required=False, help="Path to a config file specifying how to perform the clustering")
     args = parser.parse_args()
+    
+    tiles_data_path = '../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
+    config_path = 'configs/baseline.cfg' if args.config is None else args.config
 
-    tiles_data_path = args.tiles_path
-    config_path = args.config
     ComputeClusters(tiles_data_path, config_path)

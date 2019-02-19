@@ -207,12 +207,12 @@ class Plot(object):
             plt.savefig(os.path.join(save_folder, participant_id, day_str + '.png'), dpi=300)
             plt.close()
 
-    def plot_clusetr(self, participant_id, fitbit_df=None, realizd_df=None, owl_in_one_df=None,
+    def plot_clusetr(self, participant_id, save_path, fitbit_df=None, realizd_df=None, owl_in_one_df=None,
                      fitbit_summary_df=None, mgt_df=None, omsignal_data_df=None, cluster_df=None):
         ###########################################################
         # If folder not exist
         ###########################################################
-        save_folder = os.path.join(self.ggs_config.process_folder)
+        save_folder = os.path.join(save_path, participant_id)
         if not os.path.exists(save_folder):
             os.mkdir(save_folder)
     
@@ -222,9 +222,9 @@ class Plot(object):
         fitbit_df = fitbit_df.sort_index()
         realizd_data_df = None if realizd_df is None else realizd_df
     
-        if os.path.exists(os.path.join(save_folder, participant_id + '.csv.gz')) is False:
+        if os.path.exists(os.path.join(self.ggs_config.process_folder, participant_id + '.csv.gz')) is False:
             return
-        bps_df = pd.read_csv(os.path.join(save_folder, participant_id + '.csv.gz'), index_col=0)
+        bps_df = pd.read_csv(os.path.join(self.ggs_config.process_folder, participant_id + '.csv.gz'), index_col=0)
     
         interval = int((pd.to_datetime(fitbit_df.index[1]) - pd.to_datetime(fitbit_df.index[0])).total_seconds() / 60)
     
@@ -334,7 +334,7 @@ class Plot(object):
             ax[2].set_xlim([day_time_array[0], day_time_array[-1]])
             ax[2].set_ylim([-10, 100])
             ax[2].set_xlabel(self.primary_unit)
-        
+
             ax[0].legend()
             ax[1].legend()
             # ax[2].legend()
@@ -386,10 +386,10 @@ class Plot(object):
                 if len(day_cluster_df) > 0:
                     for index, row_cluster in day_cluster_df.iterrows():
                         for i in range(3):
-                            self.plot_cluster_span(ax[i], row_cluster.start, row_cluster.end,
-                                                   row_cluster.cluster_id, day_str, day_after_str)
-                            
-            plt.savefig(os.path.join(save_folder, participant_id, day_str + '.png'), dpi=300)
+                            ymin, ymax = ax[i].get_ylim()
+                            self.plot_cluster_span(ax[i], row_cluster.start, row_cluster.end, row_cluster.cluster_id, day_str, day_after_str)
+                            ax[i].set_ylim([ymin, ymax])
+            plt.savefig(os.path.join(save_folder, day_str + '.png'), dpi=300)
             plt.close()
             
     def plot_owl_in_one_span(self, ax, room_type, begin_str, end_str, day_str, day_after_str):
@@ -431,20 +431,19 @@ class Plot(object):
     def plot_cluster_span(self, ax, cluster_begin_str, cluster_end_str, cluster_id, day_str, day_after_str):
         condition1 = pd.to_datetime(day_str) < pd.to_datetime(cluster_begin_str) < pd.to_datetime(day_after_str)
         condition2 = pd.to_datetime(day_str) < pd.to_datetime(cluster_end_str) < pd.to_datetime(day_after_str)
-
         ymin, ymax = ax.get_ylim()
-
+        
         if condition1 is True and condition2 is True:
-            ax.axhline(y=ymax, color=cluster_color_list[cluster_id],
-                       xmin=pd.to_datetime(cluster_begin_str), xmax=pd.to_datetime(cluster_begin_str))
+            ax.hlines(y=ymax, color=cluster_color_list[cluster_id], linewidth=20,
+                      xmin=pd.to_datetime(cluster_begin_str), xmax=pd.to_datetime(cluster_end_str))
 
         elif condition1 is True:
-            ax.axhline(y=ymax, color=cluster_color_list[cluster_id],
-                       xmin=pd.to_datetime(cluster_begin_str), xmax=pd.to_datetime(day_after_str))
+            ax.hlines(y=ymax, color=cluster_color_list[cluster_id], linewidth=20,
+                      xmin=pd.to_datetime(cluster_begin_str), xmax=pd.to_datetime(day_after_str))
             
         elif condition2 is True:
-            ax.axhline(y=ymax, color=cluster_color_list[cluster_id],
-                       xmin=pd.to_datetime(day_str), xmax=pd.to_datetime(cluster_end_str))
+            ax.hlines(y=ymax, color=cluster_color_list[cluster_id], linewidth=20,
+                      xmin=pd.to_datetime(day_str), xmax=pd.to_datetime(cluster_end_str))
             
     def plot_sleep_span(self, ax, sleep_begin_str, sleep_end_str, day_str, day_after_str):
     

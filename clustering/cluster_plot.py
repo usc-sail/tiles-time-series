@@ -2,6 +2,8 @@
 
 import os
 import sys
+from configparser import ConfigParser
+import argparse
 
 ###########################################################
 # Add package path
@@ -52,11 +54,11 @@ def return_participant(main_folder):
     return list(fitbit_file_dict_list.keys())
 
 
-def main(main_folder):
+def main(tiles_data_path, cluster_config_path):
     ###########################################################
     # 1. Create Config
     ###########################################################
-    process_data_folder = os.path.abspath(os.path.join(os.pardir, os.pardir, 'data'))
+    process_data_folder = os.path.abspath(os.path.join(os.pardir, 'data'))
     fitbit_config = config.Config(data_type='preprocess_data', sensor='fitbit', read_folder=process_data_folder,
                                   return_full_feature=False, process_hyper=preprocess_hype, signal_hyper=default_signal)
 
@@ -72,22 +74,22 @@ def main(main_folder):
     ggs_config = config.Config(data_type='segmentation', sensor='fitbit', read_folder=process_data_folder,
                                return_full_feature=False, process_hyper=segmentation_hype, signal_hyper=default_signal)
     
-    fitbit_summary_config = config.Config(data_type='3_preprocessed_data', sensor='fitbit', read_folder=main_folder,
+    fitbit_summary_config = config.Config(data_type='3_preprocessed_data', sensor='fitbit', read_folder=tiles_data_path,
                                           return_full_feature=False, process_hyper=preprocess_hype, signal_hyper=default_signal)
     
     ###########################################################
     # 2. Get participant id list
     ###########################################################
-    participant_id_list = return_participant(main_folder)
+    participant_id_list = return_participant(tiles_data_path)
     participant_id_list.sort()
     
     top_participant_id_df = pd.read_csv(os.path.join(ggs_config.process_folder, 'participant_id.csv.gz'), index_col=0, compression='gzip')
     top_participant_id_list = list(top_participant_id_df.index)
     top_participant_id_list.sort()
 
-    igtb_df = load_data_basic.read_AllBasic(main_folder)
+    igtb_df = load_data_basic.read_AllBasic(tiles_data_path)
     igtb_df = igtb_df.drop_duplicates(keep='first')
-    mgt_df = load_data_basic.read_MGT(main_folder)
+    mgt_df = load_data_basic.read_MGT(tiles_data_path)
     
     for idx, participant_id in enumerate(top_participant_id_list):
         
@@ -117,21 +119,40 @@ def main(main_folder):
         omsignal_data_df = load_sensor_data.read_processed_omsignal(omsignal_config, participant_id)
 
         owl_in_one_df = load_sensor_data.read_processed_owl_in_one(owl_in_one_config, participant_id)
+
+        # Get cluster configuration from the config file
+        config_parser = ConfigParser()
+        config_parser.read(cluster_config_path)
+        
+        save_path = os.path.abspath(os.path.join(os.pardir, 'data', 'clustering', os.path.basename(cluster_config_path).split('.')[0]))
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        file_name = participant_id + '.csv'
+        segment_cluster_df = pd.read_csv(os.path.join(save_path, file_name))
+        segment_cluster_df.loc[:, 'index'] = segment_cluster_df.loc[:, 'start']
+        segment_cluster_df = segment_cluster_df.set_index('index')
         
         ###########################################################
         # 5. Plot
         ###########################################################
         cluster_plot = plot.Plot(ggs_config=ggs_config, primary_unit=primary_unit)
 
-        cluster_plot.plot_clusetr(participant_id, fitbit_df=ggs_segmentation.fitbit_df, fitbit_summary_df=fitbit_summary_df,
-                                  mgt_df=participant_mgt, omsignal_data_df=omsignal_data_df,
-                                  realizd_df=ggs_segmentation.realizd_df, owl_in_one_df=owl_in_one_df, cluster_df=None)
+        cluster_plot.plot_clusetr(participant_id, save_path,
+                                  fitbit_df=ggs_segmentation.fitbit_df, fitbit_summary_df=fitbit_summary_df, mgt_df=participant_mgt,
+                                  omsignal_data_df=omsignal_data_df, realizd_df=ggs_segmentation.realizd_df, owl_in_one_df=owl_in_one_df, cluster_df=segment_cluster_df)
         
         del ggs_segmentation
 
 
 if __name__ == '__main__':
-    # Main Data folder
-    main_folder = '../../../data/keck_wave_all/'
     
-    main(main_folder)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--tiles_path", required=False, help="Path to the root folder containing TILES data")
+    parser.add_argument("--config", required=False,
+                        help="Path to a config file specifying how to perform the clustering")
+    args = parser.parse_args()
+    
+    tiles_data_path = '../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
+    config_path = 'configs/baseline.cfg' if args.config is None else args.config
+    
+    main(tiles_data_path, config_path)
