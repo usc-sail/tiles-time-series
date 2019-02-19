@@ -6,10 +6,10 @@ import sys
 ###########################################################
 # Add package path
 ###########################################################
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config')))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'segmentation')))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'util')))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'plot')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'config')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'segmentation')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'util')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'plot')))
 
 
 import config
@@ -64,34 +64,24 @@ def main(main_folder):
     ###########################################################
     # 1. Create Config
     ###########################################################
-    fitbit_config = config.Config(data_type='preprocess_data', sensor='fitbit',
-                                  read_folder=os.path.abspath(os.path.join(os.pardir, 'data')),
-                                  return_full_feature=False, process_hyper=preprocess_hype,
-                                  signal_hyper=default_signal)
+    process_data_folder = os.path.abspath(os.path.join(os.pardir, os.pardir, 'data'))
+    fitbit_config = config.Config(data_type='preprocess_data', sensor='fitbit', read_folder=process_data_folder,
+                                  return_full_feature=False, process_hyper=preprocess_hype, signal_hyper=default_signal)
 
-    omsignal_config = config.Config(data_type='preprocess_data', sensor='om_signal',
-                                    read_folder=os.path.abspath(os.path.join(os.pardir, 'data')),
-                                    return_full_feature=False, process_hyper=omsignal_hype,
-                                    signal_hyper=om_signal)
+    omsignal_config = config.Config(data_type='preprocess_data', sensor='om_signal', read_folder=process_data_folder,
+                                    return_full_feature=False, process_hyper=omsignal_hype, signal_hyper=om_signal)
     
-    realizd_config = config.Config(data_type='preprocess_data', sensor='realizd',
-                                   read_folder=os.path.abspath(os.path.join(os.pardir, 'data')),
-                                   return_full_feature=False, process_hyper=preprocess_hype,
-                                   signal_hyper=default_signal)
+    realizd_config = config.Config(data_type='preprocess_data', sensor='realizd', read_folder=process_data_folder,
+                                   return_full_feature=False, process_hyper=preprocess_hype, signal_hyper=default_signal)
 
-    owl_in_one_config = config.Config(data_type='preprocess_data', sensor='owl_in_one',
-                                      read_folder=os.path.abspath(os.path.join(os.pardir, 'data')),
-                                      return_full_feature=False, process_hyper=owl_in_one_hype,
-                                      signal_hyper=default_signal)
+    owl_in_one_config = config.Config(data_type='preprocess_data', sensor='owl_in_one', read_folder=process_data_folder,
+                                      return_full_feature=False, process_hyper=owl_in_one_hype, signal_hyper=default_signal)
     
-    ggs_config = config.Config(data_type='segmentation', sensor='fitbit',
-                               read_folder=os.path.abspath(os.path.join(os.pardir, 'data')),
-                               return_full_feature=False, process_hyper=segmentation_hype,
-                               signal_hyper=default_signal)
+    ggs_config = config.Config(data_type='segmentation', sensor='fitbit', read_folder=process_data_folder,
+                               return_full_feature=False, process_hyper=segmentation_hype, signal_hyper=default_signal)
     
-    fitbit_summary_config = config.Config(data_type='3_preprocessed_data', sensor='fitbit',
-                                          read_folder=main_folder, return_full_feature=False,
-                                          process_hyper=preprocess_hype, signal_hyper=default_signal)
+    fitbit_summary_config = config.Config(data_type='3_preprocessed_data', sensor='fitbit', read_folder=main_folder,
+                                          return_full_feature=False, process_hyper=preprocess_hype, signal_hyper=default_signal)
     
     ###########################################################
     # 2. Get participant id list
@@ -139,12 +129,11 @@ def main(main_folder):
         ###########################################################
         # 5. Plot
         ###########################################################
-        ggs_plot = plot.Plot(ggs_config=ggs_config, primary_unit=primary_unit)
+        cluster_plot = plot.Plot(ggs_config=ggs_config, primary_unit=primary_unit)
 
-        ggs_plot.plot_segmentation(participant_id, fitbit_df=ggs_segmentation.fitbit_df,
-                                   fitbit_summary_df=fitbit_summary_df, mgt_df=participant_mgt,
-                                   omsignal_data_df=omsignal_data_df, realizd_df=ggs_segmentation.realizd_df,
-                                   owl_in_one_df=owl_in_one_df)
+        cluster_plot.plot_clusetr(participant_id, fitbit_df=ggs_segmentation.fitbit_df, fitbit_summary_df=fitbit_summary_df,
+                                  mgt_df=participant_mgt, omsignal_data_df=omsignal_data_df,
+                                  realizd_df=ggs_segmentation.realizd_df, owl_in_one_df=owl_in_one_df, cluster_df=None)
         
         del ggs_segmentation
 

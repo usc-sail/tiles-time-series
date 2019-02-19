@@ -312,7 +312,7 @@ class Segmentation(object):
             final_df = self.processed_data_dict_array[participant_id]['raw'].sort_index()
             self.fitbit_df = final_df
      
-    def segment_data_by_sleep(self, fitbit_summary_df=None):
+    def segment_data_by_sleep(self, fitbit_summary_df=None, threshold=0):
     
         participant_id = self.participant_id
     
@@ -366,11 +366,22 @@ class Segmentation(object):
             ###########################################################
             # First seg
             ###########################################################
+            last_sleep_df = pd.DataFrame(index=[data_df.index[-1]])
+            last_sleep_df['start'] = data_df.index[-1]
+            last_sleep_df['end'] = data_df.index[-1]
+            sleep_df = sleep_df.append(last_sleep_df)
+            
             for index, row in sleep_df.iterrows():
                 start_str = last_sleep_end
                 end_str = row.start
-                last_sleep_end = row.end
                 
+                cond1 = index != data_df.index[-1]
+                cond2 = (pd.to_datetime(end_str) - pd.to_datetime(start_str)).total_seconds() < 60 * 60 * 10
+                if cond1 and cond2:
+                    continue
+
+                last_sleep_end = row.end
+
                 row_data_df = data_df[start_str:end_str]
                 row_data = np.array(row_data_df).astype(float)
 
@@ -395,7 +406,7 @@ class Segmentation(object):
                         if bps_index == 0 or bps_index == len(bps) - 1:
                             bps_final.append(bps[bps_index])
                         else:
-                            if bps[bps_index + 1] - bps[bps_index] > 5 and bps[bps_index] - bps[last_index] > 5:
+                            if bps[bps_index + 1] - bps[bps_index] > threshold and bps[bps_index] - bps[last_index] > threshold:
                                 bps_final.append(bps[bps_index])
                                 last_index = bps_index
 

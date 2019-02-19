@@ -1,5 +1,20 @@
-import config
+"""
+Top level classes for the preprocess model.
+"""
+from __future__ import print_function
+
 import os
+import sys
+
+###########################################################
+# Change to your own pyspark path
+###########################################################
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'preprocess')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'segmentation')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'util')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config')))
+
+import config
 import segmentation
 import load_sensor_data
 import numpy as np
@@ -10,7 +25,7 @@ date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
 date_only_date_time_format = '%Y-%m-%d'
 
 segmentation_hype = {'method': 'ma', 'offset': 60, 'overlap': 0,
-                     'segmentation': 'ggs', 'segmentation_lamb': 5e0, 'sub_segmentation_lamb': None,
+                     'segmentation': 'ggs', 'segmentation_lamb': 10e0, 'sub_segmentation_lamb': None,
                      'preprocess_cols': ['HeartRatePPG', 'StepCount'], 'imputation': 'iterative'}
 
 preprocess_hype = {'method': 'ma', 'offset': 60, 'overlap': 0,
@@ -65,10 +80,10 @@ def main(main_folder):
     # 1. Create Config
     ###########################################################
     fitbit_config = config.Config(data_type='preprocess_data', sensor='fitbit',
-                                  read_folder=os.path.abspath(os.path.join(os.pardir, '..')),
+                                  read_folder=os.path.abspath(os.path.join(os.pardir, 'data')),
                                   return_full_feature=False, process_hyper=preprocess_hype)
     
-    ggs_config = config.Config(data_type='segmentation_by_sleep', sensor='fitbit',
+    ggs_config = config.Config(data_type='segmentation_no_comb', sensor='fitbit',
                                read_folder=os.path.abspath(os.path.join(os.pardir, '..')),
                                return_full_feature=False, process_hyper=segmentation_hype)
     
@@ -86,7 +101,9 @@ def main(main_folder):
         top_participant_id_df = return_top_k_participant(participant_id_list, k=150, fitbit_config=fitbit_config, ggs_config=ggs_config)
 
     top_participant_id_list = list(top_participant_id_df.index)
-
+    top_participant_id_list.sort()
+    top_participant_id_list = top_participant_id_list[30:40]
+    
     for idx, participant_id in enumerate(top_participant_id_list):
         
         print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
@@ -107,7 +124,7 @@ def main(main_folder):
         fitbit_data_dict = load_sensor_data.read_fitbit(fitbit_summary_config, participant_id)
         fitbit_summary_df = fitbit_data_dict['summary']
         
-        success = ggs_segmentation.segment_data_by_sleep(fitbit_summary_df=fitbit_summary_df)
+        success = ggs_segmentation.segment_data_by_sleep(fitbit_summary_df=fitbit_summary_df, threshold=0)
         # ggs_segmentation.read_inactive_df(participant_id)
         # success = ggs_segmentation.segment_data_by_sleep(participant_id, fitbit_summary_df=fitbit_summary_df)
 
@@ -116,6 +133,6 @@ def main(main_folder):
 
 if __name__ == '__main__':
     # Main Data folder
-    main_folder = '../../../data/keck_wave_all/'
+    main_folder = '../../../../data/keck_wave_all/'
     
     main(main_folder)
