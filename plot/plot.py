@@ -386,8 +386,8 @@ class Plot(object):
                 if len(day_cluster_df) > 0:
                     for index, row_cluster in day_cluster_df.iterrows():
                         for i in range(3):
-                            self.plot_cluster_span(ax[i], row_cluster.start, row_cluster.end, row_cluster.cluster,
-                                                   day_str, day_after_str)
+                            self.plot_cluster_span(ax[i], row_cluster.start, row_cluster.end,
+                                                   row_cluster.cluster_id, day_str, day_after_str)
                             
             plt.savefig(os.path.join(save_folder, participant_id, day_str + '.png'), dpi=300)
             plt.close()

@@ -23,21 +23,13 @@ import pandas as pd
 date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
 date_only_date_time_format = '%Y-%m-%d'
 
-default_signal = {'MinPeakDistance': 100, 'MinPeakHeight': 0.04,
-                  'raw_cols': ['Cadence', 'HeartRate', 'Intensity', 'Steps', 'BreathingDepth', 'BreathingRate']}
-
+# Define data type
+default_signal = {'MinPeakDistance': 100, 'MinPeakHeight': 0.04, 'raw_cols': ['Cadence', 'HeartRate', 'Intensity', 'Steps', 'BreathingDepth', 'BreathingRate']}
 om_signal = {'MinPeakDistance': 100, 'MinPeakHeight': 0.04, 'raw_cols': ['HeartRatePPG', 'StepCount']}
 
-segmentation_hype = {'method': 'ma', 'offset': 60, 'overlap': 0,
-                     'segmentation': 'ggs', 'segmentation_lamb': 10e0, 'sub_segmentation_lamb': None,
-                     'preprocess_cols': ['HeartRatePPG', 'StepCount'], 'imputation': 'iterative'}
-
-preprocess_hype = {'method': 'ma', 'offset': 60, 'overlap': 0,
-                   'preprocess_cols': ['HeartRatePPG', 'StepCount'], 'imputation': 'iterative'}
-
-omsignal_hype = {'method': 'ma', 'offset': 60, 'overlap': 0, 'imputation': None,
-                'preprocess_cols': ['Cadence', 'HeartRate', 'Intensity', 'Steps', 'BreathingDepth', 'BreathingRate']}
-
+segmentation_hype = {'method': 'ma', 'offset': 60, 'overlap': 0, 'segmentation': 'ggs', 'segmentation_lamb': 10e0, 'sub_segmentation_lamb': None, 'preprocess_cols': ['HeartRatePPG', 'StepCount'], 'imputation': 'iterative'}
+preprocess_hype = {'method': 'ma', 'offset': 60, 'overlap': 0, 'preprocess_cols': ['HeartRatePPG', 'StepCount'], 'imputation': 'iterative'}
+omsignal_hype = {'method': 'ma', 'offset': 60, 'overlap': 0, 'imputation': None, 'preprocess_cols': ['Cadence', 'HeartRate', 'Intensity', 'Steps', 'BreathingDepth', 'BreathingRate']}
 owl_in_one_hype = {'method': 'ma', 'offset': 60, 'overlap': 0, 'imputation': None}
 
 

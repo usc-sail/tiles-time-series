@@ -102,7 +102,7 @@ def main(main_folder):
 
     top_participant_id_list = list(top_participant_id_df.index)
     top_participant_id_list.sort()
-    top_participant_id_list = top_participant_id_list[30:40]
+    top_participant_id_list = top_participant_id_list[120:]
     
     for idx, participant_id in enumerate(top_participant_id_list):
         
