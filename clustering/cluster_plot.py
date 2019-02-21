@@ -16,24 +16,13 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.
 
 import config
 import segmentation
-import load_sensor_data
-import load_data_basic
+import load_sensor_data, load_data_basic, load_data_folder
 import plot
 import pandas as pd
 
 # date_time format
 date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
 date_only_date_time_format = '%Y-%m-%d'
-
-# Define data type
-default_signal = {'MinPeakDistance': 100, 'MinPeakHeight': 0.04, 'raw_cols': ['Cadence', 'HeartRate', 'Intensity', 'Steps', 'BreathingDepth', 'BreathingRate']}
-om_signal = {'MinPeakDistance': 100, 'MinPeakHeight': 0.04, 'raw_cols': ['HeartRatePPG', 'StepCount']}
-
-segmentation_hype = {'method': 'ma', 'offset': 60, 'overlap': 0, 'segmentation': 'ggs', 'segmentation_lamb': 10e0, 'sub_segmentation_lamb': None, 'preprocess_cols': ['HeartRatePPG', 'StepCount'], 'imputation': 'iterative'}
-preprocess_hype = {'method': 'ma', 'offset': 60, 'overlap': 0, 'preprocess_cols': ['HeartRatePPG', 'StepCount'], 'imputation': 'iterative'}
-omsignal_hype = {'method': 'ma', 'offset': 60, 'overlap': 0, 'imputation': None, 'preprocess_cols': ['Cadence', 'HeartRate', 'Intensity', 'Steps', 'BreathingDepth', 'BreathingRate']}
-owl_in_one_hype = {'method': 'ma', 'offset': 60, 'overlap': 0, 'imputation': None}
-
 
 def return_participant(main_folder):
     ###########################################################
@@ -58,7 +47,15 @@ def main(tiles_data_path, cluster_config_path):
     ###########################################################
     # 1. Create Config
     ###########################################################
-    process_data_folder = os.path.abspath(os.path.join(os.pardir, 'data'))
+    process_data_path = os.path.abspath(os.path.join(os.pardir, 'data'))
+    
+    data_config = config.Config()
+    data_config.readConfigFile(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config')))
+    
+    # Load preprocess folder
+    load_data_folder.load_preprocess_folder(data_config, process_data_path, data_name='preprocess_data')
+    
+    
     fitbit_config = config.Config(data_type='preprocess_data', sensor='fitbit', read_folder=process_data_folder,
                                   return_full_feature=False, process_hyper=preprocess_hype, signal_hyper=default_signal)
 

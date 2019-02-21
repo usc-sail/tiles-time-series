@@ -47,6 +47,10 @@ class Config(object):
         self.config.set('fitbit', 'offset', str(fitbit_process_param['offset']))
         self.config.set('fitbit', 'feature', fitbit_process_param['feature'])
         self.config.set('fitbit', 'imputation', fitbit_process_param['imputation'])
+        self.config.set('fitbit', 'segmentation_method', fitbit_process_param['segmentation_method'])
+        self.config.set('fitbit', 'segmentation_lamb', str(fitbit_process_param['segmentation_lamb']))
+        self.config.set('fitbit', 'cluster_method', fitbit_process_param['cluster_method'])
+        self.config.set('fitbit', 'num_cluster', str(fitbit_process_param['num_cluster']))
 
         process_col_array = list(fitbit_process_param['preprocess_cols'])
         process_col_array.sort()
@@ -91,12 +95,12 @@ class Config(object):
         with open(configFilePath, 'w') as config_file:
             self.config.write(config_file)
         
-    def readConfigFile(self):
+    def readConfigFile(self, dataDir):
     
         ###########################################################
         # Config folder information
         ###########################################################
-        configFilePath = 'settings.ini'
+        configFilePath = os.path.join(dataDir, 'settings.ini')
     
         if os.path.exists(configFilePath) is False:
             print('Config file not exist! Please Check!')
@@ -124,7 +128,11 @@ class Config(object):
         self.fitbit_sensor_dict['feature'] = self.getSetting('fitbit', 'feature')
         self.fitbit_sensor_dict['imputation'] = self.getSetting('fitbit', 'imputation')
         self.fitbit_sensor_dict['preprocess_cols'] = self.getSetting('fitbit', 'preprocess_cols')
-    
+        self.fitbit_sensor_dict['segmentation_method'] = self.getSetting('fitbit', 'segmentation_method')
+        self.fitbit_sensor_dict['segmentation_lamb'] = float(self.getSetting('fitbit', 'segmentation_lamb'))
+        self.fitbit_sensor_dict['cluster_method'] = self.getSetting('fitbit', 'cluster_method')
+        self.fitbit_sensor_dict['num_cluster'] = int(self.getSetting('fitbit', 'num_cluster'))
+        
         ###########################################################
         # Read owl_in_one
         ###########################################################
@@ -136,21 +144,15 @@ class Config(object):
         ###########################################################
         # Read Fitbit
         ###########################################################
-        self.owl_in_one_sensor_dict = {}
-        self.owl_in_one_sensor_dict['name'] = 'realizd'
-        self.owl_in_one_sensor_dict['preprocess_setting'] = self.getSetting('realizd', 'preprocess_setting')
-        self.owl_in_one_sensor_dict['offset'] = int(self.getSetting('realizd', 'offset'))
+        self.realizd_sensor_dict = {}
+        self.realizd_sensor_dict['name'] = 'realizd'
+        self.realizd_sensor_dict['preprocess_setting'] = self.getSetting('realizd', 'preprocess_setting')
+        self.realizd_sensor_dict['offset'] = int(self.getSetting('realizd', 'offset'))
         
         ###########################################################
         # Read global parameters
         ###########################################################
         self.enable_plot = bool(self.getSetting('global', 'plot'))
-        
-        self.segmentation_method = self.getSetting('segmentation', 'method')
-        self.segmentation_lamb = float(self.getSetting('segmentation', 'lamb'))
-
-        self.cluster_method = self.getSetting('clustering', 'method')
-        self.num_cluster = int(self.getSetting('clustering', 'num_cluster'))
         
     def createFolder(self, folder):
         if os.path.exists(folder) is False: os.mkdir(folder)

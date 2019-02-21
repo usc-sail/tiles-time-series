@@ -1,7 +1,11 @@
 from config import Config
+import os
+
 
 fitbit_param = {'data_type': 'fitbit', 'imputation': 'iterative', 'feature': 'origin', 'offset': 60, 'overlap': 0,
-                'preprocess_cols': ['HeartRatePPG', 'StepCount']}
+                'preprocess_cols': ['HeartRatePPG', 'StepCount'],
+                'cluster_method': 'kmeans', 'num_cluster': 5,
+                'segmentation_method': 'gaussian', 'segmentation_lamb': 10e0}
 
 om_param = {'data_type': 'omsignal', 'imputation': None, 'feature': 'origin', 'offset': 60, 'overlap': 0,
             'preprocess_cols': ['BreathingDepth', 'BreathingRate', 'Cadence', 'HeartRate', 'Intensity', 'Steps']}
@@ -27,6 +31,6 @@ if __name__ == '__main__':
     config.createConfigFile()
 
     # Read config files
-    config.readConfigFile()
+    config.readConfigFile(os.curdir)
     
     
