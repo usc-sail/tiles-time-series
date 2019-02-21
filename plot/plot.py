@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -207,7 +209,7 @@ class Plot(object):
             plt.savefig(os.path.join(save_folder, participant_id, day_str + '.png'), dpi=300)
             plt.close()
 
-    def plot_clusetr(self, participant_id, save_path, fitbit_df=None, realizd_df=None, owl_in_one_df=None,
+    def plot_cluster(self, participant_id, save_path, fitbit_df=None, realizd_df=None, owl_in_one_df=None,
                      fitbit_summary_df=None, mgt_df=None, omsignal_data_df=None, cluster_df=None):
         ###########################################################
         # If folder not exist

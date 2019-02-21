@@ -21,6 +21,7 @@ import load_sensor_data
 import load_data_basic
 import summarize_sequence
 import clustering
+import plot
 
 
 # date_time format
@@ -153,13 +154,30 @@ def ComputeClusters(tiles_data_path, cluster_config_path):
         segment_cluster_df = pd.concat((segments, clusters), axis=1)
         segment_cluster_df = segment_cluster_df[['start', 'end', 'cluster_id']] # Reorder columns
         segment_cluster_df.to_csv(os.path.join(save_path, file_name), header=True, index=False)
+
+        ###########################################################
+        # 5. Plot
+        ###########################################################
+        try:
+            show_plots = config_parser['Global']['show_plots']
+        except:
+            show_plots = False
+
+        if show_plots:
+            plot_df = segment_cluster_df
+            plot_df.loc[:, 'index'] = plot_df.loc[:, 'start']
+            plot_df = plot_df.set_index('index')
+        
+            cluster_plot = plot.Plot(ggs_config=ggs_config, primary_unit=primary_unit)
+    
+            cluster_plot.plot_cluster(participant_id, save_path, fitbit_df=fitbit_df, fitbit_summary_df=fitbit_summary_df, mgt_df=participant_mgt, omsignal_data_df=None, realizd_df=None, owl_in_one_df=None, cluster_df=plot_df)
         
         del ggs_segmentation
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--tiles_path", required=False, help="Path to the root folder containing TILES data")
+    parser.add_argument("--tiles_path", required=True, help="Path to the root folder containing TILES data")
     parser.add_argument("--config", required=False, help="Path to a config file specifying how to perform the clustering")
     args = parser.parse_args()
     

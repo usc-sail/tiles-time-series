@@ -140,7 +140,7 @@ def main(tiles_data_path, cluster_config_path):
             ###########################################################
             cluster_plot = plot.Plot(ggs_config=ggs_config, primary_unit=primary_unit)
     
-            cluster_plot.plot_clusetr(participant_id, save_path,
+            cluster_plot.plot_cluster(participant_id, save_path,
                                       fitbit_df=ggs_segmentation.fitbit_df, fitbit_summary_df=fitbit_summary_df, mgt_df=participant_mgt,
                                       omsignal_data_df=omsignal_data_df, realizd_df=ggs_segmentation.realizd_df, owl_in_one_df=owl_in_one_df, cluster_df=segment_cluster_df)
         
