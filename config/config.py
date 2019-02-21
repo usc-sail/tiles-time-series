@@ -29,15 +29,15 @@ class Config(object):
         ###########################################################
         # Initiate OMSignal
         ###########################################################
-        self.config.add_section('omsignal')
-        self.config.set('omsignal', 'preprocess_setting', 'offset_' + str(om_process_param['offset']) + '_overlap_' + str(om_process_param['overlap']))
-        self.config.set('omsignal', 'offset', str(om_process_param['offset']))
-        self.config.set('omsignal', 'feature', om_process_param['feature'])
-        self.config.set('omsignal', 'imputation', str(om_process_param['imputation']))
+        self.config.add_section('om_signal')
+        self.config.set('om_signal', 'preprocess_setting', 'offset_' + str(om_process_param['offset']) + '_overlap_' + str(om_process_param['overlap']))
+        self.config.set('om_signal', 'offset', str(om_process_param['offset']))
+        self.config.set('om_signal', 'feature', om_process_param['feature'])
+        self.config.set('om_signal', 'imputation', str(om_process_param['imputation']))
 
         process_col_array = list(om_process_param['preprocess_cols'])
         process_col_array.sort()
-        self.config.set('omsignal', 'preprocess_cols', '-'.join(process_col_array))
+        self.config.set('om_signal', 'preprocess_cols', '-'.join(process_col_array))
 
         ###########################################################
         # Initiate Fitbit
@@ -60,6 +60,7 @@ class Config(object):
         # Initiate owl_in_one
         ###########################################################
         self.config.add_section('owl_in_one')
+        self.config.set('owl_in_one', 'feature', owl_in_one_param['feature'])
         self.config.set('owl_in_one', 'preprocess_setting', 'offset_' + str(owl_in_one_param['offset']))
         self.config.set('owl_in_one', 'offset', str(owl_in_one_param['offset']))
 
@@ -67,6 +68,7 @@ class Config(object):
         # Initiate realizd
         ###########################################################
         self.config.add_section('realizd')
+        self.config.set('realizd', 'feature', realizd_param['feature'])
         self.config.set('realizd', 'preprocess_setting', 'offset_' + str(realizd_param['offset']))
         self.config.set('realizd', 'offset', str(realizd_param['offset']))
         
@@ -111,12 +113,12 @@ class Config(object):
         # Read OMSignal
         ###########################################################
         self.omsignal_sensor_dict = {}
-        self.omsignal_sensor_dict['name'] = 'omsignal'
-        self.omsignal_sensor_dict['preprocess_setting'] = self.getSetting('omsignal', 'preprocess_setting')
-        self.omsignal_sensor_dict['offset'] = int(self.getSetting('omsignal', 'offset'))
-        self.omsignal_sensor_dict['feature'] = self.getSetting('omsignal', 'feature')
-        self.omsignal_sensor_dict['imputation'] = self.getSetting('omsignal', 'imputation')
-        self.omsignal_sensor_dict['preprocess_cols'] = self.getSetting('omsignal', 'preprocess_cols')
+        self.omsignal_sensor_dict['name'] = 'om_signal'
+        self.omsignal_sensor_dict['preprocess_setting'] = self.getSetting('om_signal', 'preprocess_setting')
+        self.omsignal_sensor_dict['offset'] = int(self.getSetting('om_signal', 'offset'))
+        self.omsignal_sensor_dict['feature'] = self.getSetting('om_signal', 'feature')
+        self.omsignal_sensor_dict['imputation'] = self.getSetting('om_signal', 'imputation')
+        self.omsignal_sensor_dict['preprocess_cols'] = self.getSetting('om_signal', 'preprocess_cols')
     
         ###########################################################
         # Read Fitbit
@@ -139,6 +141,7 @@ class Config(object):
         self.owl_in_one_sensor_dict = {}
         self.owl_in_one_sensor_dict['name'] = 'owl_in_one'
         self.owl_in_one_sensor_dict['preprocess_setting'] = self.getSetting('owl_in_one', 'preprocess_setting')
+        self.owl_in_one_sensor_dict['feature'] = self.getSetting('owl_in_one', 'feature')
         self.owl_in_one_sensor_dict['offset'] = int(self.getSetting('owl_in_one', 'offset'))
     
         ###########################################################
@@ -146,6 +149,7 @@ class Config(object):
         ###########################################################
         self.realizd_sensor_dict = {}
         self.realizd_sensor_dict['name'] = 'realizd'
+        self.realizd_sensor_dict['feature'] = self.getSetting('realizd', 'feature')
         self.realizd_sensor_dict['preprocess_setting'] = self.getSetting('realizd', 'preprocess_setting')
         self.realizd_sensor_dict['offset'] = int(self.getSetting('realizd', 'offset'))
         

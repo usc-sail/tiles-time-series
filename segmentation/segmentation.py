@@ -29,147 +29,21 @@ __all__ = ['Segmentation']
 
 class Segmentation(object):
     
-    def __init__(self, read_config=None, save_config=None, participant_id=None, realizd_config=None):
+    def __init__(self, data_config=None, participant_id=None):
         """
         Initialization method
         """
         ###########################################################
         # Assert if these parameters are not parsed
         ###########################################################
-        assert read_config is not None and save_config is not None and participant_id is not None
+        assert data_config is not None and participant_id is not None
         
-        self.read_config = read_config
-        self.save_config = save_config
-        self.realizd_config = realizd_config
-        
+        self.data_config = data_config
         self.participant_id = participant_id
 
         self.processed_data_dict_array = {}
-    
-    def segment_data(self, participant_id):
-    
-        ###########################################################
-        # If folder not exist
-        ###########################################################
-        save_participant_folder = os.path.join(self.save_config.process_folder)
-        if not os.path.exists(save_participant_folder):
-            os.mkdir(save_participant_folder)
-
-        ###########################################################
-        # Read data
-        ###########################################################
-        self.processed_data_dict_array[participant_id]['data'] = self.processed_data_dict_array[participant_id]['data'].sort_index()
-        data = np.array(self.processed_data_dict_array[participant_id]['data']).astype(float)
-
-        ###########################################################
-        # Normalizing
-        ###########################################################
-        mean = self.processed_data_dict_array[participant_id]['mean']
-        std = self.processed_data_dict_array[participant_id]['std']
-        norm_data = np.divide(data - mean, std)
-
-        ###########################################################
-        # Convert to an n-by-T matrix
-        ###########################################################
-        norm_data = norm_data.T
-
-        ###########################################################
-        # Find breakpoints with lambda = segmentation_lamb
-        ###########################################################
-        if not os.path.exists(os.path.join(save_participant_folder, participant_id + '.csv.gz')):
         
-            bps, objectives = GGS(norm_data, Kmax=int(data.shape[0] / 5), lamb=self.save_config.segmentation_lamb)
-            bps_df = pd.DataFrame(self.processed_data_dict_array[participant_id]['data'].index[bps[:-1]], columns=['time'],
-                                  index=self.processed_data_dict_array[participant_id]['data'].index[bps[:-1]])
-            bps_df['objectives'] = objectives
-            bps_df.to_csv(os.path.join(save_participant_folder, participant_id + '.csv.gz'), compression='gzip')
-    
-            ###########################################################
-            # Define plot range
-            ###########################################################
-            start_str = self.processed_data_dict_array[participant_id]['data'].index[0]
-            end_str = self.processed_data_dict_array[participant_id]['data'].index[720]
-            plt_df = bps_df[start_str:end_str]
-            xposition = bps[:len(plt_df)]
-            
-            ###########################################################
-            # Plot
-            ###########################################################
-            plt.figure(figsize=(18, 4))
-            plt.plot(np.array(data[:720, :]))
-            for xc in xposition:
-                plt.axvline(x=xc, color='k', linestyle='--')
-            plt.tight_layout()
-            # plt.show()
-            plt.savefig(os.path.join(save_participant_folder, participant_id + '.png'), dpi=300)
-            plt.close()
-            return True
-        else:
-            return False
-        
-    def read_preprocess_data(self, participant_id):
-        """
-        Read preprocessed data
-        """
-        ###########################################################
-        # If folder not exist
-        ###########################################################
-        save_participant_folder = os.path.join(self.save_config.process_folder, participant_id)
-        if not os.path.exists(save_participant_folder):
-            os.mkdir(save_participant_folder)
-        
-        read_participant_folder = os.path.join(self.read_config.process_folder, participant_id)
-        if not os.path.exists(read_participant_folder):
-            return
-
-        ###########################################################
-        # List files and remove 'DS' file in mac system
-        ###########################################################
-        data_file_array = os.listdir(read_participant_folder)
-            
-        for data_file in data_file_array:
-            if 'DS' in data_file: data_file_array.remove(data_file)
-    
-        if len(data_file_array) > 0:
-            ###########################################################
-            # Create dict for participant
-            ###########################################################
-            self.processed_data_dict_array[participant_id] = {}
-            self.processed_data_dict_array[participant_id]['data'] = pd.DataFrame()
-            
-            for data_file in data_file_array:
-                ###########################################################
-                # Read data and append
-                ###########################################################
-                csv_path = os.path.join(read_participant_folder, data_file)
-                data_df = pd.read_csv(csv_path, index_col=0)
-
-                ###########################################################
-                # Pad data
-                ###########################################################
-                end_str = data_df.index[-1]
-                interval = int(self.read_config.offset / 60)
-                time_arr = [(pd.to_datetime(end_str) + timedelta(minutes=i*interval)).strftime(date_time_format)[:-3] for i in range(10)]
-                
-                pad_df = pd.DataFrame(np.zeros([len(time_arr), len(data_df.columns)]), index=time_arr, columns=list(data_df.columns))
-                temp = np.random.normal(size=(2, 2))
-                temp2 = np.dot(temp, temp.T)
-                for j in range(len(pad_df)):
-                    data_pad_tmp = np.random.multivariate_normal(np.zeros(2) - 10, temp2)
-                    pad_df.loc[time_arr[j], :] = data_pad_tmp
-
-                ###########################################################
-                # Append data
-                ###########################################################
-                self.processed_data_dict_array[participant_id]['data'] = self.processed_data_dict_array[participant_id]['data'].append(data_df)
-                self.processed_data_dict_array[participant_id]['data'] = self.processed_data_dict_array[participant_id]['data'].append(pad_df)
-
-                self.processed_data_dict_array[participant_id]['raw'] = self.processed_data_dict_array[participant_id]['data'].append(data_df)
-                
-            self.processed_data_dict_array[participant_id]['mean'] = np.nanmean(self.processed_data_dict_array[participant_id]['raw'], axis=0)
-            self.processed_data_dict_array[participant_id]['std'] = np.nanstd(self.processed_data_dict_array[participant_id]['raw'], axis=0)
-
-    def read_preprocess_data_all(self):
+    def read_preprocess_data(self):
         """
         Read preprocessed data
         """
@@ -178,11 +52,11 @@ class Segmentation(object):
         ###########################################################
         participant_id = self.participant_id
         
-        save_participant_folder = os.path.join(self.save_config.process_folder, participant_id)
+        save_participant_folder = os.path.join(self.data_config.fitbit_sensor_dict['segmentation_path'], participant_id)
         if not os.path.exists(save_participant_folder):
             os.mkdir(save_participant_folder)
     
-        read_participant_folder = os.path.join(self.read_config.process_folder, participant_id)
+        read_participant_folder = os.path.join(self.data_config.fitbit_sensor_dict['preprocess_path'], participant_id)
         if not os.path.exists(read_participant_folder):
             return
     
@@ -203,16 +77,6 @@ class Segmentation(object):
             self.processed_data_dict_array[participant_id] = {}
             self.processed_data_dict_array[participant_id]['data'] = pd.DataFrame()
             self.processed_data_dict_array[participant_id]['raw'] = pd.DataFrame()
-
-            ###########################################################
-            # Read realizd data if exist
-            ###########################################################
-            if self.realizd_config is not None:
-                realizd_participant_folder = os.path.join(self.realizd_config.process_folder, participant_id)
-    
-                self.realizd_df = None
-                if os.path.exists(os.path.join(realizd_participant_folder, participant_id + '.csv.gz')) is True:
-                    self.realizd_df = pd.read_csv(os.path.join(realizd_participant_folder, participant_id + '.csv.gz'), index_col=0)
         
             for data_file in data_file_array:
                 ###########################################################
@@ -229,7 +93,7 @@ class Segmentation(object):
             ###########################################################
             # Assign data
             ###########################################################
-            interval = int(self.read_config.offset / 60)
+            interval = int(self.data_config.fitbit_sensor_dict['offset'] / 60)
 
             final_df = self.processed_data_dict_array[participant_id]['raw'].sort_index()
             final_df[final_df < 0] = 0
@@ -237,7 +101,7 @@ class Segmentation(object):
             end_str = (pd.to_datetime(final_df.index[-1]) + timedelta(days=1)).replace(hour=0, minute=0, second=0,microsecond=0).strftime(date_time_format)[:-3]
 
             time_length = (pd.to_datetime(end_str) - pd.to_datetime(start_str)).total_seconds()
-            point_length = int(time_length / self.read_config.offset) + 1
+            point_length = int(time_length / self.data_config.fitbit_sensor_dict['offset']) + 1
             time_arr = [(pd.to_datetime(start_str) + timedelta(minutes=i*interval)).strftime(date_time_format)[:-3] for i in range(0, point_length)]
             
             final_df_all = pd.DataFrame(index=time_arr, columns=final_df.columns)
@@ -260,59 +124,6 @@ class Segmentation(object):
 
             self.processed_data_dict_array[participant_id]['mean'] = np.nanmean(self.processed_data_dict_array[participant_id]['raw'], axis=0)
             self.processed_data_dict_array[participant_id]['std'] = np.nanstd(self.processed_data_dict_array[participant_id]['raw'], axis=0)
-
-    def read_data(self, participant_id):
-        """
-        Read preprocessed data
-        """
-        ###########################################################
-        # If folder not exist
-        ###########################################################
-        save_participant_folder = os.path.join(self.save_config.process_folder, participant_id)
-        if not os.path.exists(save_participant_folder):
-            os.mkdir(save_participant_folder)
-    
-        read_participant_folder = os.path.join(self.read_config.process_folder, participant_id)
-        if not os.path.exists(read_participant_folder):
-            return
-    
-        ###########################################################
-        # List files and remove 'DS' file in mac system
-        ###########################################################
-        data_file_array = os.listdir(read_participant_folder)
-    
-        for data_file in data_file_array:
-            if 'DS' in data_file: data_file_array.remove(data_file)
-    
-        self.fitbit_df = None
-    
-        if len(data_file_array) > 0:
-            ###########################################################
-            # Create dict for participant
-            ###########################################################
-            self.processed_data_dict_array[participant_id] = {}
-            self.processed_data_dict_array[participant_id]['data'] = pd.DataFrame()
-            self.processed_data_dict_array[participant_id]['raw'] = pd.DataFrame()
-            
-            for data_file in data_file_array:
-                ###########################################################
-                # Read data and append
-                ###########################################################
-                csv_path = os.path.join(read_participant_folder, data_file)
-                data_df = pd.read_csv(csv_path, index_col=0)
-            
-                ###########################################################
-                # Append data
-                ###########################################################
-                self.processed_data_dict_array[participant_id]['raw'] = self.processed_data_dict_array[participant_id][
-                    'raw'].append(data_df)
-        
-            ###########################################################
-            # Assign data
-            ###########################################################
-            interval = int(self.read_config.offset / 60)
-            final_df = self.processed_data_dict_array[participant_id]['raw'].sort_index()
-            self.fitbit_df = final_df
      
     def segment_data_by_sleep(self, fitbit_summary_df=None, threshold=0, single_stream=None):
     
@@ -321,7 +132,7 @@ class Segmentation(object):
         ###########################################################
         # If folder not exist
         ###########################################################
-        save_participant_folder = os.path.join(self.save_config.process_folder)
+        save_participant_folder = os.path.join(self.data_config.fitbit_sensor_dict['segmentation_path'])
         if not os.path.exists(save_participant_folder):
             os.mkdir(save_participant_folder)
     
@@ -414,7 +225,7 @@ class Segmentation(object):
                 
                 if len(row_data_df) > 20:
                     k_max = norm_data.shape[1]
-                    bps, objectives = GGS(norm_data, Kmax=int(k_max / 2), lamb=self.save_config.segmentation_lamb)
+                    bps, objectives = GGS(norm_data, Kmax=int(k_max / 2), lamb=self.data_config.fitbit_sensor_dict['segmentation_lamb'])
                     bps[-1] = norm_data.shape[1] - 1
 
                     bps_final = []
@@ -435,212 +246,16 @@ class Segmentation(object):
                     row_bps_df['end'] = bps_end_str
 
                     bps_df = bps_df.append(pd.DataFrame(bps_str, columns=['time'], index=bps_str))
-
-                    ###########################################################
-                    # Sub seg
-                    ###########################################################
-                    if len(row_bps_df) > 0 and self.save_config.sub_segmentation_lamb is not None:
-                        for row_bps_index, bps_row_series in row_bps_df.iterrows():
-                            if (pd.to_datetime(bps_row_series.end) - pd.to_datetime(bps_row_series.start)).total_seconds() > 30 * 60:
-                                bps_row_data_df = data_df[bps_row_series.start:bps_row_series.end]
-                                bps_row_data = np.array(bps_row_data_df).astype(float)
-    
-                                ###########################################################
-                                # Normalizing
-                                ###########################################################
-                                norm_data = np.divide(bps_row_data - mean, std)
-    
-                                ###########################################################
-                                # Convert to an n-by-T matrix
-                                ###########################################################
-                                norm_data = norm_data.T
-
-                                bps_row, bps_objectives = GGS(norm_data, Kmax=int(norm_data.shape[1] / 2), lamb=self.save_config.sub_segmentation_lamb)
-                                bps_row[-1] = norm_data.shape[1] - 1
-
-                                bps_row_final = []
-                                last_index = 0
-                                for bps_index, bps in enumerate(bps_row):
-                                    if bps_index == 0 or bps_index == len(bps_row) - 1:
-                                        bps_row_final.append(bps_row[bps_index])
-                                    else:
-                                        if bps_row[bps_index+1] - bps_row[bps_index] > 5 and bps_row[bps_index] - bps_row[last_index] > 5:
-                                            bps_row_final.append(bps_row[bps_index])
-                                            last_index = bps_index
-                                
-                                bps_row_str = [list(bps_row_data_df.index)[i] for i in bps_row_final[:-1]]
-                                
-                                final_row_bps_df = pd.DataFrame(bps_row_str, columns=['time'], index=bps_row_str)
-                                final_bps_df = final_bps_df.append(final_row_bps_df)
-                            else:
-                                bps_tmp_df = pd.DataFrame(row_bps_index, index=[row_bps_index], columns=['time'])
-                                final_bps_df = final_bps_df.append(bps_tmp_df)
-                                
-                        ###########################################################
-                        # Last data
-                        ###########################################################
-                        row_bps_index = row_bps_df.loc[row_bps_df.index[-1], 'end']
-                        bps_tmp_df = pd.DataFrame(row_bps_index, index=[row_bps_index], columns=['time'])
-                        final_bps_df = final_bps_df.append(bps_tmp_df)
-
-            if self.save_config.sub_segmentation_lamb is not None:
-                final_bps_df.to_csv(os.path.join(save_participant_folder, participant_id + '.csv.gz'), compression='gzip')
-            else:
-                bps_df.to_csv(os.path.join(save_participant_folder, participant_id + '.csv.gz'), compression='gzip')
-        
-            return True
-        else:
-            return False
-
-    def segment_data_by_sleep_and_inactive(self, participant_id, fitbit_summary_df=None):
-    
-        ###########################################################
-        # If folder not exist
-        ###########################################################
-        save_participant_folder = os.path.join(self.save_config.process_folder)
-        if not os.path.exists(save_participant_folder):
-            os.mkdir(save_participant_folder)
-    
-        ###########################################################
-        # Read data
-        ###########################################################
-        data_df = self.processed_data_dict_array[participant_id]['data'].sort_index()
-        data = np.array(data_df).astype(float)
-    
-        fitbit_summary_df = fitbit_summary_df
-        sleep_df = pd.DataFrame()
-    
-        ###########################################################
-        # Parse sleep df
-        ###########################################################
-        if fitbit_summary_df is not None:
-            if len(fitbit_summary_df) > 0:
-                for index, row in fitbit_summary_df.iterrows():
-                    return_df = self.add_sleep_data_frame(row.Sleep1BeginTimestamp, row.Sleep1EndTimestamp)
-                    if return_df is not None: sleep_df = sleep_df.append(return_df)
-                    return_df = self.add_sleep_data_frame(row.Sleep2BeginTimestamp, row.Sleep2EndTimestamp)
-                    if return_df is not None: sleep_df = sleep_df.append(return_df)
-                    return_df = self.add_sleep_data_frame(row.Sleep3BeginTimestamp, row.Sleep3EndTimestamp)
-                    if return_df is not None: sleep_df = sleep_df.append(return_df)
-        sleep_df = sleep_df.sort_index()
-    
-        if len(sleep_df) < 5:
-            return False
-    
-        ###########################################################
-        # Normalizing
-        ###########################################################
-        mean = self.processed_data_dict_array[participant_id]['mean']
-        std = self.processed_data_dict_array[participant_id]['std']
-    
-        ###########################################################
-        # Find breakpoints with lambda = segmentation_lamb
-        ###########################################################
-        if not os.path.exists(os.path.join(save_participant_folder, participant_id + '.csv.gz')):
-        
-            last_sleep_end = data_df.index[0]
-            bps_df, final_bps_df = pd.DataFrame(), pd.DataFrame()
-        
-            ###########################################################
-            # First seg
-            ###########################################################
-            for index, row in sleep_df.iterrows():
-                start_str = last_sleep_end
-                end_str = row.start
-                last_sleep_end = row.end
-            
-                row_data_df = data_df[start_str:end_str]
-                row_data = np.array(row_data_df).astype(float)
-            
-                ###########################################################
-                # Normalizing
-                ###########################################################
-                norm_data = np.divide(row_data - mean, std)
-            
-                ###########################################################
-                # Convert to an n-by-T matrix
-                ###########################################################
-                norm_data = norm_data.T
-            
-                if len(row_data_df) > 20:
-                    bps, objectives = GGS(norm_data, Kmax=int(norm_data.shape[1] / 2),
-                                          lamb=self.save_config.segmentation_lamb)
-                    bps[-1] = norm_data.shape[1] - 1
-                
-                    bps_final = []
-                    last_index = 0
-                    for bps_index, bps_row in enumerate(bps):
-                        if bps_index == 0 or bps_index == len(bps) - 1:
-                            bps_final.append(bps[bps_index])
-                        else:
-                            if bps[bps_index + 1] - bps[bps_index] > 5 and bps[bps_index] - bps[last_index] > 5:
-                                bps_final.append(bps[bps_index])
-                                last_index = bps_index
-                
-                    bps_start_str = [list(row_data_df.index)[i] for i in bps_final[:-1]]
-                    bps_end_str = [list(row_data_df.index)[i] for i in bps_final[1:]]
-                
-                    row_bps_df = pd.DataFrame(bps_start_str, columns=['start'], index=bps_start_str)
-                    row_bps_df['end'] = bps_end_str
-                
-                    bps_df = bps_df.append(row_bps_df)
-                
-                    ###########################################################
-                    # Sub seg
-                    ###########################################################
-                    if len(row_bps_df) > 0:
-                        for row_bps_index, bps_row_series in row_bps_df.iterrows():
-                            if (pd.to_datetime(bps_row_series.end) - pd.to_datetime(
-                                    bps_row_series.start)).total_seconds() > 30 * 60:
-                                bps_row_data_df = data_df[bps_row_series.start:bps_row_series.end]
-                                bps_row_data = np.array(bps_row_data_df).astype(float)
-                            
-                                ###########################################################
-                                # Normalizing
-                                ###########################################################
-                                norm_data = np.divide(bps_row_data - mean, std)
-                            
-                                ###########################################################
-                                # Convert to an n-by-T matrix
-                                ###########################################################
-                                norm_data = norm_data.T
-                            
-                                bps_row, bps_objectives = GGS(norm_data, Kmax=int(norm_data.shape[1] / 2),
-                                                              lamb=self.save_config.sub_segmentation_lamb)
-                                bps_row[-1] = norm_data.shape[1] - 1
-                            
-                                bps_row_final = []
-                                last_index = 0
-                                for bps_index, bps in enumerate(bps_row):
-                                    if bps_index == 0 or bps_index == len(bps_row) - 1:
-                                        bps_row_final.append(bps_row[bps_index])
-                                    else:
-                                        if bps_row[bps_index + 1] - bps_row[bps_index] > 5 and bps_row[bps_index] - \
-                                                bps_row[last_index] > 5:
-                                            bps_row_final.append(bps_row[bps_index])
-                                            last_index = bps_index
-                            
-                                bps_row_str = [list(bps_row_data_df.index)[i] for i in bps_row_final[:-1]]
-                            
-                                final_row_bps_df = pd.DataFrame(bps_row_str, columns=['time'], index=bps_row_str)
-                                final_bps_df = final_bps_df.append(final_row_bps_df)
-                            else:
-                                bps_tmp_df = pd.DataFrame(row_bps_index, index=[row_bps_index], columns=['time'])
-                                final_bps_df = final_bps_df.append(bps_tmp_df)
                     
-                        ###########################################################
-                        # Last data
-                        ###########################################################
-                        row_bps_index = row_bps_df.loc[row_bps_df.index[-1], 'end']
-                        bps_tmp_df = pd.DataFrame(row_bps_index, index=[row_bps_index], columns=['time'])
-                        final_bps_df = final_bps_df.append(bps_tmp_df)
-        
-            final_bps_df.to_csv(os.path.join(save_participant_folder, participant_id + '.csv.gz'), compression='gzip')
+            ###########################################################
+            # Save data
+            ###########################################################
+            bps_df.to_csv(os.path.join(save_participant_folder, participant_id + '.csv.gz'), compression='gzip')
         
             return True
         else:
             return False
-        
+
     def add_sleep_data_frame(self, sleep_begin_str, sleep_end_str):
         
         if pd.to_datetime(sleep_begin_str).year > 0:
@@ -667,7 +282,7 @@ class Segmentation(object):
         ###########################################################
         # Read segmentation file
         ###########################################################
-        save_folder = os.path.join(self.save_config.process_folder)
+        save_folder = os.path.join(self.data_config.fitbit_sensor_dict['segmentation_path'])
         if os.path.exists(os.path.join(save_folder, participant_id + '.csv.gz')) is False:
             return
         

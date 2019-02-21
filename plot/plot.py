@@ -17,17 +17,14 @@ cluster_color_list = ['red', 'blue', 'green', 'cyan', 'grey', 'yellow', 'purple'
 
 class Plot(object):
     
-    def __init__(self, fitbit_config=None, ggs_config=None, participant_id_list=None, realizd_config=None,
-                 primary_unit=None):
+    def __init__(self, data_config=None, participant_id_list=None, primary_unit=None):
         """
         Initialization method
         """
         ###########################################################
         # Assert if these parameters are not parsed
         ###########################################################
-        self.fitbit_config = fitbit_config
-        self.ggs_config = ggs_config
-        self.realizd_config = realizd_config
+        self.data_config = data_config
         self.primary_unit = primary_unit
         
         self.participant_id_list = participant_id_list
@@ -37,7 +34,7 @@ class Plot(object):
         ###########################################################
         # If folder not exist
         ###########################################################
-        save_folder = os.path.join(self.ggs_config.process_folder)
+        save_folder = os.path.join(self.data_config.fitbit_sensor_dict['segmentation_path'])
         if not os.path.exists(save_folder):
             os.mkdir(save_folder)
         
@@ -211,6 +208,7 @@ class Plot(object):
 
     def plot_cluster(self, participant_id, save_path, fitbit_df=None, realizd_df=None, owl_in_one_df=None,
                      fitbit_summary_df=None, mgt_df=None, omsignal_data_df=None, cluster_df=None):
+            
         ###########################################################
         # If folder not exist
         ###########################################################
@@ -224,9 +222,9 @@ class Plot(object):
         fitbit_df = fitbit_df.sort_index()
         realizd_data_df = None if realizd_df is None else realizd_df
     
-        if os.path.exists(os.path.join(self.ggs_config.process_folder, participant_id + '.csv.gz')) is False:
+        if os.path.exists(os.path.join(self.data_config.fitbit_sensor_dict['segmentation_path'], participant_id + '.csv.gz')) is False:
             return
-        bps_df = pd.read_csv(os.path.join(self.ggs_config.process_folder, participant_id + '.csv.gz'), index_col=0)
+        bps_df = pd.read_csv(os.path.join(self.data_config.fitbit_sensor_dict['segmentation_path'], participant_id + '.csv.gz'), index_col=0)
     
         interval = int((pd.to_datetime(fitbit_df.index[1]) - pd.to_datetime(fitbit_df.index[0])).total_seconds() / 60)
     
@@ -337,15 +335,16 @@ class Plot(object):
             ax[2].set_ylim([-10, 100])
             ax[2].set_xlabel(self.primary_unit)
 
-            ax[0].legend()
-            ax[1].legend()
-            # ax[2].legend()
-            # ax[2].legend(['lounge'], loc='upper center', bbox_to_anchor=(0.5, -0.15), fancybox=True, shadow=True)
-        
-            legend_elements = [Patch(facecolor=color_dict[loc], label=loc, alpha=0.3) for loc in
-                               list(color_dict.keys())]
-            ax[2].legend(handles=legend_elements)
-        
+            legend_elements = [Patch(facecolor=color_dict[loc], label=loc, alpha=0.3) for loc in list(color_dict.keys())]
+
+            # Plot legend
+            ax[0].legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True)
+            
+            if omsignal_data_df is not None:
+                if len(day_omsignal_data_df) > 0: ax[1].legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True)
+            if day_owl_in_one_df is not None:
+                if len(day_owl_in_one_df) > 0: ax[2].legend(handles=legend_elements, bbox_to_anchor=(1, 1), fancybox=True, shadow=True)
+            
             ###########################################################
             # Plot fitbit summary
             ###########################################################

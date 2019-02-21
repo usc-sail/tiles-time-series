@@ -10,11 +10,10 @@ date_only_date_time_format = '%Y-%m-%d'
 from datetime import timedelta
 
 
-def read_fitbit(fitbit_raw_config, participant_id):
+def read_fitbit(fitbit_folder, participant_id):
     ###########################################################
     # 1. Read all fitbit file
     ###########################################################
-    fitbit_folder = fitbit_raw_config.signal_type_folder
     fitbit_data_dict = {}
 
     ppg_file_abs_path = os.path.join(fitbit_folder, participant_id + '_heartRate.csv.gz')
@@ -37,11 +36,11 @@ def read_fitbit(fitbit_raw_config, participant_id):
     return fitbit_data_dict
 
 
-def read_processed_omsignal(omsignal_config, participant_id):
+def read_processed_omsignal(omsignal_pat, participant_id):
     ###########################################################
     # 1. Read all omsignal file
     ###########################################################
-    omsignal_folder = os.path.join(omsignal_config.process_folder, participant_id)
+    omsignal_folder = os.path.join(omsignal_pat, participant_id)
     omsignal_all_df = pd.DataFrame()
 
     if os.path.exists(omsignal_folder) is True:
@@ -59,16 +58,30 @@ def read_processed_omsignal(omsignal_config, participant_id):
     return omsignal_all_df
 
 
-def read_processed_owl_in_one(owl_in_one_config, participant_id):
+def read_processed_owl_in_one(owl_in_one_path, participant_id):
     ###########################################################
     # 1. Read all omsignal file
     ###########################################################
-    owl_in_one_file_abs_path = os.path.join(owl_in_one_config.process_folder, participant_id + '.csv.gz')
+    owl_in_one_file_abs_path = os.path.join(owl_in_one_path, participant_id + '.csv.gz')
     if os.path.exists(owl_in_one_file_abs_path) is True:
         owl_in_one_all_df = pd.read_csv(owl_in_one_file_abs_path, index_col=0)
         owl_in_one_all_df = owl_in_one_all_df.sort_index()
     
         return owl_in_one_all_df
+    else:
+        return None
+
+
+def read_processed_realizd(realizd_path, participant_id):
+    ###########################################################
+    # 1. Read all omsignal file
+    ###########################################################
+    realizd_file_abs_path = os.path.join(realizd_path, participant_id + '.csv.gz')
+    if os.path.exists(realizd_file_abs_path) is True:
+        realizd_all_df = pd.read_csv(realizd_file_abs_path, index_col=0)
+        realizd_all_df = realizd_all_df.sort_index()
+        
+        return realizd_all_df
     else:
         return None
 

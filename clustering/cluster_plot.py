@@ -16,7 +16,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.
 
 import config
 import segmentation
-import load_sensor_data, load_data_basic, load_data_folder
+import load_sensor_data, load_data_basic, load_data_path
 import plot
 import pandas as pd
 
@@ -45,7 +45,7 @@ def return_participant(main_folder):
 
 def main(tiles_data_path, cluster_config_path):
     ###########################################################
-    # 1. Create Config
+    # 1. Create Config, load data paths
     ###########################################################
     process_data_path = os.path.abspath(os.path.join(os.pardir, 'data'))
     
@@ -53,26 +53,23 @@ def main(tiles_data_path, cluster_config_path):
     data_config.readConfigFile(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config')))
     
     # Load preprocess folder
-    load_data_folder.load_preprocess_folder(data_config, process_data_path, data_name='preprocess_data')
-    
-    
-    fitbit_config = config.Config(data_type='preprocess_data', sensor='fitbit', read_folder=process_data_folder,
-                                  return_full_feature=False, process_hyper=preprocess_hype, signal_hyper=default_signal)
+    load_data_path.load_preprocess_path(data_config, process_data_path, data_name='preprocess_data')
 
-    omsignal_config = config.Config(data_type='preprocess_data', sensor='om_signal', read_folder=process_data_folder,
-                                    return_full_feature=False, process_hyper=omsignal_hype, signal_hyper=om_signal)
-    
-    realizd_config = config.Config(data_type='preprocess_data', sensor='realizd', read_folder=process_data_folder,
-                                   return_full_feature=False, process_hyper=preprocess_hype, signal_hyper=default_signal)
+    # Load segmentation folder
+    load_data_path.load_segmentation_path(data_config, process_data_path, data_name='segmentation')
 
-    owl_in_one_config = config.Config(data_type='preprocess_data', sensor='owl_in_one', read_folder=process_data_folder,
-                                      return_full_feature=False, process_hyper=owl_in_one_hype, signal_hyper=default_signal)
+    # Load clustering folder
+    load_data_path.load_clustering_path(data_config, process_data_path, data_name='clustering')
     
-    ggs_config = config.Config(data_type='segmentation', sensor='fitbit', read_folder=process_data_folder,
-                               return_full_feature=False, process_hyper=segmentation_hype, signal_hyper=default_signal)
-    
-    fitbit_summary_config = config.Config(data_type='3_preprocessed_data', sensor='fitbit', read_folder=tiles_data_path,
-                                          return_full_feature=False, process_hyper=preprocess_hype, signal_hyper=default_signal)
+    # Load Fitbit summary folder
+    fitbit_summary_path = load_data_path.load_fitbit_summary_path(tiles_data_path, data_name='3_preprocessed_data')
+
+    ###########################################################
+    # Read ground truth data
+    ###########################################################
+    igtb_df = load_data_basic.read_AllBasic(tiles_data_path)
+    igtb_df = igtb_df.drop_duplicates(keep='first')
+    mgt_df = load_data_basic.read_MGT(tiles_data_path)
     
     ###########################################################
     # 2. Get participant id list
@@ -80,13 +77,10 @@ def main(tiles_data_path, cluster_config_path):
     participant_id_list = return_participant(tiles_data_path)
     participant_id_list.sort()
     
-    top_participant_id_df = pd.read_csv(os.path.join(ggs_config.process_folder, 'participant_id.csv.gz'), index_col=0, compression='gzip')
+    top_participant_id_df = pd.read_csv(os.path.join(data_config.fitbit_sensor_dict['segmentation_path'],
+                                                     'participant_id.csv.gz'), index_col=0, compression='gzip')
     top_participant_id_list = list(top_participant_id_df.index)
     top_participant_id_list.sort()
-
-    igtb_df = load_data_basic.read_AllBasic(tiles_data_path)
-    igtb_df = igtb_df.drop_duplicates(keep='first')
-    mgt_df = load_data_basic.read_MGT(tiles_data_path)
     
     for idx, participant_id in enumerate(top_participant_id_list):
         
@@ -94,29 +88,28 @@ def main(tiles_data_path, cluster_config_path):
         ###########################################################
         # 3. Create segmentation class
         ###########################################################
-        ggs_segmentation = segmentation.Segmentation(read_config=fitbit_config, save_config=ggs_config,
-                                                     realizd_config=realizd_config, participant_id=participant_id)
-        
-        ###########################################################
-        # 4. Read segmentation data
-        ###########################################################
-        # ggs_segmentation.read_preprocess_data(participant_id)
-        ggs_segmentation.read_preprocess_data_all()
-        
+        ggs_segmentation = segmentation.Segmentation(data_config=data_config, participant_id=participant_id)
+
         ###########################################################
         # Option: Read summary data, mgt, omsignal
         ###########################################################
-        fitbit_data_dict = load_sensor_data.read_fitbit(fitbit_summary_config, participant_id)
+        fitbit_data_dict = load_sensor_data.read_fitbit(fitbit_summary_path, participant_id)
         fitbit_summary_df = fitbit_data_dict['summary']
 
         uid = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].index)[0]
         primary_unit = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit[0]
         participant_mgt = mgt_df.loc[mgt_df['uid'] == uid]
 
-        omsignal_data_df = load_sensor_data.read_processed_omsignal(omsignal_config, participant_id)
+        omsignal_data_df = load_sensor_data.read_processed_omsignal(data_config.omsignal_sensor_dict['preprocess_path'], participant_id)
+        owl_in_one_df = load_sensor_data.read_processed_owl_in_one(data_config.owl_in_one_sensor_dict['preprocess_path'], participant_id)
+        realizd_df = load_sensor_data.read_processed_realizd(data_config.realizd_sensor_dict['preprocess_path'], participant_id)
 
-        owl_in_one_df = load_sensor_data.read_processed_owl_in_one(owl_in_one_config, participant_id)
-
+        ###########################################################
+        # 4. Read data and segmentation data
+        ###########################################################
+        ggs_segmentation.read_preprocess_data()
+        ggs_segmentation.segment_data_by_sleep(fitbit_summary_df=fitbit_summary_df)
+        
         # Get cluster configuration from the config file
         config_parser = ConfigParser()
         config_parser.read(cluster_config_path)
@@ -135,11 +128,10 @@ def main(tiles_data_path, cluster_config_path):
             ###########################################################
             # 5. Plot
             ###########################################################
-            cluster_plot = plot.Plot(ggs_config=ggs_config, primary_unit=primary_unit)
+            cluster_plot = plot.Plot(data_config=data_config, primary_unit=primary_unit)
     
-            cluster_plot.plot_cluster(participant_id, save_path,
-                                      fitbit_df=ggs_segmentation.fitbit_df, fitbit_summary_df=fitbit_summary_df, mgt_df=participant_mgt,
-                                      omsignal_data_df=omsignal_data_df, realizd_df=ggs_segmentation.realizd_df, owl_in_one_df=owl_in_one_df, cluster_df=segment_cluster_df)
+            cluster_plot.plot_cluster(participant_id, save_path, fitbit_df=ggs_segmentation.fitbit_df, fitbit_summary_df=fitbit_summary_df, mgt_df=participant_mgt,
+                                      omsignal_data_df=omsignal_data_df, realizd_df=realizd_df, owl_in_one_df=owl_in_one_df, cluster_df=segment_cluster_df)
         
         del ggs_segmentation
 
