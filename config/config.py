@@ -16,12 +16,6 @@ __all__ = ['Config']
 
 
 class Config(object):
-    _process_hype = {'data_type': 'preprocess_data', 'imputation': None,
-                     'segmentation': None, 'segmentation_lamb': 1e0, 'sub_segmentation_lamb': None,
-                     'offset': 30, 'overlap': 0}
-    
-    _default_signal = {'raw_cols': ['BreathingDepth', 'BreathingRate', 'Cadence', 'HeartRate', 'Intensity', 'Steps'],
-                       'MinPeakDistance': 100, 'MinPeakHeight': 0.04}
     
     def __init__(self):
         ###########################################################
@@ -160,51 +154,6 @@ class Config(object):
         
     def createFolder(self, folder):
         if os.path.exists(folder) is False: os.mkdir(folder)
-
-    def updateFolderName(self):
-        ###########################################################
-        # Create main folders
-        ###########################################################
-        self.createFolder(self.main_folder)
-        self.main_folder = os.path.join(self.main_folder, self.data_type)
-        self.createFolder(self.main_folder)
-
-        ###########################################################
-        # Create Signal folders
-        ###########################################################
-        self.signal_type_folder = os.path.join(self.main_folder, self.sensor)
-        self.createFolder(self.signal_type_folder)
-        
-        if self.return_full_feature == True and self.sensor is not 'realizd':
-            self.signal_type_folder = os.path.join(self.signal_type_folder, 'feat')
-        elif self.enable_impute == True and self.sensor is not 'realizd':
-            self.signal_type_folder = os.path.join(self.signal_type_folder, 'impute_' + self.imputation_method)
-        else:
-            self.signal_type_folder = os.path.join(self.signal_type_folder, 'original')
-        self.createFolder(self.signal_type_folder)
-        
-        if self.enable_segmentation == True:
-            if self.sub_segmentation_lamb is not None:
-                self.signal_type_folder = os.path.join(self.signal_type_folder,
-                                                       self.segmentation + '_' + str(self.segmentation_lamb) +
-                                                       '_' + str(self.sub_segmentation_lamb))
-            else:
-                self.signal_type_folder = os.path.join(self.signal_type_folder,
-                                                       self.segmentation + '_' + str(self.segmentation_lamb))
-        self.createFolder(self.signal_type_folder)
-
-        ###########################################################
-        # Create parameter folder
-        ###########################################################
-        if self.sensor != 'realizd' and self.sensor != 'owl_in_one':
-            self.process_folder = os.path.join(self.signal_type_folder, self.process_basic_str)
-            self.createFolder(self.process_folder)
-            
-            self.process_folder = os.path.join(self.process_folder, self.process_col_str)
-            self.createFolder(self.process_folder)
-        else:
-            self.process_folder = os.path.join(self.signal_type_folder, self.process_basic_str)
-            self.createFolder(self.process_folder)
     
     def getSetting(self, section, setting):
         ###########################################################
@@ -218,7 +167,4 @@ class Config(object):
         ###########################################################
         print('----------------------------------------------------')
         print('Config Class, printConfig')
-        if self.data_type != '3_preprocessed_data':
-            print('process_basic_folder: ' + self.process_folder)
-        print('sensor: ' + self.sensor)
         print('----------------------------------------------------')
