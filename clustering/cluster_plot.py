@@ -128,18 +128,21 @@ def main(tiles_data_path, cluster_config_path):
         if not os.path.exists(save_path):
             os.makedirs(save_path)
         file_name = participant_id + '.csv'
-        segment_cluster_df = pd.read_csv(os.path.join(save_path, file_name))
-        segment_cluster_df.loc[:, 'index'] = segment_cluster_df.loc[:, 'start']
-        segment_cluster_df = segment_cluster_df.set_index('index')
         
-        ###########################################################
-        # 5. Plot
-        ###########################################################
-        cluster_plot = plot.Plot(ggs_config=ggs_config, primary_unit=primary_unit)
-
-        cluster_plot.plot_clusetr(participant_id, save_path,
-                                  fitbit_df=ggs_segmentation.fitbit_df, fitbit_summary_df=fitbit_summary_df, mgt_df=participant_mgt,
-                                  omsignal_data_df=omsignal_data_df, realizd_df=ggs_segmentation.realizd_df, owl_in_one_df=owl_in_one_df, cluster_df=segment_cluster_df)
+        # If clustering file exist
+        if os.path.exists(os.path.join(save_path, file_name)) is True:
+            segment_cluster_df = pd.read_csv(os.path.join(save_path, file_name))
+            segment_cluster_df.loc[:, 'index'] = segment_cluster_df.loc[:, 'start']
+            segment_cluster_df = segment_cluster_df.set_index('index')
+        
+            ###########################################################
+            # 5. Plot
+            ###########################################################
+            cluster_plot = plot.Plot(ggs_config=ggs_config, primary_unit=primary_unit)
+    
+            cluster_plot.plot_clusetr(participant_id, save_path,
+                                      fitbit_df=ggs_segmentation.fitbit_df, fitbit_summary_df=fitbit_summary_df, mgt_df=participant_mgt,
+                                      omsignal_data_df=omsignal_data_df, realizd_df=ggs_segmentation.realizd_df, owl_in_one_df=owl_in_one_df, cluster_df=segment_cluster_df)
         
         del ggs_segmentation
 

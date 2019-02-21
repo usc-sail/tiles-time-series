@@ -83,7 +83,7 @@ def main(main_folder):
                                   read_folder=os.path.abspath(os.path.join(os.pardir, 'data')),
                                   return_full_feature=False, process_hyper=preprocess_hype)
     
-    ggs_config = config.Config(data_type='segmentation_no_comb', sensor='fitbit',
+    ggs_config = config.Config(data_type='segmentation_step', sensor='fitbit',
                                read_folder=os.path.abspath(os.path.join(os.pardir, '..')),
                                return_full_feature=False, process_hyper=segmentation_hype)
     
@@ -102,7 +102,7 @@ def main(main_folder):
 
     top_participant_id_list = list(top_participant_id_df.index)
     top_participant_id_list.sort()
-    top_participant_id_list = top_participant_id_list[80:120]
+    top_participant_id_list = top_participant_id_list[0:]
     
     for idx, participant_id in enumerate(top_participant_id_list):
         
@@ -124,7 +124,7 @@ def main(main_folder):
         fitbit_data_dict = load_sensor_data.read_fitbit(fitbit_summary_config, participant_id)
         fitbit_summary_df = fitbit_data_dict['summary']
         
-        success = ggs_segmentation.segment_data_by_sleep(fitbit_summary_df=fitbit_summary_df, threshold=0)
+        success = ggs_segmentation.segment_data_by_sleep(fitbit_summary_df=fitbit_summary_df, threshold=0, single_stream='step')
         # ggs_segmentation.read_inactive_df(participant_id)
         # success = ggs_segmentation.segment_data_by_sleep(participant_id, fitbit_summary_df=fitbit_summary_df)
 

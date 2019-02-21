@@ -230,7 +230,9 @@ class Segmentation(object):
             # Assign data
             ###########################################################
             interval = int(self.read_config.offset / 60)
+
             final_df = self.processed_data_dict_array[participant_id]['raw'].sort_index()
+            final_df[final_df < 0] = 0
             start_str = pd.to_datetime(final_df.index[0]).replace(hour=0, minute=0, second=0, microsecond=0).strftime(date_time_format)[:-3]
             end_str = (pd.to_datetime(final_df.index[-1]) + timedelta(days=1)).replace(hour=0, minute=0, second=0,microsecond=0).strftime(date_time_format)[:-3]
 
@@ -312,7 +314,7 @@ class Segmentation(object):
             final_df = self.processed_data_dict_array[participant_id]['raw'].sort_index()
             self.fitbit_df = final_df
      
-    def segment_data_by_sleep(self, fitbit_summary_df=None, threshold=0):
+    def segment_data_by_sleep(self, fitbit_summary_df=None, threshold=0, single_stream=None):
     
         participant_id = self.participant_id
     
@@ -327,7 +329,11 @@ class Segmentation(object):
         # Read data
         ###########################################################
         data_df = self.processed_data_dict_array[participant_id]['data'].sort_index()
-        data = np.array(data_df).astype(float)
+        if single_stream is not None:
+            if single_stream == 'step':
+                data_df = data_df.loc[:, 'StepCount']
+            elif single_stream == 'heart_rate':
+                data_df = data_df.loc[:, 'HeartRatePPG']
         
         fitbit_summary_df = fitbit_summary_df
         sleep_df = pd.DataFrame()
@@ -354,6 +360,14 @@ class Segmentation(object):
         ###########################################################
         mean = self.processed_data_dict_array[participant_id]['mean']
         std = self.processed_data_dict_array[participant_id]['std']
+        
+        if single_stream is not None:
+            if single_stream == 'step':
+                mean = mean[1]
+                std = std[1]
+            elif single_stream == 'heart_rate':
+                mean = [0]
+                std = std[0]
         
         ###########################################################
         # Find breakpoints with lambda = segmentation_lamb
@@ -388,16 +402,19 @@ class Segmentation(object):
                 ###########################################################
                 # Normalizing
                 ###########################################################
+                # mean = np.mean()
                 norm_data = np.divide(row_data - mean, std)
 
                 ###########################################################
                 # Convert to an n-by-T matrix
                 ###########################################################
                 norm_data = norm_data.T
+                if single_stream is not None:
+                    norm_data = np.array(norm_data).reshape([1, len(norm_data)])
                 
                 if len(row_data_df) > 20:
-                    bps, objectives = GGS(norm_data, Kmax=int(norm_data.shape[1] / 2),
-                                          lamb=self.save_config.segmentation_lamb)
+                    k_max = norm_data.shape[1]
+                    bps, objectives = GGS(norm_data, Kmax=int(k_max / 2), lamb=self.save_config.segmentation_lamb)
                     bps[-1] = norm_data.shape[1] - 1
 
                     bps_final = []
