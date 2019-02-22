@@ -24,7 +24,7 @@ class Config(object):
         self.config = ConfigParser()
         
     def saveConfig(self, om_process_param, fitbit_process_param, owl_in_one_param, realizd_param,
-                   segmentation_param, cluster_param, global_param):
+                   segmentation_param, cluster_param, global_param, experiement):
     
         ###########################################################
         # Initiate OMSignal
@@ -89,25 +89,27 @@ class Config(object):
         self.config.add_section('global')
         self.config.set('global', 'plot', str(global_param['enable_plot']))
 
-    def createConfigFile(self):
+    def createConfigFile(self, dataDir, experiement):
         ###########################################################
         # Add folder information
         ###########################################################
-        configFilePath = 'settings.ini'
+        configFilePath = os.path.join(dataDir, experiement + '.cfg')
         with open(configFilePath, 'w') as config_file:
             self.config.write(config_file)
         
-    def readConfigFile(self, dataDir):
+    def readConfigFile(self, dataDir, experiement):
     
         ###########################################################
         # Config folder information
         ###########################################################
-        configFilePath = os.path.join(dataDir, 'settings.ini')
+        configFilePath = os.path.join(dataDir, experiement + '.cfg')
     
         if os.path.exists(configFilePath) is False:
             print('Config file not exist! Please Check!')
 
         self.config.read(configFilePath)
+        
+        self.experiement = experiement
         
         ###########################################################
         # Read OMSignal

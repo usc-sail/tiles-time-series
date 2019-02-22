@@ -43,14 +43,14 @@ def return_participant(main_folder):
     return list(fitbit_file_dict_list.keys())
 
 
-def main(tiles_data_path, cluster_config_path):
+def main(tiles_data_path, cluster_config_path, experiement):
     ###########################################################
     # 1. Create Config, load data paths
     ###########################################################
     process_data_path = os.path.abspath(os.path.join(os.pardir, 'data'))
     
     data_config = config.Config()
-    data_config.readConfigFile(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config')))
+    data_config.readConfigFile(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file')), experiement)
     
     # Load preprocess folder
     load_data_path.load_preprocess_path(data_config, process_data_path, data_name='preprocess_data')
@@ -140,11 +140,12 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser()
     parser.add_argument("--tiles_path", required=False, help="Path to the root folder containing TILES data")
-    parser.add_argument("--config", required=False,
-                        help="Path to a config file specifying how to perform the clustering")
+    parser.add_argument("--config", required=False, help="Path to a config file specifying how to perform the clustering")
+    parser.add_argument("--experiement", required=False, help="Experiement name")
     args = parser.parse_args()
     
     tiles_data_path = '../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
-    config_path = 'configs/baseline.cfg' if args.config is None else args.config
-    
-    main(tiles_data_path, config_path)
+    config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file')) if args.config is None else args.config
+    experiement = 'baseline' if args.config is None else args.config
+
+    main(tiles_data_path, config_path, experiement)

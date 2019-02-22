@@ -105,14 +105,14 @@ def read_owl_in_one(owl_in_one_config, participant_id):
     return owl_in_one_all_df
 
 
-def read_processed_fitbit(fitbit_config, participant_id):
+def read_processed_fitbit(fitbit_path, participant_id):
     """
     Read preprocessed data
     """
     ###########################################################
     # If folder not exist
     ###########################################################
-    read_participant_folder = os.path.join(fitbit_config.process_folder, participant_id)
+    read_participant_folder = os.path.join(fitbit_path, participant_id)
     if not os.path.exists(read_participant_folder):
         return
 

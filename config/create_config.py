@@ -24,15 +24,16 @@ global_param = {'enable_plot': False}
 
 if __name__ == '__main__':
     
+    experiement = 'baseline'
     config = Config()
     
     # Save parameters
-    config.saveConfig(om_param, fitbit_param, owl_in_one_param, realizd_param, segmentation_param, cluster_param, global_param)
+    config.saveConfig(om_param, fitbit_param, owl_in_one_param, realizd_param, segmentation_param, cluster_param, global_param, experiement)
 
     # Create config files
-    config.createConfigFile()
+    config.createConfigFile(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file'), experiement)
 
     # Read config files
-    config.readConfigFile(os.curdir)
+    config.readConfigFile(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file'), experiement)
     
     
