@@ -206,13 +206,13 @@ class Plot(object):
             plt.savefig(os.path.join(save_folder, participant_id, day_str + '.png'), dpi=300)
             plt.close()
 
-    def plot_cluster(self, participant_id, save_path, fitbit_df=None, realizd_df=None, owl_in_one_df=None,
+    def plot_cluster(self, participant_id, fitbit_df=None, realizd_df=None, owl_in_one_df=None, segmentation_df=None,
                      fitbit_summary_df=None, mgt_df=None, omsignal_data_df=None, cluster_df=None):
             
         ###########################################################
         # If folder not exist
         ###########################################################
-        save_folder = os.path.join(save_path, participant_id)
+        save_folder = os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], participant_id)
         if not os.path.exists(save_folder):
             os.mkdir(save_folder)
     
@@ -221,11 +221,7 @@ class Plot(object):
         ###########################################################
         fitbit_df = fitbit_df.sort_index()
         realizd_data_df = None if realizd_df is None else realizd_df
-    
-        if os.path.exists(os.path.join(self.data_config.fitbit_sensor_dict['segmentation_path'], participant_id + '.csv.gz')) is False:
-            return
-        bps_df = pd.read_csv(os.path.join(self.data_config.fitbit_sensor_dict['segmentation_path'], participant_id + '.csv.gz'), index_col=0)
-    
+        
         interval = int((pd.to_datetime(fitbit_df.index[1]) - pd.to_datetime(fitbit_df.index[0])).total_seconds() / 60)
     
         ###########################################################
@@ -258,7 +254,7 @@ class Plot(object):
             ###########################################################
             # Read plot segmentation
             ###########################################################
-            plt_df = bps_df[day_start_str:day_end_str]
+            plt_df = segmentation_df[day_start_str:day_end_str]
             xposition = pd.to_datetime(list(plt_df.index))
             
             ###########################################################

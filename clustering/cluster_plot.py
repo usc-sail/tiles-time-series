@@ -81,35 +81,27 @@ def main(tiles_data_path, cluster_config_path, experiement):
         omsignal_data_df = load_sensor_data.read_processed_omsignal(data_config.omsignal_sensor_dict['preprocess_path'], participant_id)
         owl_in_one_df = load_sensor_data.read_processed_owl_in_one(data_config.owl_in_one_sensor_dict['preprocess_path'], participant_id)
         realizd_df = load_sensor_data.read_processed_realizd(data_config.realizd_sensor_dict['preprocess_path'], participant_id)
+        fitbit_df, fitbit_mean, fitbit_std = load_sensor_data.read_processed_fitbit_with_pad(data_config, participant_id)
+        
+        ###########################################################
+        # 4. Read clustering and segmentation data
+        ###########################################################
+        if os.path.exists(os.path.join(data_config.fitbit_sensor_dict['segmentation_path'], participant_id + '.csv.gz')) is False:
+            continue
+        if os.path.exists(os.path.join(data_config.fitbit_sensor_dict['clustering_path'], participant_id + '.csv')) is False:
+            continue
 
+        segmentation_df = load_sensor_data.load_segmentation_data(data_config.fitbit_sensor_dict['segmentation_path'], participant_id)
+        clustering_df = load_sensor_data.load_clustering_data(data_config.fitbit_sensor_dict['clustering_path'], participant_id)
+        
         ###########################################################
-        # 4. Read data and segmentation data
+        # 5. Plot
         ###########################################################
-        ggs_segmentation.read_preprocess_data()
-        ggs_segmentation.segment_data_by_sleep(fitbit_summary_df=fitbit_summary_df)
-        
-        # Get cluster configuration from the config file
-        config_parser = ConfigParser()
-        config_parser.read(cluster_config_path)
-        
-        save_path = os.path.abspath(os.path.join(os.pardir, 'data', 'clustering', os.path.basename(cluster_config_path).split('.')[0]))
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
-        file_name = participant_id + '.csv'
-        
-        # If clustering file exist
-        if os.path.exists(os.path.join(save_path, file_name)) is True:
-            segment_cluster_df = pd.read_csv(os.path.join(save_path, file_name))
-            segment_cluster_df.loc[:, 'index'] = segment_cluster_df.loc[:, 'start']
-            segment_cluster_df = segment_cluster_df.set_index('index')
-        
-            ###########################################################
-            # 5. Plot
-            ###########################################################
-            cluster_plot = plot.Plot(data_config=data_config, primary_unit=primary_unit)
-    
-            cluster_plot.plot_cluster(participant_id, save_path, fitbit_df=ggs_segmentation.fitbit_df, fitbit_summary_df=fitbit_summary_df, mgt_df=participant_mgt,
-                                      omsignal_data_df=omsignal_data_df, realizd_df=realizd_df, owl_in_one_df=owl_in_one_df, cluster_df=segment_cluster_df)
+        cluster_plot = plot.Plot(data_config=data_config, primary_unit=primary_unit)
+
+        cluster_plot.plot_cluster(participant_id, fitbit_df=fitbit_df, fitbit_summary_df=fitbit_summary_df,
+                                  mgt_df=participant_mgt, segmentation_df=segmentation_df, omsignal_data_df=omsignal_data_df,
+                                  realizd_df=realizd_df, owl_in_one_df=owl_in_one_df, cluster_df=clustering_df)
         
         del ggs_segmentation
 

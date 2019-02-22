@@ -73,16 +73,19 @@ def main(tiles_data_path, config_path, experiement):
         ###########################################################
         # 4. Read segmentation data
         ###########################################################
-        ggs_segmentation.read_preprocess_data()
-        
+        fitbit_df, fitbit_mean, fitbit_std = load_sensor_data.read_processed_fitbit(data_config.fitbit_sensor_dict['preprocess_path'], participant_id)
+
+        if fitbit_df is None:
+            continue
+
         ###########################################################
         # 5. Segmentation
         ###########################################################
         fitbit_data_dict = load_sensor_data.read_fitbit(fitbit_summary_path, participant_id)
         fitbit_summary_df = fitbit_data_dict['summary']
         
-        success = ggs_segmentation.segment_data_by_sleep(fitbit_summary_df=fitbit_summary_df, threshold=0)
-        
+        ggs_segmentation.segment_data_by_sleep(fitbit_mean, fitbit_std, fitbit_df, fitbit_summary_df=fitbit_summary_df)
+
         del ggs_segmentation
 
 

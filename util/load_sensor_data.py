@@ -58,6 +58,82 @@ def read_processed_omsignal(omsignal_pat, participant_id):
     return omsignal_all_df
 
 
+def read_processed_fitbit_with_pad(data_config, participant_id):
+    ###########################################################
+    # 1. Read all fitbit file
+    ###########################################################
+    fitbit_folder = os.path.join(data_config.fitbit_sensor_dict['preprocess_path'], participant_id)
+    if not os.path.exists(fitbit_folder):
+        return None, None, None
+
+    ###########################################################
+    # List files and remove 'DS' file in mac system
+    ###########################################################
+    data_file_array = os.listdir(fitbit_folder)
+
+    for data_file in data_file_array:
+        if 'DS' in data_file: data_file_array.remove(data_file)
+
+    processed_data_dict_array = {}
+    
+    if len(data_file_array) > 0:
+        ###########################################################
+        # Create dict for participant
+        ###########################################################
+        processed_data_dict_array['data'] = pd.DataFrame()
+        processed_data_dict_array['raw'] = pd.DataFrame()
+    
+        for data_file in data_file_array:
+            ###########################################################
+            # Read data and append
+            ###########################################################
+            csv_path = os.path.join(fitbit_folder, data_file)
+            data_df = pd.read_csv(csv_path, index_col=0)
+        
+            ###########################################################
+            # Append data
+            ###########################################################
+            processed_data_dict_array['raw'] = processed_data_dict_array['raw'].append(data_df)
+    
+        ###########################################################
+        # Assign data
+        ###########################################################
+        interval = int(data_config.fitbit_sensor_dict['offset'] / 60)
+    
+        final_df = processed_data_dict_array['raw'].sort_index()
+        final_df[final_df < 0] = 0
+        start_str = pd.to_datetime(final_df.index[0]).replace(hour=0, minute=0, second=0, microsecond=0).strftime(date_time_format)[:-3]
+        end_str = (pd.to_datetime(final_df.index[-1]) + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).strftime(date_time_format)[:-3]
+    
+        time_length = (pd.to_datetime(end_str) - pd.to_datetime(start_str)).total_seconds()
+        point_length = int(time_length / data_config.fitbit_sensor_dict['offset']) + 1
+        time_arr = [(pd.to_datetime(start_str) + timedelta(minutes=i * interval)).strftime(date_time_format)[:-3] for i in range(0, point_length)]
+    
+        final_df_all = pd.DataFrame(index=time_arr, columns=final_df.columns)
+        final_df_all.loc[final_df.index, :] = final_df
+    
+        ###########################################################
+        # Assign pad
+        ###########################################################
+        pad_time_arr = list(set(time_arr) - set(final_df.dropna().index))
+        pad_df = pd.DataFrame(np.zeros([len(pad_time_arr), len(final_df_all.columns)]), index=pad_time_arr, columns=list(final_df_all.columns))
+        temp = np.random.normal(size=(2, 2))
+        temp2 = np.dot(temp, temp.T)
+        for j in range(len(pad_df)):
+            data_pad_tmp = np.random.multivariate_normal(np.zeros(2) - 50, temp2)
+            pad_df.loc[pad_time_arr[j], :] = data_pad_tmp
+        final_df_all.loc[pad_df.index, :] = pad_df
+    
+        processed_data_dict_array['data'] = final_df_all
+        processed_data_dict_array['mean'] = np.nanmean(processed_data_dict_array['raw'], axis=0)
+        processed_data_dict_array['std'] = np.nanstd(processed_data_dict_array['raw'], axis=0)
+        
+        return final_df_all, processed_data_dict_array['mean'], processed_data_dict_array['std']
+    
+    else:
+        return None, None, None
+
+
 def read_processed_owl_in_one(owl_in_one_path, participant_id):
     ###########################################################
     # 1. Read all omsignal file
@@ -152,82 +228,15 @@ def read_processed_fitbit(fitbit_path, participant_id):
     return fitbit_df
 
 
-def read_processed_fitbit_with_pad(fitbit_config, participant_id):
-    """
-    Read preprocessed data
-    """
-    ###########################################################
-    # If folder not exist
-    ###########################################################
-    read_participant_folder = os.path.join(fitbit_config.process_folder, participant_id)
-    if not os.path.exists(read_participant_folder):
-        return
-
-    ###########################################################
-    # List files and remove 'DS' file in mac system
-    ###########################################################
-    data_file_array = os.listdir(read_participant_folder)
-
-    for data_file in data_file_array:
-        if 'DS' in data_file: data_file_array.remove(data_file)
-
-    fitbit_df, final_df_all = None, None
-
-    if len(data_file_array) > 0:
-        ###########################################################
-        # Create dict for participant
-        ###########################################################
-        processed_data_dict_array = {}
-        processed_data_dict_array['data'] = pd.DataFrame()
+def load_clustering_data(path, participant_id):
+    clustering_df = pd.read_csv(os.path.join(path, participant_id + '.csv'))
+    clustering_df.loc[:, 'index'] = clustering_df.loc[:, 'start']
+    clustering_df = clustering_df.set_index('index')
     
-        for data_file in data_file_array:
-            ###########################################################
-            # Read data and append
-            ###########################################################
-            csv_path = os.path.join(read_participant_folder, data_file)
-            data_df = pd.read_csv(csv_path, index_col=0)
-        
-            ###########################################################
-            # Append data
-            ###########################################################
-            processed_data_dict_array['data'] = processed_data_dict_array['data'].append(data_df)
-    
-        ###########################################################
-        # Assign data
-        ###########################################################
-        fitbit_df = processed_data_dict_array['data'].sort_index()
+    return clustering_df
 
-        ###########################################################
-        # If stepcount is below zero
-        ###########################################################
-        zero_index = list(fitbit_df.loc[fitbit_df['StepCount'] < 0].index)
-        fitbit_df.loc[zero_index, 'StepCount'] = 0
 
-        ###########################################################
-        # Assign data
-        ###########################################################
-        interval = int(fitbit_config.offset / 60)
-        start_str = pd.to_datetime(fitbit_df.index[0]).replace(hour=0, minute=0, second=0, microsecond=0).strftime(date_time_format)[:-3]
-        end_str = (pd.to_datetime(fitbit_df.index[-1]) + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).strftime(date_time_format)[:-3]
+def load_segmentation_data(path, participant_id):
+    segmentation_df = pd.read_csv(os.path.join(path, participant_id + '.csv.gz'), index_col=0)
+    return segmentation_df
 
-        time_length = (pd.to_datetime(end_str) - pd.to_datetime(start_str)).total_seconds()
-        point_length = int(time_length / fitbit_config.offset) + 1
-        time_arr = [(pd.to_datetime(start_str) + timedelta(minutes=i * interval)).strftime(date_time_format)[:-3] for i in range(0, point_length)]
-
-        final_df_all = pd.DataFrame(index=time_arr, columns=fitbit_df.columns)
-        final_df_all.loc[fitbit_df.index, :] = fitbit_df
-
-        ###########################################################
-        # Assign pad
-        ###########################################################
-        pad_time_arr = list(set(time_arr) - set(fitbit_df.dropna().index))
-        pad_df = pd.DataFrame(np.zeros([len(pad_time_arr), len(final_df_all.columns)]), index=pad_time_arr, columns=list(final_df_all.columns))
-        temp = np.random.normal(size=(2, 2))
-        temp2 = np.dot(temp, temp.T)
-        for j in range(len(pad_df)):
-            data_pad_tmp = np.random.multivariate_normal(np.zeros(2) - 50, temp2)
-            pad_df.loc[pad_time_arr[j], :] = data_pad_tmp
-        final_df_all.loc[pad_df.index, :] = pad_df
-        final_df_all = final_df_all
-
-    return final_df_all

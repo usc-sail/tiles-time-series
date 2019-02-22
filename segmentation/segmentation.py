@@ -125,7 +125,7 @@ class Segmentation(object):
             self.processed_data_dict_array[participant_id]['mean'] = np.nanmean(self.processed_data_dict_array[participant_id]['raw'], axis=0)
             self.processed_data_dict_array[participant_id]['std'] = np.nanstd(self.processed_data_dict_array[participant_id]['raw'], axis=0)
      
-    def segment_data_by_sleep(self, fitbit_summary_df=None, threshold=0, single_stream=None):
+    def segment_data_by_sleep(self, fitbit_mean, fitbit_std, fitbit_df, fitbit_summary_df=None, threshold=0, single_stream=None):
     
         participant_id = self.participant_id
     
@@ -139,7 +139,7 @@ class Segmentation(object):
         ###########################################################
         # Read data
         ###########################################################
-        data_df = self.processed_data_dict_array[participant_id]['data'].sort_index()
+        data_df = fitbit_df.sort_index()
         if single_stream is not None:
             if single_stream == 'step':
                 data_df = data_df.loc[:, 'StepCount']
@@ -169,8 +169,8 @@ class Segmentation(object):
         ###########################################################
         # Normalizing
         ###########################################################
-        mean = self.processed_data_dict_array[participant_id]['mean']
-        std = self.processed_data_dict_array[participant_id]['std']
+        mean = fitbit_mean
+        std = fitbit_std
         
         if single_stream is not None:
             if single_stream == 'step':
