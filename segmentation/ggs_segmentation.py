@@ -60,7 +60,7 @@ def main(tiles_data_path, config_path, experiement):
 
     top_participant_id_list = list(top_participant_id_df.index)
     top_participant_id_list.sort()
-    top_participant_id_list = top_participant_id_list[0:]
+    top_participant_id_list = top_participant_id_list[120:]
     
     for idx, participant_id in enumerate(top_participant_id_list):
         
@@ -73,7 +73,7 @@ def main(tiles_data_path, config_path, experiement):
         ###########################################################
         # 4. Read segmentation data
         ###########################################################
-        fitbit_df, fitbit_mean, fitbit_std = load_sensor_data.read_processed_fitbit(data_config.fitbit_sensor_dict['preprocess_path'], participant_id)
+        fitbit_df, fitbit_mean, fitbit_std = load_sensor_data.read_processed_fitbit_with_pad(data_config, participant_id)
 
         if fitbit_df is None:
             continue
