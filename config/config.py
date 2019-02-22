@@ -51,6 +51,8 @@ class Config(object):
         self.config.set('fitbit', 'segmentation_lamb', str(fitbit_process_param['segmentation_lamb']))
         self.config.set('fitbit', 'cluster_method', fitbit_process_param['cluster_method'])
         self.config.set('fitbit', 'num_cluster', str(fitbit_process_param['num_cluster']))
+        if fitbit_process_param['cluster_method'] == 'ticc':
+            self.config.set('fitbit', 'cluster_window', str(fitbit_process_param['cluster_window']))
 
         process_col_array = list(fitbit_process_param['preprocess_cols'])
         process_col_array.sort()
@@ -126,6 +128,9 @@ class Config(object):
         self.fitbit_sensor_dict['cluster_method'] = self.getSetting('fitbit', 'cluster_method')
         self.fitbit_sensor_dict['num_cluster'] = int(self.getSetting('fitbit', 'num_cluster'))
         
+        if self.fitbit_sensor_dict['cluster_method'] == 'ticc':
+            self.fitbit_sensor_dict['cluster_window'] = int(self.getSetting('fitbit', 'cluster_window'))
+            
         ###########################################################
         # Read owl_in_one
         ###########################################################

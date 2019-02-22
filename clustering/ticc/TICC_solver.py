@@ -13,18 +13,11 @@ from src.TICC_helper import *
 from src.admm_solver import ADMMSolver
 
 class TICC:
-    _process_hype = {'method': 'ma', 'offset': 30, 'overlap': 0}
     
-    _default_om_signal = {'raw_cols': ['BreathingDepth', 'BreathingRate', 'Cadence',
-                                       'HeartRate', 'Intensity', 'Steps'],
-                          'MinPeakDistance': 100, 'MinPeakHeight': 0.04}
-    
-    def __init__(self, signal_type=None, main_folder=None, mp=0.05, method=None, num_of_point_per_segment=400,
-                 process_hyper=_process_hype, signal_hyper=_default_om_signal, method_hyper=None,
-                 times_series_arr=None, window_size=10, number_of_clusters=5,
+    def __init__(self, data_config, times_series_arr=None, window_size=10, number_of_clusters=5,
                  lambda_parameter=11e-2, beta=400, maxIters=1000, threshold=2e-5,
                  write_out_file=False, prefix_string="", num_proc=1,
-                 compute_BIC=False, cluster_reassignment=20):
+                 compute_BIC=False, cluster_reassignment=20, participant_id=None):
         """
         Parameters:
             - window_size: size of the sliding window
@@ -51,8 +44,9 @@ class TICC:
         self.compute_BIC = compute_BIC
         self.cluster_reassignment = cluster_reassignment
         self.num_blocks = self.window_size + 1
-        self.num_of_point_per_segment = num_of_point_per_segment
-
+        self.data_config = data_config
+        self.participant_id = participant_id
+        
         self.trained_model = {}
 
         pd.set_option('display.max_columns', 500)
@@ -60,168 +54,55 @@ class TICC:
         np.random.seed(102)
 
         ###########################################################
-        # Data specific
+        # Save model paths
         ###########################################################
-        self.mp = mp
-        self.method = method
-        self.method_hyper = method_hyper
-        self.signal_type = signal_type
-
-        ###########################################################
-        # 1. om_signal type
-        ###########################################################
-        if signal_type == 'om_signal':
-            ###########################################################
-            # Update hyper paramters for signal and preprocess method
-            ###########################################################
-            self.signal_hypers = copy.deepcopy(self._default_om_signal)
-            self.signal_hypers.update(signal_hyper)
-    
-            self.process_hyper = copy.deepcopy(self._process_hype)
-            self.process_hyper.update(process_hyper)
-
-        ###########################################################
-        # 2. Data folder
-        ###########################################################
-        self.main_folder = main_folder
-        self.process_basic_str = 'method_' + self.process_hyper['method'] + \
-                                 '_offset_' + str(self.process_hyper['offset']) + \
-                                 '_overlap_' + str(self.process_hyper['overlap'])
-
-        process_col_array = list(self.process_hyper['preprocess_cols'])
-        process_col_array.sort()
-        self.process_col_str = '-'.join(process_col_array)
-
-        self.process_col_array = process_col_array
-        self.num_modalities = len(process_col_array)
-
-        ###########################################################
-        # 2.2 TICC Data folder
-        ###########################################################
-        self.create_folder(self.main_folder)
-        
-        self.save_TICC_path = os.path.join(self.main_folder, self.signal_type)
-        self.create_folder(self.save_TICC_path)
-        
-        self.save_TICC_path = os.path.join(self.save_TICC_path, self.process_basic_str)
-        self.create_folder(self.save_TICC_path)
-        
-        self.save_TICC_path = os.path.join(self.save_TICC_path, self.process_col_str)
-        self.create_folder(self.save_TICC_path)
-        
-        if self.method is not None:
-            self.save_TICC_data_path = os.path.join(self.save_TICC_path, 'mp_' + str(mp))
-            self.create_folder(self.save_TICC_data_path)
-            
-            self.save_TICC_data_path = os.path.join(self.save_TICC_data_path, method)
-            self.create_folder(self.save_TICC_data_path)
-
-            if self.method == 'trmf':
-                self.method_str = 'K_' + str(self.method_hyper['K']) + \
-                                  '_lag_' + str(method_hyper['lag'][0]) + \
-                                  '_alpha_' + str(method_hyper['alpha']) + \
-                                  '_eta_' + str(method_hyper['eta']) + \
-                                  '_lambda_f_' + str(method_hyper['lambda_f']) + \
-                                  '_lambda_x_' + str(method_hyper['lambda_x']) + \
-                                  '_lambda_w_' + str(method_hyper['lambda_w'])
-                self.save_TICC_data_path = os.path.join(self.save_TICC_data_path, self.method_str)
-    
-            elif self.method == 'brits' or self.method == 'brits_multitask':
-                self.method_str = 'rnn_hid_size_' + str(self.method_hyper['rnn_hid_size']) + \
-                                  '_drop_out_' + str(self.method_hyper['drop_out']) + \
-                                  '_seq_len_' + str(self.method_hyper['seq_len'])
-                self.save_TICC_data_path = os.path.join(self.save_TICC_data_path, self.method_str)
-
-        ###########################################################
-        # 2.3 Save model paths
-        ###########################################################
-        self.save_TICC_model_path = os.path.join(self.save_TICC_path, 'model')
+        self.save_TICC_model_path = os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], 'model')
+        self.create_folder(self.save_TICC_model_path)
+        self.save_TICC_model_path = os.path.join(self.save_TICC_model_path, participant_id)
         self.create_folder(self.save_TICC_model_path)
 
-        self.save_TICC_ground_truth_path = os.path.join(self.save_TICC_path, 'ground_truth')
-        self.create_folder(self.save_TICC_ground_truth_path)
 
-        self.ticc_model_str = 'ncluster_' + str(self.number_of_clusters) \
-                              + '_window_' + str(self.window_size) \
-                              + '_beta_' + str(self.switch_penalty) \
-                              + '_lambda_' + str(self.lambda_parameter)
-
-        self.save_TICC_model_path = os.path.join(self.save_TICC_model_path, self.ticc_model_str)
-        self.create_folder(self.save_TICC_model_path)
-
-        self.save_TICC_ground_truth_path = os.path.join(self.save_TICC_ground_truth_path, self.ticc_model_str)
-        self.create_folder(self.save_TICC_ground_truth_path)
-
-    def fit(self, data_array_dict=None, global_stats=None):
+    def fit(self, data_df=None, mean=None, std=None):
         """
-        Main method for TICC solver.
+        Main method for ticc solver.
         Parameters:
             - input_file: location of the data file
         """
         assert self.maxIters > 0  # must have at least one iteration
         self.log_parameters()
-        self.data = data_array_dict
-
+        
         self.complete_D_train = None
-        self.data_dict_array = []
         last_end_index = 0
         
-        participant_id_array = data_array_dict.keys()
-        for participant_id in participant_id_array:
-            if len(data_array_dict) == 0:
-                continue
-            for file_name in data_array_dict[participant_id].keys():
-                data_df = data_array_dict[participant_id][file_name]
-                data_df = data_df.fillna(data_df.mean())
-                
-                ###########################################################
-                # 1.1 Find the row and col size of the input
-                ###########################################################
-                if global_stats is None:
-                    times_series_arr = (data_df - data_df.mean()) / data_df.std()
-                    times_series_arr = times_series_arr.fillna(data_df.mean())
-                    times_series_arr = np.array(times_series_arr)
-                else:
-                    times_series_arr = np.array((data_df - global_stats['mean'].squeeze()) / global_stats['std'].squeeze())
-                    
-                time_series_rows_size = times_series_arr.shape[0]
-                time_series_col_size = times_series_arr.shape[1]
-
-                ###########################################################
-                # 1.2 Train test split
-                ###########################################################
-                training_indices = getTrainTestSplit(time_series_rows_size, self.num_blocks,
-                                                     self.window_size)  # indices of the training samples
-                num_train_points = len(training_indices)
-
-                ###########################################################
-                # 1.3 Stack the training data
-                ###########################################################
-                complete_D_train = self.stack_training_data(times_series_arr, time_series_col_size,
-                                                            num_train_points, training_indices)
-                complete_D_train = complete_D_train[:-self.window_size + 1]
-                
-                data_dict = {}
-                if len(self.data_dict_array) == 0:
-                    data_dict['start_index'] = 0
-                    data_dict['end_index'] = complete_D_train.shape[0]
-                else:
-                    data_dict['start_index'] = last_end_index
-                    data_dict['end_index'] = last_end_index + complete_D_train.shape[0]
-
-                data_dict['participant_id'] = participant_id
-                data_dict['file_name'] = file_name
-                self.data_dict_array.append(data_dict)
-                
-                last_end_index = data_dict['end_index']
-                # complete_D_train_df = pd.DataFrame(complete_D_train)
-                # complete_D_train = np.array(complete_D_train_df.dropna())
-                
-                if self.complete_D_train is None:
-                    self.complete_D_train = complete_D_train
-                else:
-                    self.complete_D_train = np.append(self.complete_D_train, complete_D_train, axis=0)
+        if len(data_df) == 0:
+            return
         
+        data_df = data_df.fillna(data_df.mean())
+
+        ###########################################################
+        # 1.1 Find the row and col size of the input
+        ###########################################################
+        times_series_arr = np.array((data_df - mean) / std)
+        time_series_rows_size = times_series_arr.shape[0]
+        time_series_col_size = times_series_arr.shape[1]
+
+        ###########################################################
+        # 1.2 Train test split
+        ###########################################################
+        training_indices = getTrainTestSplit(time_series_rows_size, self.num_blocks, self.window_size)  # indices of the training samples
+        num_train_points = len(training_indices)
+
+        ###########################################################
+        # 1.3 Stack the training data
+        ###########################################################
+        complete_D_train = self.stack_training_data(times_series_arr, time_series_col_size, num_train_points, training_indices)
+        complete_D_train = complete_D_train[:-self.window_size + 1]
+
+        if self.complete_D_train is None:
+            self.complete_D_train = complete_D_train
+        else:
+            self.complete_D_train = np.append(self.complete_D_train, complete_D_train, axis=0)
+
         ###########################################################
         # 1.4 Initiate using Gaussian Mixture
         ###########################################################
@@ -239,10 +120,10 @@ class TICC:
         # 2. PERFORM TRAINING ITERATIONS
         ###########################################################
         pool = Pool(processes=self.num_proc)  # multi-threading
-        
+
         for iters in range(self.maxIters):
             print("\n\n\nITERATION ###", iters)
-            
+    
             ###########################################################
             # 2.1 Get the train and test points
             ###########################################################
@@ -251,7 +132,7 @@ class TICC:
                 train_clusters_arr[cluster_num].append(point)
     
             len_train_clusters = {k: len(train_clusters_arr[k]) for k in range(self.number_of_clusters)}
-
+    
             ###########################################################
             # Train_clusters holds the indices in complete_D_train
             # for each of the clusters
@@ -259,11 +140,12 @@ class TICC:
             opt_res = self.train_clusters(cluster_mean_info, cluster_mean_stacked_info, self.complete_D_train,
                                           empirical_covariances, len_train_clusters, time_series_col_size,
                                           pool, train_clusters_arr)
-            
+    
             ###########################################################
             # 2.2 Optimize using ADMM
             ###########################################################
-            self.optimize_clusters(computed_covariance, len_train_clusters, log_det_values, opt_res, train_cluster_inverse)
+            self.optimize_clusters(computed_covariance, len_train_clusters, log_det_values, opt_res,
+                                   train_cluster_inverse)
             self.train_cluster_inverse = train_cluster_inverse
 
             ###########################################################
@@ -291,22 +173,21 @@ class TICC:
             len_new_train_clusters = {k: len(new_train_clusters[k]) for k in range(self.number_of_clusters)}
 
             before_empty_cluster_assign = clustered_points.copy()
-            
+
             ###########################################################
             # 2.5 Handle cluster with 0 number
             ###########################################################
             if iters != 0:
-                cluster_norms = [(np.linalg.norm(old_computed_covariance[self.number_of_clusters, i]), i) for i in
-                                 range(self.number_of_clusters)]
+                cluster_norms = [(np.linalg.norm(old_computed_covariance[self.number_of_clusters, i]), i) for i in range(self.number_of_clusters)]
                 norms_sorted = sorted(cluster_norms, reverse=True)
-
+    
                 # clusters that are not 0 as sorted by norm
                 valid_clusters = [cp[1] for cp in norms_sorted if len_new_train_clusters[cp[1]] != 0]
-
+    
                 # Add a point to the empty clusters
                 # assuming more non empty clusters than empty ones
                 counter = 0
-                
+    
                 for cluster_num in range(self.number_of_clusters):
                     if len_new_train_clusters[cluster_num] == 0:
                         cluster_selected = valid_clusters[counter]  # a cluster that is not len 0
@@ -319,26 +200,27 @@ class TICC:
                             if point_to_move >= len(clustered_points):
                                 break
                             clustered_points[point_to_move] = cluster_num
-
-                            computed_covariance[self.number_of_clusters, cluster_num] = old_computed_covariance[self.number_of_clusters, cluster_selected]
+                
+                            computed_covariance[self.number_of_clusters, cluster_num] = old_computed_covariance[
+                                self.number_of_clusters, cluster_selected]
                             cluster_mean_stacked_info[self.number_of_clusters, cluster_num] = self.complete_D_train[point_to_move, :]
                             cluster_mean_info[self.number_of_clusters, cluster_num] = self.complete_D_train[point_to_move, :][(self.window_size - 1) * time_series_col_size:self.window_size * time_series_col_size]
-
+    
                 for cluster_num in range(self.number_of_clusters):
                     print("length of cluster #", cluster_num, "-------->",
                           sum([x == cluster_num for x in clustered_points]))
-
+    
                 str_NULL = 'output'
                 if os.path.exists(str_NULL) is False:
                     os.mkdir(str_NULL)
-                
+
             print("\n\n\n")
 
             ###########################################################
             # 2.6 Save model parameters
             ###########################################################
             self.save_model_parameters()
-            
+
             ###########################################################
             # 2.7 If converge
             ###########################################################
@@ -350,10 +232,9 @@ class TICC:
         if pool is not None:
             pool.close()
             pool.join()
-            
+
         if self.compute_BIC:
-            bic = computeBIC(self.number_of_clusters, self.complete_D_train.shape[0],
-                             clustered_points, train_cluster_inverse, empirical_covariances)
+            bic = computeBIC(self.number_of_clusters, self.complete_D_train.shape[0], clustered_points, train_cluster_inverse, empirical_covariances)
             return clustered_points, train_cluster_inverse, bic
 
         return clustered_points, train_cluster_inverse
@@ -490,36 +371,28 @@ class TICC:
 
         # SMOOTHENING
         clustered_points = None
-        for i in range(len(self.data_dict_array)):
-            
-            start_index = self.data_dict_array[i]['start_index']
-            end_index = self.data_dict_array[i]['end_index']
-            
-            save_cluster_path = os.path.join(self.save_TICC_ground_truth_path, self.data_dict_array[i]['participant_id'])
-            self.create_folder(save_cluster_path)
-            
-            save_cluster_path = os.path.join(save_cluster_path, self.data_dict_array[i]['file_name'])
-            
-            data_per_segment = test_data[start_index:end_index, :]
-            lle_all_points_clusters = self.smoothen_clusters(self.trained_model['cluster_mean_info'],
-                                                             self.trained_model['computed_covariance'],
-                                                             self.trained_model['cluster_mean_stacked_info'],
-                                                             data_per_segment,
-                                                             self.trained_model['time_series_col_size'])
-            
-            # Update cluster points - using NEW smoothening
-            if clustered_points is None:
-                clustered_points = updateClusters(lle_all_points_clusters, switch_penalty=self.switch_penalty)
 
-                clustered_points_df = pd.DataFrame(clustered_points)
-                clustered_points_df.to_csv(save_cluster_path)
-            else:
-                clustered_points_per_segments = updateClusters(lle_all_points_clusters, switch_penalty=self.switch_penalty)
-                clustered_points = np.append(clustered_points, clustered_points_per_segments)
-            
-                clustered_points_df = pd.DataFrame(clustered_points_per_segments)
-                clustered_points_df.to_csv(save_cluster_path)
+        save_cluster_path = os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], self.participant_id + '.csv.gz')
+        
+        data_per_segment = test_data.copy()
+        lle_all_points_clusters = self.smoothen_clusters(self.trained_model['cluster_mean_info'],
+                                                         self.trained_model['computed_covariance'],
+                                                         self.trained_model['cluster_mean_stacked_info'],
+                                                         data_per_segment, self.trained_model['time_series_col_size'])
 
+        # Update cluster points - using NEW smoothening
+        if clustered_points is None:
+            clustered_points = updateClusters(lle_all_points_clusters, switch_penalty=self.switch_penalty)
+    
+            clustered_points_df = pd.DataFrame(clustered_points)
+            clustered_points_df.to_csv(save_cluster_path, compression='gzip')
+        else:
+            clustered_points_per_segments = updateClusters(lle_all_points_clusters, switch_penalty=self.switch_penalty)
+            clustered_points = np.append(clustered_points, clustered_points_per_segments)
+    
+            clustered_points_df = pd.DataFrame(clustered_points_per_segments)
+            clustered_points_df.to_csv(save_cluster_path, compression='gzip')
+            
         return (clustered_points)
         
     def save_model_parameters(self):
@@ -644,24 +517,7 @@ class TICC:
                 clustered_points = updateClusters(lle_all_points_clusters, switch_penalty=self.switch_penalty)
                 clustered_points_df = pd.DataFrame(clustered_points)
                 clustered_points_df.to_csv(save_cluster_path)
-                
-    def load_ground_truth_ticc_data(self, participant_id_list):
-        
-        self.ground_truth_ticc_cluster = {}
-        
-        for participant_id in participant_id_list:
     
-            self.ground_truth_ticc_cluster[participant_id] = {}
-            
-            data_folder = os.path.join(self.save_TICC_ground_truth_path, participant_id)
-            if os.path.exists(data_folder) is False:
-                continue
-                
-            file_name_list = os.listdir(data_folder)
-            for file_name in file_name_list:
-                cluster_data_df = pd.read_csv(os.path.join(data_folder, file_name), index_col=0)
-                self.ground_truth_ticc_cluster[participant_id][file_name] = np.array(cluster_data_df)
-
     def load_imputed_ticc_data(self, participant_id_list):
     
         self.imputed_ticc_cluster = {}
@@ -678,39 +534,4 @@ class TICC:
             for file_name in file_name_list:
                 cluster_data_df = pd.read_csv(os.path.join(data_folder, file_name), index_col=0)
                 self.imputed_ticc_cluster[participant_id][file_name] = np.array(cluster_data_df)
-                
-    def compute_error(self):
-        
-        participant_id_list = list(self.ground_truth_ticc_cluster.keys())
-
-        ground_truth_data_array = None
-        imputed_data_array = None
-
-        for participant_id in participant_id_list:
-            
-            if len(self.ground_truth_ticc_cluster[participant_id]) == 0:
-                continue
-                
-            if participant_id not in list(self.imputed_ticc_cluster.keys()):
-                continue
-            
-            file_name_list = list(self.ground_truth_ticc_cluster[participant_id].keys())
-            
-            for file_name in file_name_list:
-                if file_name not in list(self.imputed_ticc_cluster[participant_id].keys()):
-                    continue
-                
-                ground_truth_data = self.ground_truth_ticc_cluster[participant_id][file_name]
-                imputed_data = self.imputed_ticc_cluster[participant_id][file_name]
-
-                if ground_truth_data_array is None:
-                    ground_truth_data_array = ground_truth_data
-                    imputed_data_array = imputed_data
-                else:
-                    ground_truth_data_array = np.append(ground_truth_data_array, ground_truth_data)
-                    imputed_data_array = np.append(imputed_data_array, imputed_data)
-        
-        error = np.sum(ground_truth_data_array != imputed_data_array) / len(ground_truth_data_array)
-        error_df = pd.DataFrame(np.array(error).reshape([1, 1]), index=[self.method_full_str])
-        return error_df
         

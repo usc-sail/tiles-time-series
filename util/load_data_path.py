@@ -33,7 +33,7 @@ def load_preprocess_path(data_config, process_data_path, data_name='preprocess_d
     data_config.omsignal_sensor_dict['preprocess_path'] = tmp_path
 
     # Fitbit
-    tmp_path = os.path.join(process_data_path, data_config.experiement, data_name, data_config.fitbit_sensor_dict['name'])
+    tmp_path = os.path.join(process_data_path, data_name, data_config.fitbit_sensor_dict['name'])
     create_folder(tmp_path)
     
     if data_config.fitbit_sensor_dict['imputation'] != None:
@@ -48,7 +48,7 @@ def load_preprocess_path(data_config, process_data_path, data_name='preprocess_d
     data_config.fitbit_sensor_dict['preprocess_path'] = tmp_path
 
     # owl_in_one
-    tmp_path = os.path.join(process_data_path, data_config.experiement, data_name, data_config.owl_in_one_sensor_dict['name'])
+    tmp_path = os.path.join(process_data_path, data_name, data_config.owl_in_one_sensor_dict['name'])
     create_folder(tmp_path)
 
     preprocess_str = data_config.owl_in_one_sensor_dict['feature']
@@ -60,7 +60,7 @@ def load_preprocess_path(data_config, process_data_path, data_name='preprocess_d
     data_config.owl_in_one_sensor_dict['preprocess_path'] = tmp_path
     
     # realizd
-    tmp_path = os.path.join(process_data_path, data_config.experiement, data_name, data_config.realizd_sensor_dict['name'])
+    tmp_path = os.path.join(process_data_path, data_name, data_config.realizd_sensor_dict['name'])
     create_folder(tmp_path)
     preprocess_str = data_config.realizd_sensor_dict['feature']
     preprocess_str = preprocess_str + '_' + data_config.realizd_sensor_dict['preprocess_setting']
@@ -131,7 +131,10 @@ def load_clustering_path(data_config, process_data_path, data_name='clustering')
     tmp_path = os.path.join(tmp_path, data_config.fitbit_sensor_dict['name'])
     create_folder(tmp_path)
     
-    preprocess_str = data_config.fitbit_sensor_dict['cluster_method'] + '_' + str(data_config.fitbit_sensor_dict['num_cluster'])
+    preprocess_str = data_config.fitbit_sensor_dict['cluster_method'] + '_num_cluster_' + str(data_config.fitbit_sensor_dict['num_cluster'])
+    if data_config.fitbit_sensor_dict['cluster_method'] == 'ticc':
+        preprocess_str = preprocess_str + '_' + str(data_config.fitbit_sensor_dict['cluster_window'])
+    
     if data_config.fitbit_sensor_dict['segmentation_method'] == 'gaussian':
         preprocess_str = preprocess_str + '_ggs_' + str(data_config.fitbit_sensor_dict['segmentation_lamb'])
 
