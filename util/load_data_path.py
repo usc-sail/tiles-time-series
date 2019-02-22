@@ -18,9 +18,7 @@ def load_preprocess_path(data_config, process_data_path, data_name='preprocess_d
     Returns:
 
     """
-    tmp_path = os.path.join(process_data_path, data_config.experiement)
-    create_folder(tmp_path)
-    tmp_path = os.path.join(tmp_path, data_name)
+    tmp_path = os.path.join(process_data_path, data_name)
     create_folder(tmp_path)
 
     # om signal
@@ -95,7 +93,7 @@ def load_segmentation_path(data_config, process_data_path, data_name='segmentati
     if data_config.fitbit_sensor_dict['segmentation_method'] == 'gaussian':
         preprocess_str = 'ggs_' + str(data_config.fitbit_sensor_dict['segmentation_lamb'])
     else:
-        preprocess_str = data_config.fitbit_sensor_dict['segmentation_method']
+        return
     
     if data_config.fitbit_sensor_dict['imputation'] != None:
         preprocess_str = preprocess_str + '_impute_' + data_config.fitbit_sensor_dict['imputation']
@@ -136,8 +134,6 @@ def load_clustering_path(data_config, process_data_path, data_name='clustering')
     preprocess_str = data_config.fitbit_sensor_dict['cluster_method'] + '_' + str(data_config.fitbit_sensor_dict['num_cluster'])
     if data_config.fitbit_sensor_dict['segmentation_method'] == 'gaussian':
         preprocess_str = preprocess_str + '_ggs_' + str(data_config.fitbit_sensor_dict['segmentation_lamb'])
-    else:
-        preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['segmentation_method']
 
     if data_config.fitbit_sensor_dict['imputation'] != None:
         preprocess_str = preprocess_str + '_impute_' + data_config.fitbit_sensor_dict['imputation']

@@ -2,6 +2,7 @@ import os, errno
 import pandas as pd
 from datetime import datetime, timedelta
 import numpy as np
+import load_sensor_data
 
 # date_time format
 date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
@@ -206,3 +207,60 @@ def read_IGTB_per_unit(user_df, participant_unit_dict):
         return_unit_type_df = return_unit_type_df.append(unit_type_igtb_df)
         
     return return_unit_df, return_unit_type_df
+
+
+def return_participant(tiles_data_path):
+    """
+    Return all participants that with data
+
+    Params:
+    tiles_data_path - tiles data folder
+
+    Returns:
+    list(fitbit_file_dict_list.keys()) - participant list
+    """
+    ###########################################################
+    fitbit_folder = os.path.join(tiles_data_path, '3_preprocessed_data/fitbit/')
+    fitbit_file_list = os.listdir(fitbit_folder)
+    fitbit_file_dict_list = {}
+    
+    for fitbit_file in fitbit_file_list:
+        
+        if '.DS' in fitbit_file:
+            continue
+        
+        participant_id = fitbit_file.split('_')[0]
+        if participant_id not in list(fitbit_file_dict_list.keys()):
+            fitbit_file_dict_list[participant_id] = {}
+    return list(fitbit_file_dict_list.keys())
+
+
+def return_top_k_participant(participant_id_list, k=10, data_config=None):
+    """
+        Return all participants that with data
+
+        Params:
+        tiles_data_path - tiles data folder
+
+        Returns:
+        fitbit_len_df - top participant df with fitbit data
+        """
+    fitbit_len_list = []
+    for idx, participant_id in enumerate(participant_id_list):
+        print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(participant_id_list)))
+        
+        fitbit_df = load_sensor_data.read_processed_fitbit(data_config.fitbit_sensor_dict['preprocess_path'], participant_id)
+        
+        if fitbit_df is not None:
+            fitbit_len_list.append(len(fitbit_df))
+        else:
+            fitbit_len_list.append(0)
+    
+    top_participant_list = [participant_id_list[i] for i in np.argsort(fitbit_len_list)[::-1][:k]]
+    fitbit_len_sort = np.sort(fitbit_len_list)[::-1][:k]
+    
+    fitbit_len_df = pd.DataFrame(fitbit_len_sort, index=top_participant_list)
+    
+    return fitbit_len_df
+
+

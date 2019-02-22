@@ -24,24 +24,6 @@ import pandas as pd
 date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
 date_only_date_time_format = '%Y-%m-%d'
 
-def return_participant(main_folder):
-    ###########################################################
-    # 2. Read all fitbit file
-    ###########################################################
-    fitbit_folder = os.path.join(main_folder, '3_preprocessed_data/fitbit/')
-    fitbit_file_list = os.listdir(fitbit_folder)
-    fitbit_file_dict_list = {}
-    
-    for fitbit_file in fitbit_file_list:
-        
-        if '.DS' in fitbit_file:
-            continue
-        
-        participant_id = fitbit_file.split('_')[0]
-        if participant_id not in list(fitbit_file_dict_list.keys()):
-            fitbit_file_dict_list[participant_id] = {}
-    return list(fitbit_file_dict_list.keys())
-
 
 def main(tiles_data_path, cluster_config_path, experiement):
     ###########################################################
@@ -74,17 +56,13 @@ def main(tiles_data_path, cluster_config_path, experiement):
     ###########################################################
     # 2. Get participant id list
     ###########################################################
-    participant_id_list = return_participant(tiles_data_path)
-    participant_id_list.sort()
-    
-    top_participant_id_df = pd.read_csv(os.path.join(data_config.fitbit_sensor_dict['segmentation_path'],
-                                                     'participant_id.csv.gz'), index_col=0, compression='gzip')
+    top_participant_id_df = pd.read_csv(os.path.join(process_data_path, experiement, 'participant_id.csv.gz'), index_col=0, compression='gzip')
     top_participant_id_list = list(top_participant_id_df.index)
     top_participant_id_list.sort()
     
     for idx, participant_id in enumerate(top_participant_id_list):
         
-        print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(participant_id_list)))
+        print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
         ###########################################################
         # 3. Create segmentation class
         ###########################################################

@@ -9,8 +9,8 @@ import copy
 import pandas as pd
 from multiprocessing import Pool
 
-from preprocess.main.TICC.src.TICC_helper import *
-from preprocess.main.TICC.src.admm_solver import ADMMSolver
+from src.TICC_helper import *
+from src.admm_solver import ADMMSolver
 
 class TICC:
     _process_hype = {'method': 'ma', 'offset': 30, 'overlap': 0}

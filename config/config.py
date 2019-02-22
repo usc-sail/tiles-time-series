@@ -47,7 +47,7 @@ class Config(object):
         self.config.set('fitbit', 'offset', str(fitbit_process_param['offset']))
         self.config.set('fitbit', 'feature', fitbit_process_param['feature'])
         self.config.set('fitbit', 'imputation', fitbit_process_param['imputation'])
-        self.config.set('fitbit', 'segmentation_method', fitbit_process_param['segmentation_method'])
+        self.config.set('fitbit', 'segmentation_method', str(fitbit_process_param['segmentation_method']))
         self.config.set('fitbit', 'segmentation_lamb', str(fitbit_process_param['segmentation_lamb']))
         self.config.set('fitbit', 'cluster_method', fitbit_process_param['cluster_method'])
         self.config.set('fitbit', 'num_cluster', str(fitbit_process_param['num_cluster']))
@@ -72,17 +72,6 @@ class Config(object):
         self.config.set('realizd', 'preprocess_setting', 'offset_' + str(realizd_param['offset']))
         self.config.set('realizd', 'offset', str(realizd_param['offset']))
         
-        ###########################################################
-        # Initiate segmentation and cluster parameters
-        ###########################################################
-        self.config.add_section('segmentation')
-        self.config.set('segmentation', 'method', segmentation_param['method'])
-        self.config.set('segmentation', 'lamb', str(segmentation_param['segmentation_lamb']))
-
-        self.config.add_section('clustering')
-        self.config.set('clustering', 'method', cluster_param['method'])
-        self.config.set('clustering', 'num_cluster', str(cluster_param['num_cluster']))
-
         ###########################################################
         # Initiate global parameters
         ###########################################################
