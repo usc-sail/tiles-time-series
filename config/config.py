@@ -32,6 +32,7 @@ class Config(object):
         self.config.add_section('om_signal')
         self.config.set('om_signal', 'preprocess_setting', 'offset_' + str(om_process_param['offset']) + '_overlap_' + str(om_process_param['overlap']))
         self.config.set('om_signal', 'offset', str(om_process_param['offset']))
+        self.config.set('om_signal', 'overlap', str(om_process_param['overlap']))
         self.config.set('om_signal', 'feature', om_process_param['feature'])
         self.config.set('om_signal', 'imputation', str(om_process_param['imputation']))
 
@@ -45,6 +46,7 @@ class Config(object):
         self.config.add_section('fitbit')
         self.config.set('fitbit', 'preprocess_setting', 'offset_' + str(fitbit_process_param['offset']) + '_overlap_' + str(fitbit_process_param['overlap']))
         self.config.set('fitbit', 'offset', str(fitbit_process_param['offset']))
+        self.config.set('fitbit', 'overlap', str(fitbit_process_param['overlap']))
         self.config.set('fitbit', 'feature', fitbit_process_param['feature'])
         self.config.set('fitbit', 'imputation', fitbit_process_param['imputation'])
         self.config.set('fitbit', 'segmentation_method', str(fitbit_process_param['segmentation_method']))
@@ -111,6 +113,7 @@ class Config(object):
         self.omsignal_sensor_dict['name'] = 'om_signal'
         self.omsignal_sensor_dict['preprocess_setting'] = self.getSetting('om_signal', 'preprocess_setting')
         self.omsignal_sensor_dict['offset'] = int(self.getSetting('om_signal', 'offset'))
+        self.omsignal_sensor_dict['overlap'] = int(self.getSetting('om_signal', 'overlap'))
         self.omsignal_sensor_dict['feature'] = self.getSetting('om_signal', 'feature')
         self.omsignal_sensor_dict['imputation'] = self.getSetting('om_signal', 'imputation')
         self.omsignal_sensor_dict['preprocess_cols'] = self.getSetting('om_signal', 'preprocess_cols')
@@ -122,6 +125,7 @@ class Config(object):
         self.fitbit_sensor_dict['name'] = 'fitbit'
         self.fitbit_sensor_dict['preprocess_setting'] = self.getSetting('fitbit', 'preprocess_setting')
         self.fitbit_sensor_dict['offset'] = int(self.getSetting('fitbit', 'offset'))
+        self.fitbit_sensor_dict['overlap'] = int(self.getSetting('fitbit', 'overlap'))
         self.fitbit_sensor_dict['feature'] = self.getSetting('fitbit', 'feature')
         self.fitbit_sensor_dict['imputation'] = self.getSetting('fitbit', 'imputation')
         self.fitbit_sensor_dict['preprocess_cols'] = self.getSetting('fitbit', 'preprocess_cols')

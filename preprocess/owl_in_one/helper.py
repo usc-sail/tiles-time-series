@@ -93,7 +93,7 @@ def init_shift_df(shift_start_end_time, cols, offset=1):
         return None
 
 
-def process_owl_in_one_data(owl_in_one_df, participant_id, save_process_folder, offset=60):
+def process_owl_in_one_data(owl_in_one_df, offset=60):
     
     ###########################################################
     # Initialization
@@ -224,9 +224,7 @@ def process_owl_in_one_data(owl_in_one_df, participant_id, save_process_folder, 
     
             shift_final_df = shift_final_df.loc[:, (shift_final_df != 0).any(axis=0)]
             preprocess_data_df = preprocess_data_df.append(shift_final_df)
-            preprocess_data_df.to_csv(os.path.join(save_process_folder, participant_id + '.csv.gz'), compression='gzip')
-
+            
     preprocess_data_df = preprocess_data_df.fillna(0)
-    preprocess_data_df.to_csv(os.path.join(save_process_folder, participant_id + '.csv.gz'), compression='gzip')
     return preprocess_data_df
 

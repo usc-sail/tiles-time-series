@@ -3,48 +3,40 @@
 import os
 import sys
 import pandas as pd
+import argparse
 
 ###########################################################
 # Add package path
 ###########################################################
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'util')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config')))
 
 
 # date_time format
 date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
 date_only_date_time_format = '%Y-%m-%d'
 
-from load_data_basic import *
+import load_sensor_data, load_data_path, load_data_basic
+import config
 from preprocess import Preprocess
 
-raw_cols = ['HeartRatePPG', 'StepCount']
 
-
-def main(main_folder, enable_impute=False):
-    
+def main(tiles_data_path, config_path, experiment):
     ###########################################################
-    # 1. Read all fitbit file
+    # 0. Read configs
     ###########################################################
-    fitbit_folder = os.path.join(main_folder, '3_preprocessed_data/fitbit/')
-    fitbit_file_list = os.listdir(fitbit_folder)
-    fitbit_file_dict_list = {}
-    
-    for fitbit_file in fitbit_file_list:
-        
-        if '.DS' in fitbit_file:
-            continue
-        
-        participant_id = fitbit_file.split('_')[0]
-        if participant_id not in list(fitbit_file_dict_list.keys()):
-            fitbit_file_dict_list[participant_id] = {}
-        
-        if 'heartRate.csv.gz' in fitbit_file:
-            fitbit_file_dict_list[participant_id]['ppg'] = fitbit_file
-        elif 'stepCount.csv.gz' in fitbit_file:
-            fitbit_file_dict_list[participant_id]['step'] = fitbit_file
+    process_data_path = os.path.abspath(os.path.join(os.pardir, 'data'))
 
-    participant_id_list = list(fitbit_file_dict_list.keys())
-    participant_id_list.sort()
+    data_config = config.Config()
+    data_config.readConfigFile(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file')), experiment)
+
+    # Load preprocess folder
+    load_data_path.load_preprocess_path(data_config, process_data_path, data_name='preprocess_data')
+
+    ###########################################################
+    # 1. Read all participant
+    ###########################################################
+    participant_id_list = load_data_basic.return_participant(tiles_data_path)
 
     ###########################################################
     # 2. Iterate all participant
@@ -56,11 +48,11 @@ def main(main_folder, enable_impute=False):
         ###########################################################
         # Read ppg and step count file path
         ###########################################################
-        ppg_file = fitbit_file_dict_list[participant_id]['ppg']
-        step_file = fitbit_file_dict_list[participant_id]['step']
+        ppg_file = participant_id + '_heartRate.csv.gz'
+        step_file = participant_id + '_stepCount.csv.gz'
 
-        ppg_file_abs_path = os.path.join(fitbit_folder, ppg_file)
-        step_file_abs_path = os.path.join(fitbit_folder, step_file)
+        ppg_file_abs_path = os.path.join(tiles_data_path, '3_preprocessed_data/fitbit/', ppg_file)
+        step_file_abs_path = os.path.join(tiles_data_path, '3_preprocessed_data/fitbit/', step_file)
 
         ###########################################################
         # Read ppg and step count data
@@ -71,40 +63,38 @@ def main(main_folder, enable_impute=False):
         step_df = pd.read_csv(step_file_abs_path, index_col=0)
         step_df = step_df.sort_index()
 
-        # step_df = step_df.drop_duplicates(keep='first')
-        # ppg_df = ppg_df.drop_duplicates(keep='first')
-
         ###########################################################
-        # 2.0 Iterate all omsignal files
+        # 2.0 Iterate all fitbit files
         ###########################################################
-        process_hype = {'method': 'ma', 'offset': 60, 'overlap': 0,
-                        'preprocess_cols': ['HeartRatePPG', 'StepCount']}
-        
         if len(ppg_df) > 0:
             
             ###########################################################
-            # 2.1 Init om_signal preprocess
+            # 2.1 Init fitbit preprocess
             ###########################################################
-            fitbit_preprocess = Preprocess(data_df=None, signal_type = 'fitbit',
-                                           participant_id=participant_id, imputation_method='iterative',
-                                           save_main_folder=os.path.abspath(os.path.join(os.pardir, '../preprocess_data')),
-                                           process_hyper=process_hype, enable_impute=enable_impute)
+            fitbit_preprocess = Preprocess(data_config=data_config, participant_id=participant_id)
         
             ###########################################################
             # 2.2 Preprocess fitbit raw data array (No slice)
             ###########################################################
-            fitbit_preprocess.process_fitbit(ppg_df, step_df, method='block')
+            fitbit_preprocess.process_fitbit(ppg_df, step_df)
             
             ###########################################################
-            # 2.3 Delete current omsignal_preprocess object
+            # 2.3 Delete current fitbit preprocess object
             ###########################################################
             del fitbit_preprocess
       
         
 if __name__ == "__main__":
     
-    # Main Data folder
-    main_folder = '../../../data/keck_wave_all/'
-
-    main(main_folder, enable_impute=True)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--tiles_path", required=False, help="Path to the root folder containing TILES data")
+    parser.add_argument("--config", required=False, help="Path to a config file specifying how to perform the clustering")
+    parser.add_argument("--experiment", required=False, help="Experiment name")
+    args = parser.parse_args()
+    
+    tiles_data_path = '../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
+    config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file')) if args.config is None else args.config
+    experiment = 'baseline' if args.config is None else args.config
+    
+    main(tiles_data_path, config_path, experiment)
 

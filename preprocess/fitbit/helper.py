@@ -38,16 +38,14 @@ def fitbit_sliced_data_start_end_array(raw_data_df, threshold=timedelta(seconds=
     
     return start_time_array, end_time_array
 
-def fitbit_process_sliced_data(ppg_data_df, step_data_df, process_hyper,
-                               check_saved=False, check_folder=None, imputation_method=None):
+def fitbit_process_sliced_data(ppg_data_df, step_data_df, participant=None, data_config=None, check_saved=True):
     
     ###########################################################
     # Initialization
     ###########################################################
-    method = process_hyper['method']
-    offset = process_hyper['offset']
-    overlap = process_hyper['overlap']
-    preprocess_cols = process_hyper['preprocess_cols']
+    offset = data_config.fitbit_sensor_dict['offset']
+    overlap = data_config.fitbit_sensor_dict['overlap']
+    preprocess_cols = data_config.fitbit_sensor_dict['preprocess_cols']
 
     threshold = 2
     interval = int(offset / 60)
@@ -59,8 +57,6 @@ def fitbit_process_sliced_data(ppg_data_df, step_data_df, process_hyper,
     # Process function, only for heart rate, cadence, intensity
     ###########################################################
     process_func = np.nanmean
-    if method == 'ma':
-        process_func = np.nanmean
 
     ###########################################################
     # Start iterate data with given parameters
@@ -105,19 +101,19 @@ def fitbit_process_sliced_data(ppg_data_df, step_data_df, process_hyper,
         ###########################################################
         # If check saved or not
         ###########################################################
-        if check_saved is True and check_folder is not None:
-            if len(preprocess_data_df) > 0 and os.path.join(check_folder, preprocess_data_df.index[0] + '.csv') is True:
+        if check_saved is True:
+            if len(preprocess_data_df) > 0 and os.path.join(data_config.fitbit_sensor_dict['preprocess_path'], participant, preprocess_data_df.index[0] + '.csv') is True:
                 return None
 
     ###########################################################
     # If we add imputation or not
     ###########################################################
-    if imputation_method is not None:
+    if data_config.fitbit_sensor_dict['imputation'] != '':
         
         len_seq = len(preprocess_data_df)
         iteration = int(len_seq / 30)
 
-        if imputation_method == 'knn':
+        if data_config.fitbit_sensor_dict['imputation'] == 'knn':
             model = KNN(k=5)
         else:
             model = IterativeImputer()
