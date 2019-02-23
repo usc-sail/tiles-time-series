@@ -87,7 +87,6 @@ def main(tiles_data_path, config_path, experiement):
             
         ticc.fit(fitbit_df, fitbit_mean, fitbit_std)
 
-        # ticc.load_model_parameters()
 
 if __name__ == '__main__':
     

@@ -12,6 +12,7 @@ from multiprocessing import Pool
 from src.TICC_helper import *
 from src.admm_solver import ADMMSolver
 
+
 class TICC:
     
     def __init__(self, data_config, times_series_arr=None, window_size=10, number_of_clusters=5,
@@ -61,7 +62,6 @@ class TICC:
         self.save_TICC_model_path = os.path.join(self.save_TICC_model_path, participant_id)
         self.create_folder(self.save_TICC_model_path)
 
-
     def fit(self, data_df=None, mean=None, std=None):
         """
         Main method for ticc solver.
@@ -78,7 +78,9 @@ class TICC:
             return
         
         data_df = data_df.fillna(data_df.mean())
-
+        self.time_index = list(data_df.index)
+        self.data_df = data_df
+        
         ###########################################################
         # 1.1 Find the row and col size of the input
         ###########################################################
@@ -96,8 +98,7 @@ class TICC:
         # 1.3 Stack the training data
         ###########################################################
         complete_D_train = self.stack_training_data(times_series_arr, time_series_col_size, num_train_points, training_indices)
-        complete_D_train = complete_D_train[:-self.window_size + 1]
-
+        
         if self.complete_D_train is None:
             self.complete_D_train = complete_D_train
         else:
@@ -144,8 +145,7 @@ class TICC:
             ###########################################################
             # 2.2 Optimize using ADMM
             ###########################################################
-            self.optimize_clusters(computed_covariance, len_train_clusters, log_det_values, opt_res,
-                                   train_cluster_inverse)
+            self.optimize_clusters(computed_covariance, len_train_clusters, log_det_values, opt_res, train_cluster_inverse)
             self.train_cluster_inverse = train_cluster_inverse
 
             ###########################################################
@@ -201,14 +201,12 @@ class TICC:
                                 break
                             clustered_points[point_to_move] = cluster_num
                 
-                            computed_covariance[self.number_of_clusters, cluster_num] = old_computed_covariance[
-                                self.number_of_clusters, cluster_selected]
+                            computed_covariance[self.number_of_clusters, cluster_num] = old_computed_covariance[self.number_of_clusters, cluster_selected]
                             cluster_mean_stacked_info[self.number_of_clusters, cluster_num] = self.complete_D_train[point_to_move, :]
                             cluster_mean_info[self.number_of_clusters, cluster_num] = self.complete_D_train[point_to_move, :][(self.window_size - 1) * time_series_col_size:self.window_size * time_series_col_size]
     
                 for cluster_num in range(self.number_of_clusters):
-                    print("length of cluster #", cluster_num, "-------->",
-                          sum([x == cluster_num for x in clustered_points]))
+                    print("length of cluster #", cluster_num, "-------->", sum([x == cluster_num for x in clustered_points]))
     
                 str_NULL = 'output'
                 if os.path.exists(str_NULL) is False:
@@ -244,8 +242,7 @@ class TICC:
         plt.figure()
         plt.plot(training_indices[0:len(clustered_points)], clustered_points, color="r")  # ,marker = ".",s =100)
         plt.ylim((-0.5, self.number_of_clusters + 0.5))
-        if self.write_out_file: plt.savefig(str_NULL + "TRAINING_EM_lam_sparse=" + str(self.lambda_parameter)
-                                            + "switch_penalty = " + str(self.switch_penalty) + ".jpg")
+        if self.write_out_file: plt.savefig(str_NULL + "TRAINING_EM_lam_sparse=" + str(self.lambda_parameter) + "switch_penalty = " + str(self.switch_penalty) + ".jpg")
         plt.close("all")
         print("Done writing the figure")
 
@@ -272,8 +269,7 @@ class TICC:
         for cluster in range(self.number_of_clusters):
             print("length of the cluster ", cluster, "------>", len_train_clusters[cluster])
         
-    def train_clusters(self, cluster_mean_info, cluster_mean_stacked_info, complete_D_train, empirical_covariances,
-                       len_train_clusters, n, pool, train_clusters_arr):
+    def train_clusters(self, cluster_mean_info, cluster_mean_stacked_info, complete_D_train, empirical_covariances, len_train_clusters, n, pool, train_clusters_arr):
     
         optRes = [None for i in range(self.number_of_clusters)]
 
@@ -313,7 +309,7 @@ class TICC:
                 if i + k < num_train_points:
                     idx_k = training_indices[i + k]
                     complete_D_train[i][k * n:(k + 1) * n] = Data[idx_k][0:n]
-        return complete_D_train[:-self.window_size+1]
+        return complete_D_train
     
     def log_parameters(self):
         print("lam_sparse", self.lambda_parameter)
@@ -328,8 +324,7 @@ class TICC:
         log_det_dict = {}  # cluster to log_det
         
         for cluster in range(self.number_of_clusters):
-            cov_matrix = computed_covariance[self.number_of_clusters, cluster][0:(self.num_blocks - 1) * n,
-                         0:(self.num_blocks - 1) * n]
+            cov_matrix = computed_covariance[self.number_of_clusters, cluster][0:(self.num_blocks - 1) * n, 0:(self.num_blocks - 1) * n]
             inv_cov_matrix = np.linalg.inv(cov_matrix)
             log_det_cov = np.log(np.linalg.det(cov_matrix))  # log(det(sigma2|1))
             inv_cov_dict[cluster] = inv_cov_matrix
@@ -345,13 +340,12 @@ class TICC:
                     x = complete_D_train[point, :] - cluster_mean_stacked[0:(self.num_blocks - 1) * n]
                     inv_cov_matrix = inv_cov_dict[cluster]
                     log_det_cov = log_det_dict[cluster]
-                    lle = np.dot(x.reshape([1, (self.num_blocks - 1) * n]),
-                                 np.dot(inv_cov_matrix, x.reshape([n * (self.num_blocks - 1), 1]))) + log_det_cov
+                    lle = np.dot(x.reshape([1, (self.num_blocks - 1) * n]), np.dot(inv_cov_matrix, x.reshape([n * (self.num_blocks - 1), 1]))) + log_det_cov
                     LLE_all_points_clusters[point, cluster] = lle
 
         return LLE_all_points_clusters
         
-    def predict_clusters(self, test_data = None):
+    def predict_clusters(self, test_data=None):
         '''
         Given the current trained models, predict clusters.  If the cluster segmentation has not been optimized yet,
         than this will be part of the interative process.
@@ -384,14 +378,18 @@ class TICC:
         if clustered_points is None:
             clustered_points = updateClusters(lle_all_points_clusters, switch_penalty=self.switch_penalty)
     
-            clustered_points_df = pd.DataFrame(clustered_points)
-            clustered_points_df.to_csv(save_cluster_path, compression='gzip')
+            clustered_points_df = pd.DataFrame(clustered_points, index=self.time_index[:len(clustered_points)])
+            # clustered_points_df.to_csv(save_cluster_path, compression='gzip')
+            self.data_df.loc[self.time_index[:len(clustered_points)], 'cluster'] = clustered_points
+            self.data_df.to_csv(save_cluster_path, compression='gzip')
         else:
             clustered_points_per_segments = updateClusters(lle_all_points_clusters, switch_penalty=self.switch_penalty)
             clustered_points = np.append(clustered_points, clustered_points_per_segments)
     
             clustered_points_df = pd.DataFrame(clustered_points_per_segments)
             clustered_points_df.to_csv(save_cluster_path, compression='gzip')
+            self.data_df.loc[self.time_index[:len(clustered_points)], 'cluster'] = clustered_points
+            self.data_df.to_csv(save_cluster_path, compression='gzip')
             
         return (clustered_points)
         
@@ -418,120 +416,3 @@ class TICC:
     def create_folder(self, folder):
         if os.path.exists(folder) is False:
             os.mkdir(folder)
-            
-    def update_imputation_method(self, method='mean', method_hyper=None, mp=0.05):
-    
-        ###########################################################
-        # Update Class
-        ###########################################################
-        self.method = method
-        self.method_hyper = method_hyper
-        self.mp = mp
-        self.method_full_str = method
-
-        self.save_TICC_data_path = os.path.join(self.save_TICC_path, self.ticc_model_str)
-        self.create_folder(self.save_TICC_data_path)
-        
-        self.save_TICC_data_path = os.path.join(self.save_TICC_data_path, 'mp_' + str(mp))
-        self.create_folder(self.save_TICC_data_path)
-
-        self.save_TICC_data_path = os.path.join(self.save_TICC_data_path, method)
-        self.create_folder(self.save_TICC_data_path)
-
-        if self.method == 'trmf':
-            self.method_str = 'K_' + str(self.method_hyper['K']) + \
-                              '_lag_' + str(method_hyper['lag'][0]) + \
-                              '_alpha_' + str(method_hyper['alpha']) + \
-                              '_eta_' + str(method_hyper['eta']) + \
-                              '_lambda_f_' + str(method_hyper['lambda_f']) + \
-                              '_lambda_x_' + str(method_hyper['lambda_x']) + \
-                              '_lambda_w_' + str(method_hyper['lambda_w'])
-            self.save_TICC_data_path = os.path.join(self.save_TICC_data_path, self.method_str)
-            self.method_full_str = self.method_full_str + '_' + self.method_str
-
-        elif self.method == 'brits' or self.method == 'brits_multitask':
-            self.method_str = 'rnn_hid_size_' + str(self.method_hyper['rnn_hid_size']) + \
-                              '_drop_out_' + str(self.method_hyper['drop_out']) + \
-                              '_seq_len_' + str(self.method_hyper['seq_len'])
-            self.save_TICC_data_path = os.path.join(self.save_TICC_data_path, self.method_str)
-            self.method_full_str = self.method_full_str + '_' + self.method_str
-
-        self.create_folder(self.save_TICC_data_path)
-        
-    def predict_data(self, data_dict, global_stats=None):
-        
-        participantd_id_array = list(data_dict.keys())
-        participantd_id_array.sort()
-
-        ###########################################################
-        # 1. Iterate data dict
-        ###########################################################
-        for participantd_id in participantd_id_array:
-            
-            if len(data_dict[participantd_id]) == 0:
-                continue
-                
-            file_name_array = list(data_dict[participantd_id].keys())
-            
-            for file_name in file_name_array:
-                data_df = data_dict[participantd_id][file_name]
-                data_df = data_df.fillna(data_df.mean())
-
-                save_cluster_path = os.path.join(self.save_TICC_data_path, participantd_id)
-                self.create_folder(save_cluster_path)
-
-                save_cluster_path = os.path.join(save_cluster_path, file_name)
-
-                ###########################################################
-                # 1.1 Find the row and col size of the input
-                ###########################################################
-                if global_stats is None:
-                    times_series_arr = (data_df - data_df.mean()) / data_df.std()
-                    times_series_arr = times_series_arr.fillna(data_df.mean())
-                    times_series_arr = np.array(times_series_arr)
-                else:
-                    times_series_arr = np.array((data_df - global_stats['mean'].squeeze()) / global_stats['std'].squeeze())
-
-                time_series_rows_size = times_series_arr.shape[0]
-                time_series_col_size = times_series_arr.shape[1]
-
-                ###########################################################
-                # 1.2 Train test split
-                ###########################################################
-                training_indices = getTrainTestSplit(time_series_rows_size, self.num_blocks,
-                                                     self.window_size)  # indices of the training samples
-                num_train_points = len(training_indices)
-
-                ###########################################################
-                # 1.3 Stack the training data
-                ###########################################################
-                complete_D_train = self.stack_training_data(times_series_arr, time_series_col_size,
-                                                            num_train_points, training_indices)
-                complete_D_train = complete_D_train[:-self.window_size + 1]
-
-                lle_all_points_clusters = self.smoothen_clusters(self.trained_model['cluster_mean_info'],
-                                                                 self.trained_model['computed_covariance'],
-                                                                 self.trained_model['cluster_mean_stacked_info'],
-                                                                 complete_D_train, time_series_col_size)
-
-                clustered_points = updateClusters(lle_all_points_clusters, switch_penalty=self.switch_penalty)
-                clustered_points_df = pd.DataFrame(clustered_points)
-                clustered_points_df.to_csv(save_cluster_path)
-    
-    def load_imputed_ticc_data(self, participant_id_list):
-    
-        self.imputed_ticc_cluster = {}
-    
-        for participant_id in participant_id_list:
-        
-            self.imputed_ticc_cluster[participant_id] = {}
-        
-            data_folder = os.path.join(self.save_TICC_data_path, participant_id)
-            if os.path.exists(data_folder) is False:
-                continue
-        
-            file_name_list = os.listdir(data_folder)
-            for file_name in file_name_list:
-                cluster_data_df = pd.read_csv(os.path.join(data_folder, file_name), index_col=0)
-                self.imputed_ticc_cluster[participant_id][file_name] = np.array(cluster_data_df)
-        
