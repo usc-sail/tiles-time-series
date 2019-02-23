@@ -1,5 +1,4 @@
 import os
-import sys
 
 
 def create_folder(folder_dir):
@@ -133,7 +132,9 @@ def load_clustering_path(data_config, process_data_path, data_name='clustering')
     
     preprocess_str = data_config.fitbit_sensor_dict['cluster_method'] + '_num_cluster_' + str(data_config.fitbit_sensor_dict['num_cluster'])
     if data_config.fitbit_sensor_dict['cluster_method'] == 'ticc':
-        preprocess_str = preprocess_str + '_' + str(data_config.fitbit_sensor_dict['cluster_window'])
+        preprocess_str = preprocess_str + '_window_' + str(data_config.fitbit_sensor_dict['ticc_window'])
+        preprocess_str = preprocess_str + '_penalty' + str(data_config.fitbit_sensor_dict['ticc_switch_penalty'])
+        preprocess_str = preprocess_str + '_sparsity' + str(data_config.fitbit_sensor_dict['ticc_sparsity'])
     
     if data_config.fitbit_sensor_dict['segmentation_method'] == 'gaussian':
         preprocess_str = preprocess_str + '_ggs_' + str(data_config.fitbit_sensor_dict['segmentation_lamb'])
