@@ -20,25 +20,23 @@ def realizd_process_data(data_df, offset=60, check_saved=False, check_folder=Non
     interval = int(offset / 60)
 
     ###########################################################
-    # Start iterate data with given parameters
+    # Initiate data df
     ###########################################################
-    minute_offset = int(pd.to_datetime(data_df.index[0]).minute * 60 / offset)
-    start_time = pd.to_datetime(data_df.index[0]).replace(minute=0, second=0, microsecond=0) + timedelta(minutes=minute_offset*interval)
+    start_time = pd.to_datetime(data_df.index[0]).replace(hour=0, minute=0, second=0, microsecond=0)
     start_str = start_time.strftime(date_time_format)[:-3]
 
-    minute_offset = pd.to_datetime(data_df.index[-1]) - pd.to_datetime(data_df.index[-1]).replace(minute=0, second=0, microsecond=0)
-    minute_offset = int((minute_offset + timedelta(seconds=np.array(data_df)[-1][0])).total_seconds() / offset) + 1
-    end_time = (pd.to_datetime(data_df.index[-1])).replace(minute=0, second=0, microsecond=0) + timedelta(minutes=minute_offset*interval)
+    end_time = (pd.to_datetime(data_df.index[-1]) + timedelta(days=1)).replace(hour=23, minute=59, second=0, microsecond=0)
     end_str = (end_time).strftime(date_time_format)[:-3]
 
     time_length = (pd.to_datetime(end_str) - pd.to_datetime(start_str)).total_seconds()
     point_length = int(time_length / offset) + 1
     time_arr = [(pd.to_datetime(start_str) + timedelta(minutes=i*interval)).strftime(date_time_format)[:-3] for i in range(0, point_length+1, 1)]
 
-    # Returned data
-    preprocess_data_df = pd.DataFrame(index=time_arr, columns=['SecondsOnPhone', 'NumberOfTime'])
-    preprocess_data_df = preprocess_data_df.fillna(0)
+    # fill return df with 0
+    return_df = pd.DataFrame(index=time_arr, columns=['SecondsOnPhone', 'NumberOfTime'])
+    return_df = return_df.fillna(0)
 
+    # Iterate data df
     for index, row in data_df.iterrows():
         seconds_on_phone = row.SecondsOnPhone
 
@@ -66,13 +64,13 @@ def realizd_process_data(data_df, offset=60, check_saved=False, check_folder=Non
             else:
                 tmp_seconds_on_phone = pd.to_datetime(tmp_end_time) - pd.to_datetime(tmp_start_time)
 
-            preprocess_data_df.loc[tmp_start_time, 'SecondsOnPhone'] = preprocess_data_df.loc[tmp_start_time, 'SecondsOnPhone'] + tmp_seconds_on_phone.total_seconds()
-            preprocess_data_df.loc[tmp_start_time, 'NumberOfTime'] = preprocess_data_df.loc[tmp_start_time, 'NumberOfTime'] + 1
+            return_df.loc[tmp_start_time, 'SecondsOnPhone'] = return_df.loc[tmp_start_time, 'SecondsOnPhone'] + tmp_seconds_on_phone.total_seconds()
+            return_df.loc[tmp_start_time, 'NumberOfTime'] = return_df.loc[tmp_start_time, 'NumberOfTime'] + 1
         
         # If check saved or not
         if check_saved is True and check_folder is not None:
-            if len(preprocess_data_df) > 0 and os.path.join(check_folder, preprocess_data_df.index[0] + '.csv') is True:
+            if len(return_df) > 0 and os.path.join(check_folder, return_df.index[0] + '.csv') is True:
                 return None
 
-    return preprocess_data_df
+    return return_df
 
