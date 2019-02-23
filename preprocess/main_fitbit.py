@@ -12,11 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config')))
 
 
-# date_time format
-date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
-date_only_date_time_format = '%Y-%m-%d'
-
-import load_sensor_data, load_data_path, load_data_basic
+import load_data_path, load_data_basic
 import config
 from preprocess import Preprocess
 

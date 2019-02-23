@@ -2,6 +2,7 @@
 
 import os
 import sys
+import pandas as pd
 import argparse
 
 ###########################################################
@@ -10,8 +11,11 @@ import argparse
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'util')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config')))
 
+# date_time format
+date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
+date_only_date_time_format = '%Y-%m-%d'
 
-import load_data_path, load_data_basic, load_sensor_data
+import load_data_path, load_data_basic
 import config
 from preprocess import Preprocess
 
@@ -32,36 +36,43 @@ def main(tiles_data_path, config_path, experiment):
     # 1. Read all participant
     ###########################################################
     participant_id_list = load_data_basic.return_participant(tiles_data_path)
-
-    ###########################################################
-    # 2. Iterate all realizd files
-    ###########################################################
-    for participant_id in participant_id_list:
-        
-        ###########################################################
-        # 2.1 Init realizd preprocess
-        ###########################################################
-        realizd_preprocess = Preprocess(data_config=data_config, participant_id=participant_id)
-
-        ###########################################################
-        # 4. Read realizd data
-        ###########################################################
-        realizd_df = load_sensor_data.read_realizd(os.path.join(tiles_data_path, '2_raw_csv_data/realizd/'), participant_id)
-
-        ###########################################################
-        # 2.2 Preprocess data
-        ###########################################################
-        if len(realizd_df) > 0:
-            realizd_preprocess.preprocess_realizd(realizd_df)
-
-        ###########################################################
-        # 2.3 Delete current realizd_preprocess object
-        ###########################################################
-        del realizd_preprocess
-      
-        
-if __name__ == "__main__":
     
+    ###########################################################
+    # 2. Iterate all participant
+    ###########################################################
+    for i, participant_id in enumerate(participant_id_list[:]):
+        
+        print('Complete process for %s: %.2f' % (participant_id, 100 * i / len(participant_id_list)))
+        
+        ###########################################################
+        # Read audio file path
+        ###########################################################
+        
+        ###########################################################
+        # Read audio data
+        ###########################################################
+        # should be pd.read_csv
+        audio_data_df = pd.DataFrame()
+        
+        ###########################################################
+        # 2.0 Iterate all fitbit files
+        ###########################################################
+        if len(audio_data_df) > 0:
+            ###########################################################
+            # 2.1 Init fitbit preprocess
+            ###########################################################
+            audio_preprocess = Preprocess(data_config=data_config, participant_id=participant_id)
+            
+            ###########################################################
+            # 2.2 Preprocess audio data array
+            ###########################################################
+            # add your code inside this function
+            audio_preprocess.preprocess_audio(audio_data_df)
+            
+            del audio_preprocess
+
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--tiles_path", required=False, help="Path to the root folder containing TILES data")
     parser.add_argument("--config", required=False, help="Path to a config file specifying how to perform the clustering")
@@ -73,3 +84,4 @@ if __name__ == "__main__":
     experiment = 'baseline' if args.config is None else args.config
     
     main(tiles_data_path, config_path, experiment)
+

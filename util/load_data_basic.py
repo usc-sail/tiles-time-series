@@ -232,7 +232,10 @@ def return_participant(tiles_data_path):
         participant_id = fitbit_file.split('_')[0]
         if participant_id not in list(fitbit_file_dict_list.keys()):
             fitbit_file_dict_list[participant_id] = {}
-    return list(fitbit_file_dict_list.keys())
+            
+    participant_id_list = list(fitbit_file_dict_list.keys())
+    participant_id_list.sort()
+    return participant_id_list
 
 
 def return_top_k_participant(participant_id_list, k=10, data_config=None):

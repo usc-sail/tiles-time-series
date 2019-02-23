@@ -36,6 +36,20 @@ def read_fitbit(path, participant_id):
     return fitbit_data_dict
 
 
+def read_realizd(path, participant_id):
+    ###########################################################
+    # 1. Read all omsignal file
+    ###########################################################
+    realizd_file_abs_path = os.path.join(path, participant_id + '_realizd.csv.gz')
+    realizd_all_df = pd.DataFrame()
+    
+    if os.path.exists(realizd_file_abs_path) is True:
+        realizd_all_df = pd.read_csv(realizd_file_abs_path, index_col=0)
+        realizd_all_df = realizd_all_df.sort_index()
+        
+    return realizd_all_df
+
+
 def read_processed_omsignal(path, participant_id):
     ###########################################################
     # 1. Read all omsignal file
@@ -162,12 +176,11 @@ def read_processed_realizd(path, participant_id):
         return None
 
 
-def read_owl_in_one(owl_in_one_config, participant_id):
+def read_owl_in_one(path, participant_id):
     ###########################################################
     # 1. Read all omsignal file
     ###########################################################
-    owl_in_one_file_abs_path = os.path.join(owl_in_one_config.signal_type_folder,
-                                            participant_id + '_bleProximity.csv.gz')
+    owl_in_one_file_abs_path = os.path.join(path, participant_id + '_bleProximity.csv.gz')
     owl_in_one_all_df = pd.DataFrame()
     
     if os.path.exists(owl_in_one_file_abs_path) is True:

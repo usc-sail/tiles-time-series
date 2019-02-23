@@ -2,6 +2,7 @@
 
 import os
 import sys
+import argparse
 
 ###########################################################
 # Add package path
@@ -10,53 +11,29 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config')))
 
 import config
-import load_sensor_data
+import load_sensor_data, load_data_path
 
-# date_time format
-date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
-date_only_date_time_format = '%Y-%m-%d'
-
-from load_data_basic import *
+import load_data_basic
 from preprocess import Preprocess
 
-process_hyper_param = {'method': 'ma', 'offset': 60, 'overlap': 0, 'preprocess_cols': None}
 
+def main(tiles_data_path, config_path, experiment):
+    ###########################################################
+    # 0. Read configs
+    ###########################################################
+    process_data_path = os.path.abspath(os.path.join(os.pardir, 'data'))
 
-def return_participant(main_folder):
+    data_config = config.Config()
+    data_config.readConfigFile(config_path, experiment)
+
+    # Load preprocess folder
+    load_data_path.load_preprocess_path(data_config, process_data_path, data_name='preprocess_data')
+
     ###########################################################
-    # Read all owl_in_one file
+    # 1. Read all participant
     ###########################################################
-    owl_in_one_folder = os.path.join(main_folder, '3_preprocessed_data/owl_in_one/')
-    owl_in_one_file_list = os.listdir(owl_in_one_folder)
-    owl_in_one_file_dict_list = {}
+    participant_id_list = load_data_basic.return_participant(tiles_data_path)
     
-    for owl_in_one_file in owl_in_one_file_list:
-        
-        if '.DS' in owl_in_one_file:
-            continue
-        
-        participant_id = owl_in_one_file.split('_')[0]
-        if participant_id not in list(owl_in_one_file_dict_list.keys()):
-            owl_in_one_file_dict_list[participant_id] = {}
-    return list(owl_in_one_file_dict_list.keys())
-
-
-def main(main_folder):
-    ###########################################################
-    # 1. Create Config
-    ###########################################################
-    owl_in_one_read_config = config.Config(data_type='3_preprocessed_data', sensor='owl_in_one',
-                                           read_folder=main_folder, return_full_feature=False,
-                                           process_hyper=process_hyper_param)
-    
-    owl_in_one_save_config = config.Config(data_type='preprocess_data', sensor='owl_in_one',
-                                           read_folder=os.path.abspath(os.path.join(os.pardir, '..')),
-                                           return_full_feature=False,
-                                           process_hyper=process_hyper_param)
-
-    participant_id_list = return_participant(main_folder)
-    participant_id_list.sort()
-
     ###########################################################
     # 2. Iterate over participant
     ###########################################################
@@ -66,25 +43,30 @@ def main(main_folder):
         ###########################################################
         # 3. Initialize preprocess
         ###########################################################
-        owl_in_one_preprocess = Preprocess(participant_id=participant_id, process_hyper=process_hyper_param,
-                                           read_config=owl_in_one_read_config, save_config=owl_in_one_save_config,
-                                           save_main_folder=os.path.abspath(os.path.join(os.pardir, '../preprocess_data')))
+        owl_in_one_preprocess = Preprocess(data_config, participant_id)
 
         ###########################################################
         # 4. Read owl_in_one data
         ###########################################################
-        owl_in_one_data_df = load_sensor_data.read_owl_in_one(owl_in_one_read_config, participant_id)
+        owl_in_one_data_df = load_sensor_data.read_owl_in_one(os.path.join(tiles_data_path, '3_preprocessed_data/owl_in_one/'), participant_id)
 
         ###########################################################
         # 5. Process owl_in_one data
         ###########################################################
-        owl_in_one_preprocess.process_owl_in_one(owl_in_one_data_df)
+        owl_in_one_preprocess.preprocess_owl_in_one(owl_in_one_data_df)
         
         del owl_in_one_preprocess
 
 
 if __name__ == "__main__":
-    # Main Data folder
-    main_folder = '../../../data/keck_wave_all/'
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--tiles_path", required=False, help="Path to the root folder containing TILES data")
+    parser.add_argument("--config", required=False, help="Path to a config file specifying how to perform the clustering")
+    parser.add_argument("--experiment", required=False, help="Experiment name")
+    args = parser.parse_args()
     
-    main(main_folder)
+    tiles_data_path = '../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
+    config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file')) if args.config is None else args.config
+    experiment = 'baseline' if args.config is None else args.config
+    
+    main(tiles_data_path, config_path, experiment)

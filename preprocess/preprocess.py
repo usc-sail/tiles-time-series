@@ -78,7 +78,7 @@ class Preprocess(object):
                     preprocess_data_df.to_csv(os.path.join(self.data_config.fitbit_sensor_dict['preprocess_path'], self.participant_id, start_time + '.csv.gz'), compression='gzip')
                     preprocess_data_all_df.to_csv(os.path.join(self.data_config.fitbit_sensor_dict['preprocess_path'], self.participant_id + '.csv.gz'), compression='gzip')
                     
-    def process_realizd(self, data_df, offset=60):
+    def preprocess_realizd(self, data_df):
         """
         Process realizd data based on shift
         """
@@ -91,11 +91,10 @@ class Preprocess(object):
         # Get start and end time of a shift
         ###########################################################
         if len(data_df) > 300:
-            self.preprocess_data_all_df = realizd_process_data(data_df, offset=offset)
-            self.preprocess_data_all_df.to_csv(os.path.join(self.data_config.realizd_sensor_dict['preprocess_path'],
-                                                            self.participant_id + '.csv.gz'), compression='gzip')
+            self.preprocess_data_all_df = realizd_process_data(data_df, offset=self.data_config.realizd_sensor_dict['offset'])
+            self.preprocess_data_all_df.to_csv(os.path.join(self.data_config.realizd_sensor_dict['preprocess_path'], self.participant_id + '.csv.gz'), compression='gzip')
 
-    def process_owl_in_one(self, data_df, offset=60):
+    def preprocess_owl_in_one(self, data_df):
         """
         Process owl_in_one data based on shift
         """
@@ -108,9 +107,17 @@ class Preprocess(object):
         # Get start and end time of a shift
         ###########################################################
         if len(data_df) > 300:
-            self.preprocess_data_all_df = process_owl_in_one_data(data_df, offset=offset)
-            self.preprocess_data_all_df.to_csv(os.path.join(self.data_config.owl_in_one_sensor_dict['preprocess_path'],
-                                                            self.participant_id + '.csv.gz'), compression='gzip')
+            self.preprocess_data_all_df = process_owl_in_one_data(data_df, offset=self.data_config.owl_in_one_sensor_dict['offset'])
+            self.preprocess_data_all_df.to_csv(os.path.join(self.data_config.owl_in_one_sensor_dict['preprocess_path'], self.participant_id + '.csv.gz'), compression='gzip')
+            
+    def preprocess_audio(self, data_df):
+        """
+        Process audio data
+        """
+        print('---------------------------------------------------------------------')
+        print('Function: preprocess_audio')
+        print('---------------------------------------------------------------------')
+        
 
     def slice_raw_data(self, method=None, valid_slice_in_min=180, data_df=None):
         """
