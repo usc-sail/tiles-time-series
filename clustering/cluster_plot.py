@@ -78,10 +78,10 @@ def main(tiles_data_path, cluster_config_path, experiement):
         primary_unit = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit[0]
         participant_mgt = mgt_df.loc[mgt_df['uid'] == uid]
 
-        omsignal_data_df = load_sensor_data.read_processed_omsignal(data_config.omsignal_sensor_dict['preprocess_path'], participant_id)
-        owl_in_one_df = load_sensor_data.read_processed_owl_in_one(data_config.owl_in_one_sensor_dict['preprocess_path'], participant_id)
-        realizd_df = load_sensor_data.read_processed_realizd(data_config.realizd_sensor_dict['preprocess_path'], participant_id)
-        fitbit_df, fitbit_mean, fitbit_std = load_sensor_data.read_processed_fitbit_with_pad(data_config, participant_id)
+        omsignal_data_df = load_sensor_data.read_preprocessed_omsignal(data_config.omsignal_sensor_dict['preprocess_path'], participant_id)
+        owl_in_one_df = load_sensor_data.read_preprocessed_owl_in_one(data_config.owl_in_one_sensor_dict['preprocess_path'], participant_id)
+        realizd_df = load_sensor_data.read_preprocessed_realizd(data_config.realizd_sensor_dict['preprocess_path'], participant_id)
+        fitbit_df, fitbit_mean, fitbit_std = load_sensor_data.read_preprocessed_fitbit_with_pad(data_config, participant_id)
         
         ###########################################################
         # 4. Read clustering and segmentation data

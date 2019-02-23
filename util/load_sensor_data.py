@@ -50,7 +50,7 @@ def read_realizd(path, participant_id):
     return realizd_all_df
 
 
-def read_processed_omsignal(path, participant_id):
+def read_preprocessed_omsignal(path, participant_id):
     ###########################################################
     # 1. Read all omsignal file
     ###########################################################
@@ -72,7 +72,7 @@ def read_processed_omsignal(path, participant_id):
     return omsignal_all_df
 
 
-def read_processed_fitbit_with_pad(data_config, participant_id):
+def read_preprocessed_fitbit_with_pad(data_config, participant_id):
     ###########################################################
     # 1. Read all fitbit file
     ###########################################################
@@ -148,7 +148,7 @@ def read_processed_fitbit_with_pad(data_config, participant_id):
         return None, None, None
 
 
-def read_processed_owl_in_one(path, participant_id):
+def read_preprocessed_owl_in_one(path, participant_id):
     ###########################################################
     # 1. Read all omsignal file
     ###########################################################
@@ -162,7 +162,7 @@ def read_processed_owl_in_one(path, participant_id):
         return None
 
 
-def read_processed_realizd(path, participant_id):
+def read_preprocessed_realizd(path, participant_id):
     ###########################################################
     # 1. Read all omsignal file
     ###########################################################
@@ -194,7 +194,7 @@ def read_owl_in_one(path, participant_id):
     return owl_in_one_all_df
 
 
-def read_processed_fitbit(path, participant_id):
+def read_preprocessed_fitbit(path, participant_id):
     """
     Read preprocessed data
     """

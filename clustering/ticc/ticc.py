@@ -82,7 +82,7 @@ def main(tiles_data_path, config_path, experiment):
         ###########################################################
         # 4. Read segmentation data
         ###########################################################
-        fitbit_df, fitbit_mean, fitbit_std = load_sensor_data.read_processed_fitbit_with_pad(data_config, participant_id)
+        fitbit_df, fitbit_mean, fitbit_std = load_sensor_data.read_preprocessed_fitbit_with_pad(data_config, participant_id)
     
         if fitbit_df is None:
             continue
