@@ -75,11 +75,6 @@ def main(tiles_data_path, config_path, experiment):
             omsignal_preprocess.preprocess_slice_raw_data_full_feature(check_saved=True)
             
             ###########################################################
-            # 2.4 Save preprocess data
-            ###########################################################
-            omsignal_preprocess.save_preprocess_slice_raw_data()
-
-            ###########################################################
             # 2.5 Delete current omsignal_preprocess object
             ###########################################################
             del omsignal_preprocess
