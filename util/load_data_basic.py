@@ -252,7 +252,7 @@ def return_top_k_participant(participant_id_list, k=10, data_config=None):
     for idx, participant_id in enumerate(participant_id_list):
         print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(participant_id_list)))
         
-        fitbit_df = load_sensor_data.read_processed_fitbit(data_config.fitbit_sensor_dict['preprocess_path'], participant_id)
+        fitbit_df = load_sensor_data.read_preprocessed_fitbit(data_config.fitbit_sensor_dict['preprocess_path'], participant_id)
         
         if fitbit_df is not None:
             fitbit_len_list.append(len(fitbit_df))

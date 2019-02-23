@@ -131,92 +131,44 @@ class Preprocess(object):
         print('Function: slice_raw_data')
         print('---------------------------------------------------------------------')
 
-        if method == 'block':
+        ###########################################################
+        # Get start and end time of a shift
+        ###########################################################
+        start_time_array, end_time_array = om_signal_sliced_data_start_end_array(data_df, threshold=timedelta(seconds=60 * 2))
+
+        ###########################################################
+        # Slice the data
+        ###########################################################
+        for i in range(len(start_time_array)):
     
-            ###########################################################
-            # 1. om_signal type
-            ###########################################################
-            if self.signal_type == 'om_signal':
-        
-                ###########################################################
-                # Get start and end time of a shift
-                ###########################################################
-                start_time_array, end_time_array = om_signal_sliced_data_start_end_array(self.raw_data_df, threshold=timedelta(seconds=60 * 2))
-        
-                ###########################################################
-                # Slice the data
-                ###########################################################
-                for i in range(len(start_time_array)):
-            
-                    start_time, end_time = start_time_array[i], end_time_array[i]
-            
-                    shift_data_df = self.raw_data_df[start_time:end_time]
-            
-                    # At least 3 hours of data for a valid shift
-                    if len(shift_data_df) / 60 > valid_slice_in_min:
-                        self.sliced_data_array.append(shift_data_df)
+            start_time, end_time = start_time_array[i], end_time_array[i]
+    
+            shift_data_df = data_df[start_time:end_time]
+    
+            # At least 3 hours of data for a valid shift
+            if len(shift_data_df) / 60 > valid_slice_in_min:
+                self.sliced_data_array.append(shift_data_df)
 
         return self.sliced_data_array
 
-    def preprocess_slice_raw_data(self, check_saved=False):
-        
-        ###########################################################
-        # 1. om_signal type
-        ###########################################################
-        if self.signal_type == 'om_signal':
-            
-            for index, sliced_data_df in enumerate(self.sliced_data_array):
-                print('---------------------------------------------------------------------')
-                print('Function: preprocess_slice_raw_data')
-                print('Process data with start index: %s' % (sliced_data_df.index[0]))
-                print('Process data process %.2f' % (index / len(self.sliced_data_array) * 100))
-                print('---------------------------------------------------------------------')
-                
-                preprocess_data_df = om_signal_process_sliced_data(sliced_data_df, self.process_hyper,
-                                                                   check_saved=check_saved,
-                                                                   check_folder=self.participant_folder)
-                
-                if preprocess_data_df is not None:
-                    self.processed_sliced_data_array.append(preprocess_data_df)
     
     def preprocess_slice_raw_data_full_feature(self, check_saved=False):
         
-        ###########################################################
-        # 1. om_signal type
-        ###########################################################
-        if self.signal_type == 'om_signal':
-            
-            for index, sliced_data_df in enumerate(self.sliced_data_array):
-                print('---------------------------------------------------------------------')
-                print('Function: preprocess_slice_raw_data')
-                print('Process data with start index: %s' % (sliced_data_df.index[0]))
-                print('Process data process %.2f' % (index / len(self.sliced_data_array) * 100))
-                print('---------------------------------------------------------------------')
+        for index, sliced_data_df in enumerate(self.sliced_data_array):
+            print('---------------------------------------------------------------------')
+            print('Function: preprocess_slice_raw_data')
+            print('Process data with start index: %s' % (sliced_data_df.index[0]))
+            print('Process data process %.2f' % (index / len(self.sliced_data_array) * 100))
+            print('---------------------------------------------------------------------')
 
-                ###########################################################
-                # 2. If we have weird data, skip
-                ###########################################################
-                if len(np.unique(np.array(sliced_data_df)[:, 0])) < 5:
-                    continue
-                
-                preprocess_data_df = om_signal_process_sliced_data_full_feature(sliced_data_df, self.process_hyper,
-                                                                                check_saved=check_saved,
-                                                                                check_folder=self.participant_folder)
-                
-                if preprocess_data_df is not None:
-                    self.processed_sliced_data_array.append(preprocess_data_df)
+            ###########################################################
+            # 2. If we have weird data, skip
+            ###########################################################
+            if len(np.unique(np.array(sliced_data_df)[:, 0])) < 5:
+                continue
+            
+            preprocess_data_df = om_signal_process_sliced_data_full_feature(sliced_data_df, self.data_config, self.participant_id)
+            
+            if preprocess_data_df is not None:
+                self.processed_sliced_data_array.append(preprocess_data_df)
     
-    def save_preprocess_slice_raw_data(self):
-        
-        print('---------------------------------------------------------------------')
-        print('Function: save_preprocess_slice_raw_data')
-        print('---------------------------------------------------------------------')
-        
-        ###########################################################
-        # Iterate data and save
-        ###########################################################
-        if len(self.processed_sliced_data_array) > 0:
-            for i in range(len(self.processed_sliced_data_array)):
-                processed_sliced_data_df = self.processed_sliced_data_array[i]
-                csv_path = os.path.join(self.participant_folder, processed_sliced_data_df.index[0] + '.csv')
-                processed_sliced_data_df.to_csv(csv_path)

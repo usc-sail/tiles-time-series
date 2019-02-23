@@ -10,6 +10,18 @@ date_only_date_time_format = '%Y-%m-%d'
 from datetime import timedelta
 
 
+def read_omsignal(path, participant_id):
+    # Read data and participant id first
+    omsignal_file_abs_path = os.path.join(path, participant_id + '_omsignal.csv.gz')
+    omsignal_df = pd.read_csv(omsignal_file_abs_path, index_col=0)
+    
+    omsignal_df = omsignal_df.fillna(0)
+    omsignal_df = omsignal_df.drop_duplicates(keep='first')
+    omsignal_df = omsignal_df.sort_index()
+    
+    return omsignal_df
+
+
 def read_fitbit(path, participant_id):
     ###########################################################
     # 1. Read all fitbit file

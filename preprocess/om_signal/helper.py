@@ -111,14 +111,13 @@ def om_signal_process_sliced_data(sliced_data_df, process_hyper, check_saved=Fal
     return preprocess_data_df
 
 
-def om_signal_process_sliced_data_full_feature(sliced_data_df, process_hyper, check_saved=False, check_folder=None):
+def om_signal_process_sliced_data_full_feature(sliced_data_df, data_config, participant_id, check_saved=True):
     ###########################################################
     # Initialization
     ###########################################################
-    method = process_hyper['method']
-    offset = process_hyper['offset']
-    overlap = process_hyper['overlap']
-    preprocess_cols = process_hyper['preprocess_cols']
+    offset = data_config.omsignal_sensor_dict['offset']
+    overlap = data_config.omsignal_sensor_dict['overlap']
+    preprocess_cols = data_config.omsignal_sensor_dict['preprocess_cols']
     
     threshold = offset / 3
     
@@ -174,8 +173,8 @@ def om_signal_process_sliced_data_full_feature(sliced_data_df, process_hyper, ch
             preprocess_data_df = preprocess_data_df.append(process_row_df)
         
         # If check saved or not
-        if check_saved is True and check_folder is not None:
-            if len(preprocess_data_df) > 0 and os.path.join(check_folder, preprocess_data_df.index[0] + '.csv') is True:
+        if check_saved is True:
+            if len(preprocess_data_df) > 0 and os.path.join(data_config.omsignal_sensor_dict['preprocess_path'], participant_id, preprocess_data_df.index[0] + '.csv') is True:
                 return None
     
     return preprocess_data_df

@@ -6,3 +6,5 @@ clustering/SOM-VAE/data
 *.gz
 data/
 **.swp
+config_file/*
+*.cfg
