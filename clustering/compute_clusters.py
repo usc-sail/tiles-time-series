@@ -123,7 +123,7 @@ def ComputeClusters(tiles_data_path, config_path, experiement):
 
             cluster_plot.plot_cluster(participant_id, fitbit_df=fitbit_df, fitbit_summary_df=fitbit_summary_df,
                                       mgt_df=participant_mgt, segmentation_df=segmentation_df,
-                                      omsignal_data_df=omsignal_data_df, realizd_df=realizd_df, owl_in_one_df=owl_in_one_df, cluster_df=clustering_df)
+                                      omsignal_data_df=omsignal_data_df, realizd_df=realizd_df, owl_in_one_df=owl_in_one_df, cluster_df=plot_df)
 
 
 if __name__ == '__main__':
