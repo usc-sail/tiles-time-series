@@ -52,7 +52,9 @@ class Config(object):
         self.config.set('fitbit', 'cluster_method', fitbit_process_param['cluster_method'])
         self.config.set('fitbit', 'num_cluster', str(fitbit_process_param['num_cluster']))
         if fitbit_process_param['cluster_method'] == 'ticc':
-            self.config.set('fitbit', 'cluster_window', str(fitbit_process_param['cluster_window']))
+            self.config.set('fitbit', 'ticc_window', str(fitbit_process_param['ticc_window']))
+            self.config.set('fitbit', 'ticc_switch_penalty', str(fitbit_process_param['ticc_switch_penalty']))
+            self.config.set('fitbit', 'ticc_sparsity', str(fitbit_process_param['ticc_sparsity']))
 
         process_col_array = list(fitbit_process_param['preprocess_cols'])
         process_col_array.sort()
@@ -129,7 +131,9 @@ class Config(object):
         self.fitbit_sensor_dict['num_cluster'] = int(self.getSetting('fitbit', 'num_cluster'))
         
         if self.fitbit_sensor_dict['cluster_method'] == 'ticc':
-            self.fitbit_sensor_dict['cluster_window'] = int(self.getSetting('fitbit', 'cluster_window'))
+            self.fitbit_sensor_dict['ticc_window'] = int(self.getSetting('fitbit', 'ticc_window'))
+            self.fitbit_sensor_dict['ticc_switch_penalty'] = float(self.getSetting('fitbit', 'ticc_switch_penalty'))
+            self.fitbit_sensor_dict['ticc_sparsity'] = float(self.getSetting('fitbit', 'ticc_sparsity'))
             
         ###########################################################
         # Read owl_in_one
