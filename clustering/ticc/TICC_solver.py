@@ -122,6 +122,8 @@ class TICC:
         ###########################################################
         pool = Pool(processes=self.num_proc)  # multi-threading
 
+        save_cluster_path = os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], self.participant_id + '.csv.gz')
+
         for iters in range(self.maxIters):
             print("\n\n\nITERATION ###", iters)
     
@@ -224,6 +226,7 @@ class TICC:
             ###########################################################
             if np.array_equal(old_clustered_points, clustered_points):
                 print("\n\n\n\nCONVERGED!!! BREAKING EARLY!!!")
+                self.data_df.to_csv(save_cluster_path, compression='gzip')
                 break
             old_clustered_points = before_empty_cluster_assign
 
@@ -234,6 +237,8 @@ class TICC:
         if self.compute_BIC:
             bic = computeBIC(self.number_of_clusters, self.complete_D_train.shape[0], clustered_points, train_cluster_inverse, empirical_covariances)
             return clustered_points, train_cluster_inverse, bic
+
+        self.data_df.to_csv(save_cluster_path, compression='gzip')
 
         return clustered_points, train_cluster_inverse
 
@@ -389,7 +394,7 @@ class TICC:
             clustered_points_df = pd.DataFrame(clustered_points_per_segments)
             clustered_points_df.to_csv(save_cluster_path, compression='gzip')
             self.data_df.loc[self.time_index[:len(clustered_points)], 'cluster'] = clustered_points
-            self.data_df.to_csv(save_cluster_path, compression='gzip')
+            # self.data_df.to_csv(save_cluster_path, compression='gzip')
             
         return (clustered_points)
         
