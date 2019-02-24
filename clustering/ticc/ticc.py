@@ -62,7 +62,7 @@ def main(tiles_data_path, config_path, experiment):
 
     top_participant_id_list = list(top_participant_id_df.index)
     top_participant_id_list.sort()
-    top_participant_id_list = top_participant_id_list[100:]
+    top_participant_id_list = top_participant_id_list[:]
 
     ###########################################################
     # 3. Learn ticc

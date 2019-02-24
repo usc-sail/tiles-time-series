@@ -386,7 +386,7 @@ class TICC:
             clustered_points_df = pd.DataFrame(clustered_points, index=self.time_index[:len(clustered_points)])
             # clustered_points_df.to_csv(save_cluster_path, compression='gzip')
             self.data_df.loc[self.time_index[:len(clustered_points)], 'cluster'] = clustered_points
-            self.data_df.to_csv(save_cluster_path, compression='gzip')
+            # self.data_df.to_csv(save_cluster_path, compression='gzip')
         else:
             clustered_points_per_segments = updateClusters(lle_all_points_clusters, switch_penalty=self.switch_penalty)
             clustered_points = np.append(clustered_points, clustered_points_per_segments)
