@@ -254,7 +254,7 @@ def read_preprocessed_fitbit(path, participant_id):
 
 
 def load_clustering_data(path, participant_id):
-    clustering_df = pd.read_csv(os.path.join(path, participant_id + '.csv'))
+    clustering_df = pd.read_csv(os.path.join(path, participant_id + '.csv.gz'))
     clustering_df.loc[:, 'index'] = clustering_df.loc[:, 'start']
     clustering_df = clustering_df.set_index('index')
     
