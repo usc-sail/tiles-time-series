@@ -122,8 +122,6 @@ class TICC:
         ###########################################################
         pool = Pool(processes=self.num_proc)  # multi-threading
 
-        save_cluster_path = os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], self.participant_id + '.csv.gz')
-
         for iters in range(self.maxIters):
             print("\n\n\nITERATION ###", iters)
     
@@ -226,7 +224,6 @@ class TICC:
             ###########################################################
             if np.array_equal(old_clustered_points, clustered_points):
                 print("\n\n\n\nCONVERGED!!! BREAKING EARLY!!!")
-                self.data_df.to_csv(save_cluster_path, compression='gzip')
                 break
             old_clustered_points = before_empty_cluster_assign
 
@@ -238,9 +235,24 @@ class TICC:
             bic = computeBIC(self.number_of_clusters, self.complete_D_train.shape[0], clustered_points, train_cluster_inverse, empirical_covariances)
             return clustered_points, train_cluster_inverse, bic
 
-        self.data_df.to_csv(save_cluster_path, compression='gzip')
+        self.save_cluster()
 
         return clustered_points, train_cluster_inverse
+
+    def save_cluster(self):
+        save_cluster_path = os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], self.participant_id + '.csv.gz')
+        self.data_df.loc[list(self.data_df.index), 'cluster_correct'] = np.array(self.data_df.cluster)
+        data_df_index = list(self.data_df.index)
+
+        invalid_hr_point = np.where(np.array(self.data_df.HeartRatePPG) < 0)[0]
+        invalid_hr_index = [data_df_index[pt] for pt in invalid_hr_point]
+        self.data_df.loc[invalid_hr_index, 'cluster_correct'] = 100
+
+        invalid_hr_index = [data_df_index[pt - self.window_size + 1] for pt in invalid_hr_point if pt - self.window_size + 1 > 0]
+        self.data_df.loc[invalid_hr_index, 'cluster_correct'] = 100
+        self.data_df.loc[data_df_index[-self.window_size+1:], 'cluster_correct'] = 100
+
+        self.data_df.to_csv(save_cluster_path, compression='gzip')
 
     def write_plot(self, clustered_points, str_NULL, training_indices):
         # Save a figure of segmentation
