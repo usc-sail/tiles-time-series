@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import os
 from datetime import timedelta
 from matplotlib.patches import Patch
+from hmmlearn import hmm
 
 # date_time format
 date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
@@ -479,15 +480,15 @@ class Plot(object):
             ax[1].axvspan(pd.to_datetime(day_str), pd.to_datetime(sleep_end_str), alpha=0.1, color='red')
             ax[2].axvspan(pd.to_datetime(day_str), pd.to_datetime(sleep_end_str), alpha=0.1, color='red')
 
-    def plot_ticc(self, participant_id, fitbit_df=None, cluster_df=None):
+    def plot_ticc(self, participant_dict, fitbit_df=None, cluster_df=None):
     
         ###########################################################
         # If folder not exist
         ###########################################################
-        save_folder = os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], participant_id)
+        save_folder = os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], participant_dict['participant_id'])
         if not os.path.exists(save_folder):
             os.mkdir(save_folder)
-    
+
         ###########################################################
         # Read data
         ###########################################################
@@ -522,7 +523,9 @@ class Plot(object):
         
         fig = plt.figure(figsize=(15, 12))
         ax = fig.add_subplot(111)
-        ax.set_title('Cluster for participant: ' + participant_id)
+        ax.set_title('Cluster for participant: ' + participant_dict['participant_id'] + '\n'
+                     + '(' + 'uid: ' + participant_dict['uid'] + ', shift:' + participant_dict['shift']
+                     + '_' + participant_dict['primary_unit'] + ')')
         ax.axis('tight')
 
         ax.set_ylim(ymin=-0.5, ymax=len(day_plot_list) + 0.5)
@@ -556,12 +559,97 @@ class Plot(object):
                     
                     for plot_array in final_plot_array:
                         if plot_array[2] >= 0:
-                            ax.barh(i + 0.5, (plot_array[1]-plot_array[0]) / 60, left=plot_array[0] / 60, height=0.8, align='center', color=cluster_color_list[int(plot_array[2])])
-     
-                    # for index, row_cluster in day_cluster_df.iterrows():
-                    #    start_time = pd.to_datetime(index).hour * 60 + pd.to_datetime(index).minute
-                    #    ax.barh(day + 0.5, 1, left=start_time, height=0.8, align='center', color=cluster_color_list[int(row_cluster.cluster)])
-                    # ax.hlines(y=ymax, color=cluster_color_list[cluster_id], linewidth=20, xmin=pd.to_datetime(cluster_begin_str), xmax=pd.to_datetime(cluster_end_str))
+                            ax.barh(i + 0.5, (plot_array[1] - plot_array[0]) / 60, left=plot_array[0] / 60, height=0.8,
+                                    align='center', color=cluster_color_list[int(plot_array[2])])
+                ax.set_xlim(xmin=0, xmax=24)
+            plt.savefig(os.path.join(save_folder, participant_dict['participant_id'] + '.png'), dpi=300)
+        plt.close()
+
+    def plot_ticc_hmm(self, participant_dict, fitbit_df=None, cluster_df=None):
+    
+        ###########################################################
+        # If folder not exist
+        ###########################################################
+        save_folder = os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], participant_dict['participant_id'])
+        if not os.path.exists(save_folder):
+            os.mkdir(save_folder)
+    
+        remodel = hmm.GaussianHMM(n_components=5, covariance_type="full", n_iter=300)
+        remodel.fit(np.array(cluster_df.cluster).reshape([-1, 1])[:-9])
+        Z2 = remodel.predict(np.array(cluster_df.cluster).reshape([-1, 1])[:-9])
+        cluster_df.loc[list(cluster_df.index)[:-9], 'hidden_state'] = Z2
+    
+        ###########################################################
+        # Read data
+        ###########################################################
+        fitbit_df = fitbit_df.sort_index()
+    
+        ###########################################################
+        # Define plot range
+        ###########################################################
+        start_str = fitbit_df.index[0]
+        end_str = fitbit_df.index[-1]
+        day_offset = (pd.to_datetime(end_str) - pd.to_datetime(start_str)).days
+        day_plot_list = []
+    
+        for day in range(day_offset):
+            ###########################################################
+            # Define start and end string
+            ###########################################################
+            day_start_str = (pd.to_datetime(start_str) + timedelta(days=day)).strftime(date_time_format)[:-3]
+            day_end_str = (pd.to_datetime(start_str) + timedelta(days=day + 1)).strftime(date_time_format)[:-3]
+        
+            if cluster_df is not None:
+                day_cluster_df = cluster_df[day_start_str:day_end_str]
+                if len(day_cluster_df) > 0:
+                    heart_rate_array = np.array(day_cluster_df.HeartRatePPG)
+                    invalid_heart_len = len(np.where(heart_rate_array < 0)[0])
+                
+                    if invalid_heart_len / len(heart_rate_array) < 0.15:
+                        day_plot_list.append(day_start_str)
+    
+        if len(day_plot_list) < 5:
+            return
+    
+        fig = plt.figure(figsize=(15, 12))
+        ax = fig.add_subplot(111)
+        ax.set_title('Cluster for participant: ' + participant_dict['participant_id'] + '\n'
+                     + '(' + 'uid: ' + participant_dict['uid'] + ', shift:' + participant_dict['shift']
+                     + '_' + participant_dict['primary_unit'] + ')')
+        ax.axis('tight')
+    
+        ax.set_ylim(ymin=-0.5, ymax=len(day_plot_list) + 0.5)
+    
+        for i in range(len(day_plot_list)):
+        
+            ###########################################################
+            # Define start and end string
+            ###########################################################
+            day_start_str = (pd.to_datetime(day_plot_list[i])).strftime(date_time_format)[:-3]
+            day_end_str = (pd.to_datetime(day_plot_list[i]) + timedelta(days=1)).strftime(date_time_format)[:-3]
+        
+            ###########################################################
+            # Plot cluster data
+            ###########################################################
+            if cluster_df is not None:
+                day_cluster_df = cluster_df[day_start_str:day_end_str]
+                if len(day_cluster_df) > 0:
+                    day_cluster_diff = np.array(day_cluster_df.hidden_state[1:]) - np.array(day_cluster_df.hidden_state[:-1])
+                    change_point_array = np.where(day_cluster_diff != 0)[0]
+                    cluster_array = np.array(day_cluster_df.hidden_state)[change_point_array]
+                    cluster_array = np.array(cluster_array).reshape([1, len(cluster_array)])
+                
+                    final_plot_array = np.zeros([len(change_point_array) + 1, 4])
+                
+                    final_plot_array[1:len(change_point_array) + 1, 0] = np.array(change_point_array).reshape([1, len(change_point_array)])
+                    final_plot_array[:len(change_point_array), 1] = np.array(change_point_array).reshape([1, len(change_point_array)])
+                    final_plot_array[len(change_point_array), 1] = len(day_cluster_df)
+                    final_plot_array[:len(change_point_array), 3] = cluster_array
+                    final_plot_array[len(change_point_array), 3] = np.array(day_cluster_df.hidden_state)[-1]
+                
+                    for plot_array in final_plot_array:
+                        if plot_array[3] >= 0:
+                            ax.barh(i + 0.5, (plot_array[1] - plot_array[0]) / 60, left=plot_array[0] / 60, height=0.8, align='center', color=cluster_color_list[int(plot_array[3])])
             ax.set_xlim(xmin=0, xmax=24)
-            plt.savefig(os.path.join(save_folder, participant_id + '.png'), dpi=300)
+            plt.savefig(os.path.join(save_folder, participant_dict['participant_id'] + '_hmm.png'), dpi=300)
         plt.close()

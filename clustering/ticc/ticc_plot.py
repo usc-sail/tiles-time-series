@@ -65,12 +65,16 @@ def main(tiles_data_path, cluster_config_path, experiement):
         fitbit_data_dict = load_sensor_data.read_fitbit(fitbit_summary_path, participant_id)
         fitbit_summary_df = fitbit_data_dict['summary']
         
-        uid = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].index)[0]
-        primary_unit = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit[0]
-        participant_mgt = mgt_df.loc[mgt_df['uid'] == uid]
+        # participant_mgt = mgt_df.loc[mgt_df['uid'] == uid]
         
-        owl_in_one_df = load_sensor_data.read_preprocessed_owl_in_one(data_config.owl_in_one_sensor_dict['preprocess_path'], participant_id)
-        realizd_df = load_sensor_data.read_preprocessed_realizd(data_config.realizd_sensor_dict['preprocess_path'], participant_id)
+        participant_dict = {}
+        participant_dict['participant_id'] = participant_id
+        participant_dict['uid'] = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].index)[0]
+        participant_dict['primary_unit'] = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit[0]
+        participant_dict['shift'] = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].Shift[0]
+        
+        # owl_in_one_df = load_sensor_data.read_preprocessed_owl_in_one(data_config.owl_in_one_sensor_dict['preprocess_path'], participant_id)
+        # realizd_df = load_sensor_data.read_preprocessed_realizd(data_config.realizd_sensor_dict['preprocess_path'], participant_id)
         fitbit_df, fitbit_mean, fitbit_std = load_sensor_data.read_preprocessed_fitbit_with_pad(data_config, participant_id)
         
         ###########################################################
@@ -80,13 +84,13 @@ def main(tiles_data_path, cluster_config_path, experiement):
             continue
         
         clustering_df = pd.read_csv(os.path.join(data_config.fitbit_sensor_dict['clustering_path'], participant_id + '.csv.gz'), index_col=0)
-
+        
         ###########################################################
         # 5. Plot
         ###########################################################
-        cluster_plot = plot.Plot(data_config=data_config, primary_unit=primary_unit)
+        cluster_plot = plot.Plot(data_config=data_config, primary_unit=participant_dict['primary_unit'])
         
-        cluster_plot.plot_ticc(participant_id, fitbit_df=fitbit_df, cluster_df=clustering_df)
+        cluster_plot.plot_ticc_hmm(participant_dict, fitbit_df=fitbit_df, cluster_df=clustering_df)
         
         
 if __name__ == '__main__':
