@@ -11,8 +11,7 @@ import numpy as np
 # Add package path
 ###########################################################
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'config')))
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'segmentation')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'segmentation')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'util')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'plot')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'ticc')))
@@ -97,8 +96,7 @@ def main(tiles_data_path, config_path, experiment):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--tiles_path", required=False, help="Path to the root folder containing TILES data")
-    parser.add_argument("--config", required=False,
-                        help="Path to a config file specifying how to perform the clustering")
+    parser.add_argument("--config", required=False, help="Path to a config file specifying how to perform the clustering")
     parser.add_argument("--experiment", required=False, help="Experiment name")
     args = parser.parse_args()
     
