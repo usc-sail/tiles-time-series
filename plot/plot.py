@@ -573,12 +573,60 @@ class Plot(object):
         save_folder = os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], participant_dict['participant_id'])
         if not os.path.exists(save_folder):
             os.mkdir(save_folder)
-    
-        remodel = hmm.GaussianHMM(n_components=5, covariance_type="full", n_iter=300)
-        remodel.fit(np.array(cluster_df.cluster).reshape([-1, 1])[:-9])
-        Z2 = remodel.predict(np.array(cluster_df.cluster).reshape([-1, 1])[:-9])
-        cluster_df.loc[list(cluster_df.index)[:-9], 'hidden_state'] = Z2
-    
+        
+        '''
+        category_sequence = np.array([list(np.array(cluster_df.cluster_correct).astype(int))]).T
+
+        category_sequence[np.where(category_sequence == 100)[0]] = 1
+        model = hmm.MultinomialHMM(n_components=4, n_iter=300)
+        model.fit(category_sequence)
+        # model.decode(category_sequence, algorithm="viterbi")
+        Z2 = model.predict(category_sequence)
+        '''
+        
+        if len(cluster_df) > 0:
+            cluster_diff = np.array(cluster_df.cluster_correct[1:]) - np.array(cluster_df.cluster_correct[:-1])
+            change_point_array = np.where(cluster_diff != 0)[0]
+            cluster_array = np.array(cluster_df.cluster_correct)[change_point_array]
+            cluster_array = np.array(cluster_array).reshape([-1, 1])
+            cluster_array = np.append(cluster_array, np.array(cluster_df.cluster_correct)[-1])
+            
+            invalid_point = np.where(cluster_array == 100)[0]
+            cluster_array[invalid_point] = 1
+            
+            hmm_training = []
+            hmm_len = []
+            for i in range(int(len(cluster_array) / 300)):
+                
+                tmp_seq = []
+                for x in np.array(cluster_array[i*300:(i+1)*300]):
+                    tmp_seq.append([int(x)])
+                # category_sequence = np.array([list(np.array(cluster_array[i*100:(i+1)*100]).astype(int))])
+                
+                if len(hmm_training) == 0:
+                    hmm_training = tmp_seq
+                else:
+                    hmm_training = np.concatenate([hmm_training, tmp_seq])
+                hmm_len.append(len(tmp_seq))
+
+            change_point_index_list = [0]
+            for change_point_index in list(cluster_df.index[change_point_array]):
+                change_point_index_list.append(change_point_index)
+            change_point_index_list.append(cluster_df.index[-1])
+            
+            hmm_df = pd.DataFrame(index=change_point_index_list[:-1])
+            hmm_df['start'] = change_point_index_list[:-1]
+            hmm_df['end'] = change_point_index_list[1:]
+
+            category_sequence = np.array([list(np.array(cluster_array).astype(int))]).T
+
+            model = hmm.MultinomialHMM(n_components=6, n_iter=3000)
+            model.fit(hmm_training, hmm_len)
+            decode_array = model.decode(hmm_training, hmm_len, algorithm="viterbi")
+            Z2 = model.predict(hmm_training)
+
+            hmm_df.loc[change_point_index_list[:-1], 'hidden_state'] = Z2
+            
         ###########################################################
         # Read data
         ###########################################################
