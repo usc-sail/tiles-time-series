@@ -5,7 +5,7 @@ import logging
 from scipy import stats
 
 from sklearn import mixture
-import time
+import time, os
 from multiprocessing import Pool
 from collections import deque
 from src.CASC_helper import *
@@ -15,16 +15,16 @@ from src.admm_solver import ADMMSolver
 np.set_printoptions(formatter={'float': lambda x: "{0:0.4f}".format(x)})
 np.random.seed(103)  # 102
 
-#####################################################################################################################################################################################################
+#######################################################################################################################################################################
 
 logging.basicConfig(level=logging.DEBUG)
 
-
 class CASCSolver:
-    def __init__(self, window_size=10, number_of_clusters=5, lambda_parameter=11e-2,
-                 beta=400, maxIters=1000, threshold=2e-5,
+    def __init__(self, data_config=None, window_size=10, number_of_clusters=5, lambda_parameter=11e-2,
+                 beta=400, maxIters=1000, threshold=2e-5, participant_id=None,
                  input_file=None, num_proc=1, gamma=0.9, maxMotifs=None, motifReq=2):
         self.window_size = window_size
+        self.data_config = data_config
         self.K = number_of_clusters  # number of clusters
         self.lambda_param = lambda_parameter
         self.beta = beta
@@ -35,17 +35,7 @@ class CASCSolver:
         self.gamma = gamma  # aggressiveness of motif
         self.maxMotifs = maxMotifs  # max num of motifs
         self.motifReq = motifReq
-        # get the data inflated by window size
-        data = np.loadtxt(input_file, delimiter=",")
-        m, n = data.shape
-        self.m = m  # observations
-        self.n = n  # size of each observation vector
-        logging.info("done retrieving data")
-        self.complete_data = np.zeros([m, window_size*n])
-        for i in range(m):
-            for k in range(window_size):
-                if i+k < m:
-                    self.complete_data[i][k*n:(k+1)*n] = data[i+k][0:n]
+        self.participant_id = participant_id
 
         # start the process pool
         self.pool = Pool(processes=self.num_proc)
@@ -76,6 +66,80 @@ class CASCSolver:
         gmm.fit(self.complete_data)
         clustered_points = gmm.predict(self.complete_data)
         return clustered_points
+    
+    def fit(self, data_df=None, mean=None, std=None, useMotif=True):
+        
+        if len(data_df) == 0:
+            return
+
+        data_df = data_df.fillna(data_df.mean())
+        self.time_index = list(data_df.index)
+        self.data_df = data_df[:5000]
+
+        ###########################################################
+        # 1.1 Find the row and col size of the input
+        ###########################################################
+        times_series_arr = np.array((self.data_df - mean) / std)
+        time_series_rows_size = times_series_arr.shape[0]
+        time_series_col_size = times_series_arr.shape[1]
+        
+        # get the data inflated by window size
+        self.time_series_rows_size = time_series_rows_size  # observations
+        self.time_series_col_size = time_series_col_size  # size of each observation vector
+        logging.info("done retrieving data")
+        self.complete_data = np.zeros([time_series_rows_size, self.window_size * time_series_col_size])
+        for i in range(time_series_rows_size):
+            for k in range(self.window_size):
+                if i + k < time_series_rows_size:
+                    self.complete_data[i][k*time_series_col_size:(k+1)*time_series_col_size] = times_series_arr[i+k][0:time_series_col_size]
+
+        ###########################################################
+        # Start training
+        ###########################################################
+        train_cluster_inverse = motifs = motifsRanked = None
+        clustered_points = None
+        start = time.time()
+        if clustered_points is None:
+            # perform no motif CASC
+            initialClusteredPoints = self.getInitialClusteredPoints()
+            clustered_points, train_cluster_inverse, _, _, bic = self.solveWithInitialization(initialClusteredPoints, useMotif=False)
+        if useMotif:
+            # perform secondary motif CASC if specified
+            clustered_points, train_cluster_inverse, motifs, motifsRanked, bic = self.solveWithInitialization(clustered_points, useMotif=True)
+        end = time.time()
+
+        self.clustered_points = clustered_points
+        self.motifs = motifs
+        self.save_cluster()
+        
+        return clustered_points, train_cluster_inverse, motifs, motifsRanked, bic, end - start
+    
+    def save_cluster(self):
+        save_cluster_path = os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], self.participant_id + '.csv.gz')
+        self.data_df.loc[list(self.data_df.index)[:len(self.clustered_points)], 'cluster'] = np.array(self.clustered_points)
+        self.data_df.loc[list(self.data_df.index)[:len(self.clustered_points)], 'cluster_correct'] = np.array(self.clustered_points)
+
+        data_df_index = list(self.data_df.index)
+        
+        motif_array = np.zeros(len(self.clustered_points))
+        motif_array = motif_array - 1
+        
+        for i, motif in enumerate(self.motifs):
+            motif_list = self.motifs[motif]
+            for motif_index in motif_list:
+                motif_array[motif_index[0]:motif_index[1]] = i
+
+        self.data_df.loc[:, 'motif'] = motif_array
+
+        invalid_hr_point = np.where(np.array(self.data_df.HeartRatePPG) < 0)[0]
+        invalid_hr_index = [data_df_index[pt] for pt in invalid_hr_point]
+        self.data_df.loc[invalid_hr_index, 'cluster_correct'] = 100
+
+        invalid_hr_index = [data_df_index[pt - self.window_size + 1] for pt in invalid_hr_point if pt - self.window_size + 1 > 0]
+        self.data_df.loc[invalid_hr_index, 'cluster_correct'] = 100
+        self.data_df.loc[data_df_index[-self.window_size+1:], 'cluster_correct'] = 100
+
+        self.data_df.to_csv(save_cluster_path, compression='gzip')
 
     def solveWithInitialization(self, clustered_points, useMotif):
         motifs = None
@@ -104,8 +168,7 @@ class CASCSolver:
             clust_indices = self.getClustIndices(clustered_points)
 
             # solve for clusters
-            self.solveForClusters(clust_indices, cluster_mean_stacked_info,
-                                  empirical_covariances, train_cluster_inverse, computed_cov)
+            self.solveForClusters(clust_indices, cluster_mean_stacked_info, empirical_covariances, train_cluster_inverse, computed_cov)
 
             # update old computed covariance
             old_computed_cov = computed_cov
@@ -138,12 +201,10 @@ class CASCSolver:
             clustered_point_history.append(before_zero)
             if stop_here:
                 break
-        bic = computeBIC(self.K, self.m, clustered_point_history[-1], train_cluster_inverse,
-                         empirical_covariances)
+        bic = computeBIC(self.K, self.time_series_rows_size, clustered_point_history[-1], train_cluster_inverse, empirical_covariances)
         clusterbic = None
         if motifs is not None:
-            clusterbic = computeClusterBIC(
-                self.K, self.m, clustered_points, train_cluster_inverse, empirical_covariances, motifs)
+            clusterbic = computeClusterBIC(self.K, self.time_series_rows_size, clustered_points, train_cluster_inverse, empirical_covariances, motifs)
         logging.info("BIC for beta %s clusters %s is %s" % (self.beta, self.K, bic))
         return (clustered_point_history[-1], train_cluster_inverse, motifs, rankedMotifs, (bic, clusterbic))
 
@@ -154,13 +215,12 @@ class CASCSolver:
         K = self.K
         num_blocks = self.window_size + 1
         num_stacked = self.window_size
-        n = self.n
+        n = self.time_series_col_size
         N = len(clustered_points)
         inv_cov_dict = {}  # cluster to inv_cov
         log_det_dict = {}  # cluster to log_det
         for cluster in range(K):
-            cov_matrix = computed_cov[cluster][0:(
-                num_blocks-1)*n, 0:(num_blocks-1)*n]
+            cov_matrix = computed_cov[cluster][0:(num_blocks-1)*n, 0:(num_blocks-1)*n]
             inv_cov_dict[cluster] = np.linalg.inv(cov_matrix)
             log_det_dict[cluster] = np.log(np.linalg.det(cov_matrix))
 
@@ -235,7 +295,7 @@ class CASCSolver:
         '''
         K = self.K
         num_stacked = self.window_size
-        n = self.n
+        n = self.time_series_col_size
         cluster_lens = {k: len(clust_indices[k]) for k in range(K)}
 
         optRes = [None] * K
