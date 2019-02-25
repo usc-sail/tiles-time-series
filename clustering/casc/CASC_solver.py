@@ -74,7 +74,7 @@ class CASCSolver:
 
         data_df = data_df.fillna(data_df.mean())
         self.time_index = list(data_df.index)
-        self.data_df = data_df[:5000]
+        self.data_df = data_df
 
         ###########################################################
         # 1.1 Find the row and col size of the input
