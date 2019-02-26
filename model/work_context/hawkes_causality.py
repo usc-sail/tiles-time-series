@@ -1,11 +1,16 @@
-#!/usr/bin/env python3
+# !/usr/bin/env python3
+
+import numpy as np
+
+from tick.plot import plot_hawkes_kernels
+from tick.hawkes import (SimuHawkes, SimuHawkesMulti, HawkesKernelExp, HawkesKernelTimeFunc, HawkesKernelPowerLaw, HawkesKernel0, HawkesSumGaussians)
+from tick.dataset import fetch_hawkes_bund_data
+from tick.hawkes import HawkesConditionalLaw
 
 import os
 import sys
-from configparser import ConfigParser
 import argparse
 import pandas as pd
-import numpy as np
 
 ###########################################################
 # Add package path
@@ -16,7 +21,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'plot')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'ticc')))
 
-from CASC_solver import CASCSolver
 import load_data_path, load_sensor_data, load_data_basic
 import config
 
@@ -70,28 +74,12 @@ def main(tiles_data_path, config_path, experiment):
     for idx, participant_id in enumerate(top_participant_id_list):
         
         print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
-        ###########################################################
-        # 3. Create segmentation class
-        ###########################################################
-        casc = CASCSolver(data_config=data_config, maxIters=300, threshold=2e-5, num_proc=1,
-                          lambda_parameter=data_config.fitbit_sensor_dict['ticc_sparsity'],
-                          beta=data_config.fitbit_sensor_dict['ticc_switch_penalty'],
-                          window_size=data_config.fitbit_sensor_dict['ticc_window'],
-                          number_of_clusters=data_config.fitbit_sensor_dict['num_cluster'], participant_id=participant_id)
         
         if os.path.exists(os.path.join(data_config.fitbit_sensor_dict['clustering_path'], participant_id + '.csv.gz')) is False:
             continue
         
-        ###########################################################
-        # 4. Read segmentation data
-        ###########################################################
-        fitbit_df, fitbit_mean, fitbit_std = load_sensor_data.read_preprocessed_fitbit_with_pad(data_config, participant_id)
-        
-        if fitbit_df is None:
-            continue
-
-        casc.fit(fitbit_df, fitbit_mean, fitbit_std)
-
+        clustering_df = load_sensor_data.load_clustering_data(data_config.fitbit_sensor_dict['clustering_path'], participant_id)
+        print()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -102,6 +90,42 @@ if __name__ == '__main__':
     
     tiles_data_path = '../../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
     config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'config_file')) if args.config is None else args.config
-    experiment = 'casc' if args.config is None else args.config
+    experiment = 'ticc' if args.config is None else args.config
     
     main(tiles_data_path, config_path, experiment)
+
+'''
+if __name__ == '__main__':
+    timestamps_list = fetch_hawkes_bund_data()
+    
+    kernel_discretization = np.hstack((0, np.logspace(-5, 0, 50)))
+    hawkes_learner = HawkesConditionalLaw(claw_method="log", delta_lag=0.1, min_lag=5e-4, max_lag=500,
+                                          quad_method="log", n_quad=10, min_support=1e-4, max_support=1, n_threads=4)
+    
+    hawkes_learner.fit(timestamps_list)
+'''
+'''
+end_time = 1000
+n_nodes = 2
+n_realizations = 10
+n_gaussians = 5
+
+timestamps_list = []
+
+if __name__ == '__main__':
+    
+
+    kernel_timefunction = HawkesKernelTimeFunc(t_values=np.array([0., .7, 2.5, 3., 4.]), y_values=np.array([.3, .03, .03, .2, 0.]))
+    kernels = [[HawkesKernelExp(.2, 2.), HawkesKernelPowerLaw(.2, .5, 1.3)], [HawkesKernel0(), kernel_timefunction]]
+    
+    hawkes = SimuHawkes(baseline=[.5, .2], kernels=kernels, end_time=end_time, verbose=False, seed=1039)
+    
+    multi = SimuHawkesMulti(hawkes, n_simulations=n_realizations)
+    
+    multi.simulate()
+    
+    learner = HawkesSumGaussians(n_gaussians, max_iter=10)
+    learner.fit(multi.timestamps)
+    
+    plot_hawkes_kernels(learner, hawkes=hawkes, support=4)
+'''

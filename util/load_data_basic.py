@@ -8,6 +8,18 @@ import load_sensor_data
 date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
 date_only_date_time_format = '%Y-%m-%d'
 
+'''
+Inpatient Rehabilitation Unit (3 North)
+Cardiovascular Thoracic ICU (4 South),
+Pulmonary Medical ICU (5 ICU), Stepdown Telemetry Unit (5 South),
+Cardiothoracic Surgery ICU (5 West), Cardiothoracic Surgery Telemetry (5 East)
+Medical/Surgical Telemetry Abdominal Organ Transplant (6 South),
+Surgical ICU (7 West), Neurosciences ICU (7 South),
+Abdominal Organ Transplant ICU (7 East), Surgical Telemetry (7 North)
+Surgical Oncology ICU (8 West), Pulmonary Medical Telemetry (8 East)
+Surgical Oncology Telemetry (9 East)
+'''
+
 nurse_unit_types = {'keck:floor4:south': 'ICU',
                     'keck:floor5:north': 'ICU', 'keck:floor5:southICU': 'ICU', 'keck:floor5:west': 'ICU',
                     'keck:floor7:east': 'ICU', 'keck:floor7:south': 'ICU', 'keck:floor7:west': 'ICU',
