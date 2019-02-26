@@ -117,7 +117,16 @@ def fitbit_process_sliced_data(ppg_data_df, step_data_df, participant=None, data
             model = KNN(k=5)
         else:
             model = IterativeImputer()
-        
+
+        if len(preprocess_data_df.dropna()) / len(preprocess_data_df) > 0.75:
+            impute_array = model.fit_transform(np.array(preprocess_data_df))
+            hr_array = impute_array[:, 0]
+            hr_array = scipy.signal.savgol_filter(hr_array, 5, 3)
+
+            preprocess_data_df.loc[:, 'HeartRatePPG'] = hr_array
+            preprocess_data_df.loc[:, 'StepCount'] = impute_array[:, 1]
+
+        '''
         last_un_imputed_idx = -1
         for iter in range(iteration):
             data_iter_df = preprocess_data_df[iter*30:(iter+1)*30+30]
@@ -142,5 +151,5 @@ def fitbit_process_sliced_data(ppg_data_df, step_data_df, participant=None, data
             filter_array = scipy.signal.savgol_filter(filter_array, 5, 3)
     
             preprocess_data_df.loc[filter_df.index, 'HeartRatePPG'] = filter_array
-
+        '''
     return preprocess_data_df
