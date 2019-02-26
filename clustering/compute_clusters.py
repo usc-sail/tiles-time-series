@@ -17,21 +17,20 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.
 
 import config
 import segmentation
-import load_sensor_data
-import load_data_basic, load_data_path
+import load_sensor_data, load_data_basic, load_data_path
 import summarize_sequence
 import clustering
 import plot
 
-
-def ComputeClusters(tiles_data_path, config_path, experiement):
+def ComputeClusters(tiles_data_path, experiment):
     ###########################################################
     # 1. Create Config, load data paths
     ###########################################################
     process_data_path = os.path.abspath(os.path.join(os.pardir, 'data'))
     
     data_config = config.Config()
-    data_config.readConfigFile(config_path, experiement)
+    config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file'))
+    data_config.readConfigFile(config_path, experiment)
     
     # Load preprocess folder
     load_data_path.load_preprocess_path(data_config, process_data_path, data_name='preprocess_data')
@@ -55,7 +54,7 @@ def ComputeClusters(tiles_data_path, config_path, experiement):
     ###########################################################
     # 2. Get participant id list
     ###########################################################
-    top_participant_id_df = pd.read_csv(os.path.join(process_data_path, experiement, 'participant_id.csv.gz'), index_col=0, compression='gzip')
+    top_participant_id_df = pd.read_csv(os.path.join(process_data_path, experiment, 'participant_id.csv.gz'), index_col=0, compression='gzip')
     top_participant_id_list = list(top_participant_id_df.index)
     top_participant_id_list.sort()
     
@@ -69,8 +68,6 @@ def ComputeClusters(tiles_data_path, config_path, experiement):
         # Read basic data for each participant
         uid = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].index)[0]
         primary_unit = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit[0]
-        current_job_position = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].currentposition[0]
-        
         participant_mgt = mgt_df.loc[mgt_df['uid'] == uid]
         
         # Read fitbit summary data
@@ -82,13 +79,16 @@ def ComputeClusters(tiles_data_path, config_path, experiement):
         owl_in_one_df = load_sensor_data.read_preprocessed_owl_in_one(data_config.owl_in_one_sensor_dict['preprocess_path'], participant_id)
         realizd_df = load_sensor_data.read_preprocessed_realizd(data_config.realizd_sensor_dict['preprocess_path'], participant_id)
         fitbit_df, fitbit_mean, fitbit_std = load_sensor_data.read_preprocessed_fitbit_with_pad(data_config, participant_id)
+        audio_df = load_sensor_data.read_preprocessed_audio(data_config.audio_sensor_dict['preprocess_path'], participant_id)
 
         # Read segmentation data
         if os.path.exists(os.path.join(data_config.fitbit_sensor_dict['segmentation_path'], participant_id + '.csv.gz')) is False:
             continue
         
+        ###########################################################
+        # 3. Read data and segmentation data
+        ###########################################################
         segmentation_df = load_sensor_data.load_segmentation_data(data_config.fitbit_sensor_dict['segmentation_path'], participant_id)
-
         times_list = segmentation_df['time']
         start_times = times_list.tolist()[0:-1]
         end_times = times_list.tolist()[1:]
@@ -105,36 +105,30 @@ def ComputeClusters(tiles_data_path, config_path, experiement):
         clustering_df = clustering_df[['start', 'end', 'cluster_id']] # Reorder columns
         clustering_df.to_csv(os.path.join(data_config.fitbit_sensor_dict['clustering_path'], file_name), header=True, index=False)
 
-        # Plot
-        try:
-            show_plots = data_config.enable_plot
-        except:
-            show_plots = False
-
-        if show_plots:
+        ###########################################################
+        # 4. Plot
+        ###########################################################
+        if data_config.enable_plot:
             plot_df = clustering_df
             plot_df.loc[:, 'index'] = plot_df.loc[:, 'start']
             plot_df = plot_df.set_index('index')
 
-            ###########################################################
-            # 5. Plot
-            ###########################################################
             cluster_plot = plot.Plot(data_config=data_config, primary_unit=primary_unit)
 
             cluster_plot.plot_cluster(participant_id, fitbit_df=fitbit_df, fitbit_summary_df=fitbit_summary_df,
                                       mgt_df=participant_mgt, segmentation_df=segmentation_df,
-                                      omsignal_data_df=omsignal_data_df, realizd_df=realizd_df, owl_in_one_df=owl_in_one_df, cluster_df=plot_df)
-
+                                      omsignal_data_df=omsignal_data_df, realizd_df=realizd_df,
+                                      owl_in_one_df=owl_in_one_df, audio_df=audio_df, cluster_df=plot_df)
+    return
+        
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--tiles_path", required=False, help="Path to the root folder containing TILES data")
-    parser.add_argument("--config", required=False, help="Path to a config file specifying how to perform the clustering")
     parser.add_argument("--experiment", required=False, help="Experiment name")
     args = parser.parse_args()
     
     tiles_data_path = '../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
-    config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file')) if args.config is None else args.config
-    experiment = 'baseline' if args.config is None else args.config
+    experiment = 'baseline' if args.experiment is None else args.experiment
 
-    ComputeClusters(tiles_data_path, config_path, experiment)
+    ComputeClusters(tiles_data_path, experiment)

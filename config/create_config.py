@@ -1,5 +1,7 @@
-from config import Config
+#!/usr/bin/env python3
 import os
+from config import Config
+import argparse
 
 '''
 fitbit_param = {'data_type': 'fitbit', 'imputation': 'iterative', 'feature': 'original', 'offset': 60, 'overlap': 0,
@@ -22,6 +24,8 @@ realizd_param = {'data_type': 'realizd', 'imputation': None, 'feature': 'origina
 
 owl_in_one_param = {'data_type': 'owl_in_one', 'imputation': None, 'feature': 'original', 'offset': 60, 'overlap': 0}
 
+audio_param = {'data_type': 'audio', 'feature': 'original', 'foreground_per_minute_percentage': 0.1}
+
 # segmentation_param = {'method': 'gaussian', 'segmentation_lamb': 10e0}
 segmentation_param = None
 
@@ -30,17 +34,16 @@ cluster_param = {'method': 'kmeans', 'num_cluster': 5}
 global_param = {'enable_plot': False}
 
 if __name__ == '__main__':
-    
-    experiement = 'casc'
-    config = Config()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--experiment', required=True, help="Name of the experiment, which will become the name of the output configuration file")
+    args = parser.parse_args()
     
     # Save parameters
-    config.saveConfig(om_param, fitbit_param, owl_in_one_param, realizd_param, segmentation_param, cluster_param, global_param, experiement)
+    config = Config()
+    config.saveConfig(om_param, fitbit_param, owl_in_one_param, realizd_param, audio_param, segmentation_param, cluster_param, global_param, args.experiment)
 
     # Create config files
-    config.createConfigFile(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file'), experiement)
+    config.createConfigFile(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file'), args.experiment)
 
     # Read config files
-    config.readConfigFile(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file'), experiement)
-    
-    
+    config.readConfigFile(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file'), args.experiment)

@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import pdb
 from datetime import timedelta
 from matplotlib.patches import Patch
 from hmmlearn import hmm
@@ -209,7 +210,7 @@ class Plot(object):
             plt.close()
 
     def plot_cluster(self, participant_id, fitbit_df=None, realizd_df=None, owl_in_one_df=None, segmentation_df=None,
-                     fitbit_summary_df=None, mgt_df=None, omsignal_data_df=None, cluster_df=None):
+                     fitbit_summary_df=None, mgt_df=None, omsignal_data_df=None, audio_df=None, cluster_df=None):
             
         ###########################################################
         # If folder not exist
@@ -223,7 +224,6 @@ class Plot(object):
         ###########################################################
         fitbit_df = fitbit_df.sort_index()
         realizd_data_df = None if realizd_df is None else realizd_df
-        
         interval = int((pd.to_datetime(fitbit_df.index[1]) - pd.to_datetime(fitbit_df.index[0])).total_seconds() / 60)
     
         ###########################################################
@@ -262,7 +262,7 @@ class Plot(object):
             ###########################################################
             # Plot
             ###########################################################
-            f, ax = plt.subplots(3, figsize=(18, 8))
+            f, ax = plt.subplots(4, figsize=(18, 8))
         
             ax[0].plot(day_time_array, np.array(day_data_array)[:, 0], label='heart rate')
             ax[0].plot(day_time_array, np.array(day_data_array)[:, 1], label='step count')
@@ -280,13 +280,24 @@ class Plot(object):
             ###########################################################
             # Plot realizd data
             ###########################################################
-            if realizd_data_df is not None:
-                day_realizd_data_df = realizd_data_df[day_start_str:day_end_str]
+            if realizd_df is not None:
+                day_realizd_data_df = realizd_df[day_start_str:day_end_str]
                 day_realizd_time_array = pd.to_datetime(day_realizd_data_df.index)
             
                 if len(day_realizd_data_df) > 0:
                     ax[2].plot(day_realizd_time_array, np.array(day_realizd_data_df.SecondsOnPhone),
                                label='phone usage', color='green')
+
+            ###########################################################
+            # Plot audio data
+            ###########################################################
+            if audio_df is not None:
+                day_audio_mask = np.where((audio_df.index > day_start_str) & (audio_df.index <= day_end_str))[0]
+                day_audio_df = audio_df.iloc[day_audio_mask, :]
+                day_audio_time_array = pd.to_datetime(day_audio_df.index)
+
+                if len(day_audio_df) > 0:
+                    ax[3].plot(day_audio_time_array, np.array(day_audio_df.foreground), label='foreground', color='blue')
         
             ###########################################################
             # Plot owl_in_one data
@@ -326,12 +337,13 @@ class Plot(object):
                 ax[0].axvline(x=xc, color='k', linestyle='--')
                 ax[1].axvline(x=xc, color='k', linestyle='--')
                 ax[2].axvline(x=xc, color='k', linestyle='--')
+                ax[3].axvline(x=xc, color='k', linestyle='--')
         
             ax[0].set_xlim([day_time_array[0], day_time_array[-1]])
             ax[1].set_xlim([day_time_array[0], day_time_array[-1]])
             ax[2].set_xlim([day_time_array[0], day_time_array[-1]])
-            ax[2].set_ylim([-10, 100])
-            ax[2].set_xlabel(self.primary_unit)
+            ax[3].set_xlim([day_time_array[0], day_time_array[-1]])
+            ax[3].set_xlabel(self.primary_unit)
 
             legend_elements = [Patch(facecolor=color_dict[loc], label=loc, alpha=0.3) for loc in list(color_dict.keys())]
 
@@ -340,8 +352,10 @@ class Plot(object):
             
             if omsignal_data_df is not None:
                 if len(day_omsignal_data_df) > 0: ax[1].legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True)
-            if day_owl_in_one_df is not None:
+            if owl_in_one_df is not None and day_owl_in_one_df is not None:
                 if len(day_owl_in_one_df) > 0: ax[2].legend(handles=legend_elements, bbox_to_anchor=(1, 1), fancybox=True, shadow=True)
+            if audio_df is not None:
+                if len(audio_df) > 0: ax[3].legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True)
             
             ###########################################################
             # Plot fitbit summary
@@ -365,6 +379,7 @@ class Plot(object):
                         ax[0].axvline(x=pd.to_datetime(index), color='red', linestyle='--')
                         ax[1].axvline(x=pd.to_datetime(index), color='red', linestyle='--')
                         ax[2].axvline(x=pd.to_datetime(index), color='red', linestyle='--')
+                        ax[3].axvline(x=pd.to_datetime(index), color='red', linestyle='--')
                     
                         plt_str = 'loc:' + str(day_mgt_df.location_mgt.values[0]) + ',' + \
                                   'pos:' + str(day_mgt_df.pos_af_mgt.values[0]) + ',' + \
@@ -384,7 +399,7 @@ class Plot(object):
                 day_cluster_df = cluster_df[day_before_str:day_after_str]
                 if len(day_cluster_df) > 0:
                     for index, row_cluster in day_cluster_df.iterrows():
-                        for i in range(3):
+                        for i in range(4):
                             ymin, ymax = ax[i].get_ylim()
                             self.plot_cluster_span(ax[i], row_cluster.start, row_cluster.end, row_cluster.cluster_id, day_str, day_after_str)
                             ax[i].set_ylim([ymin, ymax])
@@ -408,24 +423,34 @@ class Plot(object):
             ax[0].axvspan(pd.to_datetime(begin_str), pd.to_datetime(end_str), alpha=0.3, color=color, lw=0)
             ax[1].axvspan(pd.to_datetime(begin_str), pd.to_datetime(end_str), alpha=0.3, color=color, lw=0)
             ax[2].axvspan(pd.to_datetime(begin_str), pd.to_datetime(end_str), alpha=0.3, color=color, lw=0, label=room_type)
+            if len(ax) > 3:
+                ax[3].axvspan(pd.to_datetime(begin_str), pd.to_datetime(end_str), alpha=0.3, color=color, lw=0)
         
         elif condition1 is True:
             ax[0].axvline(x=pd.to_datetime(begin_str), color='blue', linestyle='--')
             ax[1].axvline(x=pd.to_datetime(begin_str), color='blue', linestyle='--')
             ax[2].axvline(x=pd.to_datetime(begin_str), color='blue', linestyle='--')
+            if len(ax) > 3:
+                ax[3].axvline(x=pd.to_datetime(begin_str), color='blue', linestyle='--')
         
             ax[0].axvspan(pd.to_datetime(begin_str), pd.to_datetime(day_after_str), alpha=0.3, color=color, lw=0)
             ax[1].axvspan(pd.to_datetime(begin_str), pd.to_datetime(day_after_str), alpha=0.3, color=color, lw=0)
             ax[2].axvspan(pd.to_datetime(begin_str), pd.to_datetime(day_after_str), alpha=0.3, color=color, label=room_type, lw=0)
+            if len(ax) > 3:
+                ax[3].axvspan(pd.to_datetime(begin_str), pd.to_datetime(day_after_str), alpha=0.3, color=color, lw=0)
     
         elif condition2 is True:
             ax[0].axvline(x=pd.to_datetime(end_str), color='blue', linestyle='--')
             ax[1].axvline(x=pd.to_datetime(end_str), color='blue', linestyle='--')
             ax[2].axvline(x=pd.to_datetime(end_str), color='blue', linestyle='--')
+            if len(ax) > 3:
+                ax[3].axvline(x=pd.to_datetime(end_str), color='blue', linestyle='--')
         
             ax[0].axvspan(pd.to_datetime(day_str), pd.to_datetime(end_str), alpha=0.3, color=color, lw=0)
             ax[1].axvspan(pd.to_datetime(day_str), pd.to_datetime(end_str), alpha=0.3, color=color, lw=0)
             ax[2].axvspan(pd.to_datetime(day_str), pd.to_datetime(end_str), alpha=0.3, color=color, label=room_type, lw=0)
+            if len(ax) > 3:
+                ax[3].axvspan(pd.to_datetime(day_str), pd.to_datetime(end_str), alpha=0.3, color=color, lw=0)
             
     def plot_cluster_span(self, ax, cluster_begin_str, cluster_end_str, cluster_id, day_str, day_after_str):
         condition1 = pd.to_datetime(day_str) < pd.to_datetime(cluster_begin_str) < pd.to_datetime(day_after_str)
@@ -453,32 +478,39 @@ class Plot(object):
             ax[0].axvline(x=pd.to_datetime(sleep_begin_str), color='blue', linestyle='--')
             ax[1].axvline(x=pd.to_datetime(sleep_begin_str), color='blue', linestyle='--')
             ax[2].axvline(x=pd.to_datetime(sleep_begin_str), color='blue', linestyle='--')
+            ax[3].axvline(x=pd.to_datetime(sleep_begin_str), color='blue', linestyle='--')
         
             ax[0].axvline(x=pd.to_datetime(sleep_end_str), color='blue', linestyle='--')
             ax[1].axvline(x=pd.to_datetime(sleep_end_str), color='blue', linestyle='--')
             ax[2].axvline(x=pd.to_datetime(sleep_end_str), color='blue', linestyle='--')
+            ax[3].axvline(x=pd.to_datetime(sleep_end_str), color='blue', linestyle='--')
         
             ax[0].axvspan(pd.to_datetime(sleep_begin_str), pd.to_datetime(sleep_end_str), alpha=0.1, color='red')
             ax[1].axvspan(pd.to_datetime(sleep_begin_str), pd.to_datetime(sleep_end_str), alpha=0.1, color='red')
             ax[2].axvspan(pd.to_datetime(sleep_begin_str), pd.to_datetime(sleep_end_str), alpha=0.1, color='red')
+            ax[3].axvspan(pd.to_datetime(sleep_begin_str), pd.to_datetime(sleep_end_str), alpha=0.1, color='red')
     
         elif condition1 is True:
             ax[0].axvline(x=pd.to_datetime(sleep_begin_str), color='blue', linestyle='--')
             ax[1].axvline(x=pd.to_datetime(sleep_begin_str), color='blue', linestyle='--')
             ax[2].axvline(x=pd.to_datetime(sleep_begin_str), color='blue', linestyle='--')
+            ax[3].axvline(x=pd.to_datetime(sleep_begin_str), color='blue', linestyle='--')
         
             ax[0].axvspan(pd.to_datetime(sleep_begin_str), pd.to_datetime(day_after_str), alpha=0.1, color='red')
             ax[1].axvspan(pd.to_datetime(sleep_begin_str), pd.to_datetime(day_after_str), alpha=0.1, color='red')
             ax[2].axvspan(pd.to_datetime(sleep_begin_str), pd.to_datetime(day_after_str), alpha=0.1, color='red')
+            ax[3].axvspan(pd.to_datetime(sleep_begin_str), pd.to_datetime(day_after_str), alpha=0.1, color='red')
     
         elif condition2 is True:
             ax[0].axvline(x=pd.to_datetime(sleep_end_str), color='blue', linestyle='--')
             ax[1].axvline(x=pd.to_datetime(sleep_end_str), color='blue', linestyle='--')
             ax[2].axvline(x=pd.to_datetime(sleep_end_str), color='blue', linestyle='--')
+            ax[3].axvline(x=pd.to_datetime(sleep_end_str), color='blue', linestyle='--')
         
             ax[0].axvspan(pd.to_datetime(day_str), pd.to_datetime(sleep_end_str), alpha=0.1, color='red')
             ax[1].axvspan(pd.to_datetime(day_str), pd.to_datetime(sleep_end_str), alpha=0.1, color='red')
             ax[2].axvspan(pd.to_datetime(day_str), pd.to_datetime(sleep_end_str), alpha=0.1, color='red')
+            ax[3].axvspan(pd.to_datetime(day_str), pd.to_datetime(sleep_end_str), alpha=0.1, color='red')
 
     def plot_ticc(self, participant_dict, fitbit_df=None, cluster_df=None):
     

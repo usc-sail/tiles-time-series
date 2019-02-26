@@ -68,6 +68,16 @@ def load_preprocess_path(data_config, process_data_path, data_name='preprocess_d
 
     data_config.realizd_sensor_dict['preprocess_path'] = tmp_path
 
+    # audio
+    tmp_path = os.path.join(process_data_path, data_name, data_config.audio_sensor_dict['name'])
+    create_folder(tmp_path)
+    preprocess_str = data_config.audio_sensor_dict['feature']
+    preprocess_str = preprocess_str + '_' + data_config.audio_sensor_dict['preprocess_setting']
+    tmp_path = os.path.join(tmp_path, preprocess_str)
+    create_folder(tmp_path)
+
+    data_config.audio_sensor_dict['preprocess_path'] = tmp_path
+
 
 def load_segmentation_path(data_config, process_data_path, data_name='segmentation'):
     """ Produces a fixed-length summary vector of the sequence for each segment.

@@ -176,7 +176,7 @@ def read_preprocessed_owl_in_one(path, participant_id):
 
 def read_preprocessed_realizd(path, participant_id):
     ###########################################################
-    # 1. Read all omsignal file
+    # 1. Read all realizd file
     ###########################################################
     realizd_file_abs_path = os.path.join(path, participant_id + '.csv.gz')
     if os.path.exists(realizd_file_abs_path) is True:
@@ -187,10 +187,23 @@ def read_preprocessed_realizd(path, participant_id):
     else:
         return None
 
+def read_preprocessed_audio(path, participant_id):
+    ###########################################################
+    # 1. Read all audio file
+    ###########################################################
+    audio_file_abs_path = os.path.join(path, participant_id + '.csv.gz')
+    if os.path.exists(audio_file_abs_path) is True:
+        audio_all_df = pd.read_csv(audio_file_abs_path, index_col=0)
+        audio_all_df = audio_all_df.sort_index()
+        
+        return audio_all_df
+    else:
+        return None
+
 
 def read_owl_in_one(path, participant_id):
     ###########################################################
-    # 1. Read all omsignal file
+    # 1. Read all owl-in-one file
     ###########################################################
     owl_in_one_file_abs_path = os.path.join(path, participant_id + '_bleProximity.csv.gz')
     owl_in_one_all_df = pd.DataFrame()

@@ -4,11 +4,15 @@ Top level classes for the preprocess model.
 from __future__ import print_function
 
 import copy
+import pdb
 from om_signal.helper import *
 from fitbit.helper import *
 from realizd.helper import *
 from owl_in_one.helper import *
 import pandas as pd
+
+date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
+
 
 __all__ = ['Preprocess']
 
@@ -117,7 +121,35 @@ class Preprocess(object):
         print('---------------------------------------------------------------------')
         print('Function: preprocess_audio')
         print('---------------------------------------------------------------------')
-        
+        sample_rate = 0.01 # The sampling rate of the audio data in seconds (ignoring missing data)
+        foreground_percentage_threshold  = float(self.data_config.audio_sensor_dict['foreground_per_minute_percentage'])
+
+        out_file_path = os.path.join(self.data_config.audio_sensor_dict['preprocess_path'], self.participant_id + '.csv.gz')
+        if os.path.exists(out_file_path): # Skip files that have already been written
+            return
+
+        data_df.index = pd.to_datetime(data_df.index)
+        unix_times = pd.DatetimeIndex([data_df.index[0], data_df.index[data_df.shape[0]-1]]).astype(np.int64)
+        start_unix_time_minute_clamp = int(unix_times[0] - (unix_times[0]% int(60e9)))
+        end_unix_time_minute_clamp = int(unix_times[1] - (unix_times[1] % int(60e9)))
+        time_index = pd.to_datetime(range(start_unix_time_minute_clamp, end_unix_time_minute_clamp+int(60e9), int(60e9))).strftime(date_time_format)[:-3]
+        foreground_data = np.zeros(len(time_index))
+
+        idx = 0
+        last_time_index = 0
+        while idx < len(time_index):
+            if (idx%(len(time_index)/20)) == 0:
+                print("Percent complete: %f"%(float(idx)/len(time_index)))
+            cur_time_index = np.searchsorted(data_df.index, time_index[idx])
+            num_foreground_samples = max(cur_time_index-last_time_index-1, 0)
+            percentage_foreground = (num_foreground_samples*sample_rate)/60.0
+            foreground_data[idx] = 1 if percentage_foreground > foreground_percentage_threshold else 0
+            last_time_index = cur_time_index
+            idx += 1
+
+        self.preprocess_data_all_df = pd.DataFrame(data={'foreground': foreground_data}, index=time_index)
+        self.preprocess_data_all_df.to_csv(out_file_path, index=True, index_label='Timestamp', compression='gzip')
+
 
     def slice_raw_data(self, method=None, valid_slice_in_min=180, data_df=None):
         """
@@ -171,4 +203,3 @@ class Preprocess(object):
             
             if preprocess_data_df is not None:
                 self.processed_sliced_data_array.append(preprocess_data_df)
-    

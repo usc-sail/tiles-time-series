@@ -11,13 +11,9 @@ import argparse
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'util')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config')))
 
-# date_time format
-date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
-date_only_date_time_format = '%Y-%m-%d'
-
-import load_data_path, load_data_basic
 import config
 from preprocess import Preprocess
+import load_data_path, load_data_basic
 
 
 def main(tiles_data_path, config_path, experiment):
@@ -47,12 +43,17 @@ def main(tiles_data_path, config_path, experiment):
         ###########################################################
         # Read audio file path
         ###########################################################
+        audio_file = participant_id + '.csv.gz'
+        audio_file_abs_path = os.path.join(tiles_data_path, '4_extracted_features/jelly_audio_feats_fixed/', audio_file)
         
         ###########################################################
         # Read audio data
         ###########################################################
-        # should be pd.read_csv
-        audio_data_df = pd.DataFrame()
+        try:
+            audio_data_df = pd.read_csv(audio_file_abs_path, index_col=0)
+            audio_data_df = audio_data_df.sort_index()
+        except FileNotFoundError:
+            continue
         
         ###########################################################
         # 2.0 Iterate all fitbit files
@@ -66,7 +67,6 @@ def main(tiles_data_path, config_path, experiment):
             ###########################################################
             # 2.2 Preprocess audio data array
             ###########################################################
-            # add your code inside this function
             audio_preprocess.preprocess_audio(audio_data_df)
             
             del audio_preprocess
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     
     tiles_data_path = '../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
     config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file')) if args.config is None else args.config
-    experiment = 'baseline' if args.config is None else args.config
+    experiment = 'baseline' if args.experiment is None else args.experiment
     
     main(tiles_data_path, config_path, experiment)
 

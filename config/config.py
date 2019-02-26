@@ -23,7 +23,7 @@ class Config(object):
         ###########################################################
         self.config = ConfigParser()
         
-    def saveConfig(self, om_process_param, fitbit_process_param, owl_in_one_param, realizd_param,
+    def saveConfig(self, om_process_param, fitbit_process_param, owl_in_one_param, realizd_param, audio_param,
                    segmentation_param, cluster_param, global_param, experiement):
     
         ###########################################################
@@ -77,6 +77,14 @@ class Config(object):
         self.config.set('realizd', 'feature', realizd_param['feature'])
         self.config.set('realizd', 'preprocess_setting', 'offset_' + str(realizd_param['offset']))
         self.config.set('realizd', 'offset', str(realizd_param['offset']))
+
+        ###########################################################
+        # Initiate audio
+        ###########################################################
+        self.config.add_section('audio')
+        self.config.set('audio', 'feature', audio_param['feature'])
+        self.config.set('audio', 'preprocess_setting', 'foreground_percentage_' + str(audio_param['foreground_per_minute_percentage']))
+        self.config.set('audio', 'foreground_per_minute_percentage', str(audio_param['foreground_per_minute_percentage']))
         
         ###########################################################
         # Initiate global parameters
@@ -88,6 +96,8 @@ class Config(object):
         ###########################################################
         # Add folder information
         ###########################################################
+        if not os.path.exists(dataDir):
+            os.makedirs(dataDir)
         configFilePath = os.path.join(dataDir, experiement + '.cfg')
         with open(configFilePath, 'w') as config_file:
             self.config.write(config_file)
@@ -149,13 +159,22 @@ class Config(object):
         self.owl_in_one_sensor_dict['offset'] = int(self.getSetting('owl_in_one', 'offset'))
     
         ###########################################################
-        # Read Fitbit
+        # Read realizd
         ###########################################################
         self.realizd_sensor_dict = {}
         self.realizd_sensor_dict['name'] = 'realizd'
         self.realizd_sensor_dict['feature'] = self.getSetting('realizd', 'feature')
         self.realizd_sensor_dict['preprocess_setting'] = self.getSetting('realizd', 'preprocess_setting')
         self.realizd_sensor_dict['offset'] = int(self.getSetting('realizd', 'offset'))
+
+        ###########################################################
+        # Read audio 
+        ###########################################################
+        self.audio_sensor_dict = {}
+        self.audio_sensor_dict['name'] = 'audio'
+        self.audio_sensor_dict['feature'] = self.getSetting('audio', 'feature')
+        self.audio_sensor_dict['preprocess_setting'] = self.getSetting('audio', 'preprocess_setting')
+        self.audio_sensor_dict['foreground_per_minute_percentage'] = self.getSetting('audio', 'foreground_per_minute_percentage')
         
         ###########################################################
         # Read global parameters
