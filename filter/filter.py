@@ -138,10 +138,13 @@ class Filter(object):
                     row_filter_df['sleep_start'] = last_start_str
                     row_filter_df['sleep_end'] = last_end_str
                     row_filter_df['duration'] = (pd.to_datetime(curr_start_str) - pd.to_datetime(last_start_str)).total_seconds() / 3600
+
+                    owl_in_one_cond, omsignal_cond, mgt_cond = False, False, False
                     
-                    owl_in_one_cond = len(owl_in_one_df[last_start_str:curr_start_str]) > 5
-                    omsignal_cond = len(omsignal_df[last_start_str:curr_start_str]) > 60 * 30
-                    mgt_cond = False
+                    if owl_in_one_df is not None:
+                        owl_in_one_cond = len(owl_in_one_df[last_start_str:curr_start_str]) > 5
+                    if omsignal_df is not None:
+                        omsignal_cond = len(omsignal_df[last_start_str:curr_start_str]) > 60 * 30
                     
                     day_mgt = mgt_df[last_start_str:curr_start_str]
                     if len(day_mgt) > 0:
