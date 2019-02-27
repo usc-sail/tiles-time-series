@@ -41,26 +41,15 @@ def main(tiles_data_path, config_path, experiment):
     ###########################################################
     # 2. Get participant id list
     ###########################################################
-    if os.path.exists(os.path.join(process_data_path, experiment, 'participant_id.csv.gz')) is True:
-        top_participant_id_df = pd.read_csv(os.path.join(process_data_path, experiment, 'participant_id.csv.gz'), index_col=0, compression='gzip')
-    else:
-        participant_id_list = load_data_basic.return_participant(tiles_data_path)
-        participant_id_list.sort()
-        top_participant_id_df = load_data_basic.return_top_k_participant(participant_id_list, k=150,
-                                                                         data_config=data_config)
-        top_participant_id_df.to_csv(os.path.join(process_data_path, experiment, 'participant_id.csv.gz'),
-                                     compression='gzip')
-    
+    top_participant_id_df = load_data_basic.return_top_k_participant(os.path.join(process_data_path, experiment, 'participant_id.csv.gz'), tiles_data_path, k=150, data_config=data_config)
     top_participant_id_list = list(top_participant_id_df.index)
     top_participant_id_list.sort()
-    top_participant_id_list = top_participant_id_list[120:]
     
     for idx, participant_id in enumerate(top_participant_id_list):
         
-        print('read_preprocess_data: participant: %s, process: %.2f' % (
-        participant_id, idx * 100 / len(top_participant_id_list)))
+        print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
         ###########################################################
-        # 3. Create segmentation class
+        # 3. Create filter class
         ###########################################################
         ggs_segmentation = segmentation.Segmentation(data_config=data_config, participant_id=participant_id)
         

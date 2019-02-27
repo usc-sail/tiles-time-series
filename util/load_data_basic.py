@@ -250,32 +250,43 @@ def return_participant(tiles_data_path):
     return participant_id_list
 
 
-def return_top_k_participant(participant_id_list, k=10, data_config=None):
+def return_top_k_participant(path, tiles_data_path, k=10, data_config=None):
     """
-        Return all participants that with data
+    Return all participants that with data
 
-        Params:
-        tiles_data_path - tiles data folder
+    Params:
+    tiles_data_path - tiles data folder
 
-        Returns:
-        fitbit_len_df - top participant df with fitbit data
-        """
-    fitbit_len_list = []
-    for idx, participant_id in enumerate(participant_id_list):
-        print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(participant_id_list)))
-        
-        fitbit_df = load_sensor_data.read_preprocessed_fitbit(data_config.fitbit_sensor_dict['preprocess_path'], participant_id)
-        
-        if fitbit_df is not None:
-            fitbit_len_list.append(len(fitbit_df))
-        else:
-            fitbit_len_list.append(0)
+    Returns:
+    fitbit_len_df - top participant df with fitbit data
+    """
+    # If we have the data, read it
+    if os.path.exists(path) is True:
+        top_participant_id_df = pd.read_csv(path, index_col=0, compression='gzip')
+    else:
+        # Get all participant id
+        participant_id_list = return_participant(tiles_data_path)
+        participant_id_list.sort()
+
+        # Iterate to get top k participant
+        fitbit_len_list = []
+        for idx, participant_id in enumerate(participant_id_list):
+            print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(participant_id_list)))
     
-    top_participant_list = [participant_id_list[i] for i in np.argsort(fitbit_len_list)[::-1][:k]]
-    fitbit_len_sort = np.sort(fitbit_len_list)[::-1][:k]
+            fitbit_df = load_sensor_data.read_preprocessed_fitbit(data_config.fitbit_sensor_dict['preprocess_path'], participant_id)
     
-    fitbit_len_df = pd.DataFrame(fitbit_len_sort, index=top_participant_list)
-    
-    return fitbit_len_df
+            if fitbit_df is not None:
+                fitbit_len_list.append(len(fitbit_df))
+            else:
+                fitbit_len_list.append(0)
+
+        top_participant_list = [participant_id_list[i] for i in np.argsort(fitbit_len_list)[::-1][:k]]
+        fitbit_len_sort = np.sort(fitbit_len_list)[::-1][:k]
+
+        top_participant_id_df = pd.DataFrame(fitbit_len_sort, index=top_participant_list)
+
+        top_participant_id_df.to_csv(path, compression='gzip')
+
+    return top_participant_id_df
 
 
