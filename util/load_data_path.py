@@ -7,7 +7,7 @@ def create_folder(folder_dir):
 
 
 def load_preprocess_path(data_config, process_data_path, data_name='preprocess_data'):
-    """ Produces a fixed-length summary vector of the sequence for each segment.
+    """ Load the preprocess path to data_config
 
     Params:
     data_config - config setting
@@ -79,8 +79,83 @@ def load_preprocess_path(data_config, process_data_path, data_name='preprocess_d
     data_config.audio_sensor_dict['preprocess_path'] = tmp_path
 
 
+def load_filter_path(data_config, process_data_path, data_name='filter'):
+    """ Load the filter data path to data_config.
+
+    Params:
+    data_config - config setting
+    process_data_path - the path contains all processed stream
+    data_name - data name
+
+    Returns:
+
+    """
+    tmp_path = os.path.join(process_data_path, data_name)
+    create_folder(tmp_path)
+    tmp_path = os.path.join(tmp_path, data_config.filter_method)
+    create_folder(tmp_path)
+    
+    # om signal
+    tmp_path = os.path.join(tmp_path, data_config.omsignal_sensor_dict['name'])
+    create_folder(tmp_path)
+    preprocess_str = data_config.omsignal_sensor_dict['feature']
+    preprocess_str = preprocess_str + '_' + data_config.omsignal_sensor_dict['preprocess_setting']
+    preprocess_str = preprocess_str + '_' + data_config.omsignal_sensor_dict['preprocess_cols']
+    tmp_path = os.path.join(tmp_path, preprocess_str)
+    create_folder(tmp_path)
+    
+    data_config.omsignal_sensor_dict['filter_path'] = tmp_path
+    
+    # Fitbit
+    tmp_path = os.path.join(process_data_path, data_name, data_config.filter_method, data_config.fitbit_sensor_dict['name'])
+    create_folder(tmp_path)
+    
+    if data_config.fitbit_sensor_dict['imputation'] != None:
+        preprocess_str = 'impute_' + data_config.fitbit_sensor_dict['imputation']
+    else:
+        preprocess_str = data_config.fitbit_sensor_dict['feature']
+    preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['preprocess_setting']
+    preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['preprocess_cols']
+    tmp_path = os.path.join(tmp_path, preprocess_str)
+    create_folder(tmp_path)
+    
+    data_config.fitbit_sensor_dict['filter_path'] = tmp_path
+    
+    # owl_in_one
+    tmp_path = os.path.join(process_data_path, data_name, data_config.filter_method, data_config.owl_in_one_sensor_dict['name'])
+    create_folder(tmp_path)
+    
+    preprocess_str = data_config.owl_in_one_sensor_dict['feature']
+    preprocess_str = preprocess_str + '_' + data_config.owl_in_one_sensor_dict['preprocess_setting']
+    
+    tmp_path = os.path.join(tmp_path, preprocess_str)
+    create_folder(tmp_path)
+    
+    data_config.owl_in_one_sensor_dict['filter_path'] = tmp_path
+    
+    # realizd
+    tmp_path = os.path.join(process_data_path, data_name, data_config.filter_method, data_config.realizd_sensor_dict['name'])
+    create_folder(tmp_path)
+    preprocess_str = data_config.realizd_sensor_dict['feature']
+    preprocess_str = preprocess_str + '_' + data_config.realizd_sensor_dict['preprocess_setting']
+    tmp_path = os.path.join(tmp_path, preprocess_str)
+    create_folder(tmp_path)
+    
+    data_config.realizd_sensor_dict['filter_path'] = tmp_path
+    
+    # audio
+    tmp_path = os.path.join(process_data_path, data_name, data_config.filter_method, data_config.audio_sensor_dict['name'])
+    create_folder(tmp_path)
+    preprocess_str = data_config.audio_sensor_dict['feature']
+    preprocess_str = preprocess_str + '_' + data_config.audio_sensor_dict['preprocess_setting']
+    tmp_path = os.path.join(tmp_path, preprocess_str)
+    create_folder(tmp_path)
+    
+    data_config.audio_sensor_dict['preprocess_path'] = tmp_path
+
+
 def load_segmentation_path(data_config, process_data_path, data_name='segmentation'):
-    """ Produces a fixed-length summary vector of the sequence for each segment.
+    """ Load the segmentation data path to data_config.
 
     Params:
     data_config - config setting
@@ -121,7 +196,7 @@ def load_fitbit_summary_path(tiles_data_path, data_name='3_preprocessed_data'):
 
 
 def load_clustering_path(data_config, process_data_path, data_name='clustering'):
-    """ Produces a fixed-length summary vector of the sequence for each segment.
+    """ Load the clustering data path to data_config.
 
     Params:
     data_config - config setting
@@ -159,3 +234,31 @@ def load_clustering_path(data_config, process_data_path, data_name='clustering')
     create_folder(tmp_path)
     
     data_config.fitbit_sensor_dict['clustering_path'] = tmp_path
+
+
+def load_all_available_path(data_config, process_data_path,
+                            preprocess_data_identifier='preprocess',
+                            segmentation_data_identifier='segmentation',
+                            filter_data_identifier='filter',
+                            clustering_data_identifier='clustering'):
+    """ Load the clustering data path to data_config.
+
+    Params:
+    data_config - config setting
+    process_data_path - the path contains all processed stream
+    identifier - root path for different process scheme
+
+    Returns:
+
+    """
+    # Load preprocess folder
+    load_preprocess_path(data_config, process_data_path, data_name=preprocess_data_identifier)
+
+    # Load segmentation folder
+    load_segmentation_path(data_config, process_data_path, data_name=segmentation_data_identifier)
+
+    # Load filter folder
+    load_filter_path(data_config, process_data_path, data_name=filter_data_identifier)
+
+    # Load clustering folder
+    load_clustering_path(data_config, process_data_path, data_name=clustering_data_identifier)
