@@ -19,7 +19,6 @@ from fitbit.helper import *
 from realizd.helper import *
 import pandas as pd
 
-from GGS.ggs import *
 import numpy as np
 
 __all__ = ['Filter']
@@ -67,22 +66,7 @@ class Filter(object):
             if fitbit_summary_df is not None:
                 if len(fitbit_summary_df) > 0:
                     for index, row in fitbit_summary_df.iterrows():
-                        '''
-                        return_df = self.add_sleep_data_frame(row.Sleep1BeginTimestamp, row.Sleep1EndTimestamp)
-                        if return_df is not None:
-                            if (pd.to_datetime(row.Sleep1EndTimestamp) - pd.to_datetime(row.Sleep1BeginTimestamp)).total_seconds() > 60 * 60 * 3:
-                                sleep_df = sleep_df.append(return_df)
-                                
-                        return_df = self.add_sleep_data_frame(row.Sleep2BeginTimestamp, row.Sleep2EndTimestamp)
-                        if return_df is not None:
-                            if (pd.to_datetime(row.Sleep2EndTimestamp) - pd.to_datetime(row.Sleep2BeginTimestamp)).total_seconds() > 60 * 60 * 3:
-                                sleep_df = sleep_df.append(return_df)
                         
-                        return_df = self.add_sleep_data_frame(row.Sleep3BeginTimestamp, row.Sleep3EndTimestamp)
-                        if return_df is not None:
-                            if (pd.to_datetime(row.Sleep3EndTimestamp) - pd.to_datetime(row.Sleep3BeginTimestamp)).total_seconds() > 60 * 60 * 3:
-                                sleep_df = sleep_df.append(return_df)
-                        '''
                         return_df = self.add_sleep_data_frame(row.Sleep1BeginTimestamp, row.Sleep1EndTimestamp)
                         if return_df is not None:
                             if row.Sleep1BeginTimestamp in list(sleep_df.index):
@@ -127,10 +111,12 @@ class Filter(object):
 
                 # Duration of last sleep longer than 4 hours
                 cond1 = (pd.to_datetime(last_end_str) - pd.to_datetime(last_start_str)).total_seconds() > 60 * 60 * 4
-                # Duration between sleep longer than 8 hours
+                # Duration between sleep longer than 10 hours, it would be a main sleep
                 cond2 = (pd.to_datetime(curr_start_str) - pd.to_datetime(last_end_str)).total_seconds() > 60 * 60 * 10
-                # Duration between sleep longer than 20 hours
+                # Duration between sleep longer than 16 hours, even it is short, it is like a main sleep
                 cond3 = (pd.to_datetime(curr_start_str) - pd.to_datetime(last_end_str)).total_seconds() > 60 * 60 * 16
+                
+                # If the condition holds, we have a day of data
                 if cond3 or (cond1 and cond2):
                     row_filter_df = pd.DataFrame(index=[last_start_str])
                     row_filter_df['start'] = last_start_str
@@ -150,16 +136,36 @@ class Filter(object):
                     if len(day_mgt) > 0:
                         location_array = np.array(day_mgt.location_mgt)
                         for location in location_array:
-                            if location == 2:
-                                mgt_cond = True
+                            if location == 2: mgt_cond = True
                     
                     row_filter_df['work'] = 1 if owl_in_one_cond or omsignal_cond or mgt_cond else 0
+
+                    # The real data for the day
+                    filter_data_df = data_df[last_start_str:curr_start_str]
+                    for col in list(data_df.columns):
+                        row_filter_df[col + '_mean'], row_filter_df[col + '_std'] = np.nan, np.nan
                     
-                    filter_df = filter_df.append(row_filter_df)
+                    # If we have enough amount of data
+                    if len(np.where(filter_data_df.StepCount >= 0)[0]) > 3 * 60:
+                        
+                        # Calculate stats on valid data
+                        mean = np.nanmean(filter_data_df[filter_data_df >= 0].dropna(), axis=0)
+                        std = np.std(filter_data_df[filter_data_df >= 0].dropna(), axis=0)
+
+                        # Save mean and std for each stream
+                        for i, col in enumerate(list(data_df.columns)):
+                            row_filter_df[col + '_mean'] = mean[i]
+                            row_filter_df[col + '_std'] = std[i]
+                        
+                        # Save the data df
+                        filter_data_df.to_csv(os.path.join(save_participant_folder, last_start_str + '.csv.gz'), compression='gzip')
+
+                        # Save filter dict
+                        filter_df = filter_df.append(row_filter_df)
+                    
+                    # Update curr and last recording start
                     last_start_str, last_end_str = curr_start_str, curr_end_str
-                
-                filter_data_df = data_df[last_start_str:curr_start_str]
-                filter_data_df.to_csv(os.path.join(save_participant_folder, last_start_str + '.csv.gz'), compression='gzip')
+                    
             filter_df.to_csv(os.path.join(save_participant_folder, 'filter_dict.csv.gz'), compression='gzip')
     
     def add_sleep_data_frame(self, sleep_begin_str, sleep_end_str):

@@ -250,7 +250,7 @@ def return_participant(tiles_data_path):
     return participant_id_list
 
 
-def return_top_k_participant(path, tiles_data_path, k=10, data_config=None):
+def return_top_k_participant(path, tiles_data_path, k=None, data_config=None):
     """
     Return all participants that with data
 
@@ -280,8 +280,12 @@ def return_top_k_participant(path, tiles_data_path, k=10, data_config=None):
             else:
                 fitbit_len_list.append(0)
 
-        top_participant_list = [participant_id_list[i] for i in np.argsort(fitbit_len_list)[::-1][:k]]
-        fitbit_len_sort = np.sort(fitbit_len_list)[::-1][:k]
+        if k is not None:
+            top_participant_list = [participant_id_list[i] for i in np.argsort(fitbit_len_list)[::-1][:k]]
+            fitbit_len_sort = np.sort(fitbit_len_list)[::-1][:k]
+        else:
+            top_participant_list = [participant_id_list[i] for i in np.argsort(fitbit_len_list)[::-1]]
+            fitbit_len_sort = np.sort(fitbit_len_list)[::-1]
 
         top_participant_id_df = pd.DataFrame(fitbit_len_sort, index=top_participant_list)
 
