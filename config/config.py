@@ -90,6 +90,7 @@ class Config(object):
         # Initiate global parameters
         ###########################################################
         self.config.add_section('global')
+        self.config.set('global', 'filter_method', str(global_param['filter_method']))
         self.config.set('global', 'plot', str(global_param['enable_plot']))
 
     def createConfigFile(self, dataDir, experiement):
@@ -180,6 +181,7 @@ class Config(object):
         # Read global parameters
         ###########################################################
         self.enable_plot = bool(self.getSetting('global', 'plot'))
+        self.filter_method = self.getSetting('global', 'filter_method')
         
     def createFolder(self, folder):
         if os.path.exists(folder) is False: os.mkdir(folder)

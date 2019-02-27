@@ -3,19 +3,19 @@ import os
 from config import Config
 import argparse
 
-'''
+
 fitbit_param = {'data_type': 'fitbit', 'imputation': 'iterative', 'feature': 'original', 'offset': 60, 'overlap': 0,
                 'preprocess_cols': ['HeartRatePPG', 'StepCount'],
                 'cluster_method': 'kmeans', 'num_cluster': 5,
                 'segmentation_method': 'gaussian', 'segmentation_lamb': 10e0}
-'''
 
+'''
 fitbit_param = {'data_type': 'fitbit', 'imputation': 'iterative', 'feature': 'original', 'offset': 60, 'overlap': 0,
                 'preprocess_cols': ['HeartRatePPG', 'StepCount'],
                 'cluster_method': 'ticc', 'num_cluster': 5, 'ticc_window': 10,
                 'ticc_switch_penalty': 100, 'ticc_sparsity': 1e-2,
                 'segmentation_method': None, 'segmentation_lamb': 10e0}
-
+'''
 
 om_param = {'data_type': 'om_signal', 'imputation': None, 'feature': 'original', 'offset': 60, 'overlap': 0,
             'preprocess_cols': ['BreathingDepth', 'BreathingRate', 'Cadence', 'HeartRate', 'Intensity', 'Steps']}
@@ -31,14 +31,15 @@ segmentation_param = None
 
 cluster_param = {'method': 'kmeans', 'num_cluster': 5}
 
-global_param = {'enable_plot': False}
+global_param = {'enable_plot': False, 'filter_method': 'day'}
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--experiment', required=True, help="Name of the experiment, which will become the name of the output configuration file")
+    parser.add_argument('--experiment', required=False, help="Name of the experiment, which will become the name of the output configuration file")
     args = parser.parse_args()
     
-    # Save parameters
+    experiment = 'baseline'
     config = Config()
     config.saveConfig(om_param, fitbit_param, owl_in_one_param, realizd_param, audio_param, segmentation_param, cluster_param, global_param, args.experiment)
 
