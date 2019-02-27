@@ -122,7 +122,7 @@ class Preprocess(object):
         print('Function: preprocess_audio')
         print('---------------------------------------------------------------------')
         sample_rate = 0.01 # The sampling rate of the audio data in seconds (ignoring missing data)
-        foreground_percentage_threshold  = float(self.data_config.audio_sensor_dict['foreground_per_minute_percentage'])
+        offset = int(self.data_config.audio_sensor_dict['offset'])
 
         out_file_path = os.path.join(self.data_config.audio_sensor_dict['preprocess_path'], self.participant_id + '.csv.gz')
         if os.path.exists(out_file_path): # Skip files that have already been written
@@ -130,9 +130,9 @@ class Preprocess(object):
 
         data_df.index = pd.to_datetime(data_df.index)
         unix_times = pd.DatetimeIndex([data_df.index[0], data_df.index[data_df.shape[0]-1]]).astype(np.int64)
-        start_unix_time_minute_clamp = int(unix_times[0] - (unix_times[0]% int(60e9)))
-        end_unix_time_minute_clamp = int(unix_times[1] - (unix_times[1] % int(60e9)))
-        time_index = pd.to_datetime(range(start_unix_time_minute_clamp, end_unix_time_minute_clamp+int(60e9), int(60e9))).strftime(date_time_format)[:-3]
+        start_unix_time_minute_clamp = int(unix_times[0] - (unix_times[0]% int(offset*1e9)))
+        end_unix_time_minute_clamp = int(unix_times[1] - (unix_times[1] % int(offset*1e9)))
+        time_index = pd.to_datetime(range(start_unix_time_minute_clamp, end_unix_time_minute_clamp+int(offset*1e9), int(offset*1e9))).strftime(date_time_format)[:-3]
         foreground_data = np.zeros(len(time_index))
 
         idx = 0
@@ -142,8 +142,8 @@ class Preprocess(object):
                 print("Percent complete: %f"%(float(idx)/len(time_index)))
             cur_time_index = np.searchsorted(data_df.index, time_index[idx])
             num_foreground_samples = max(cur_time_index-last_time_index-1, 0)
-            percentage_foreground = (num_foreground_samples*sample_rate)/60.0
-            foreground_data[idx] = 1 if percentage_foreground > foreground_percentage_threshold else 0
+            percentage_foreground = (num_foreground_samples*sample_rate)/float(offset)
+            foreground_data[idx] = percentage_foreground
             last_time_index = cur_time_index
             idx += 1
 

@@ -24,7 +24,7 @@ realizd_param = {'data_type': 'realizd', 'imputation': None, 'feature': 'origina
 
 owl_in_one_param = {'data_type': 'owl_in_one', 'imputation': None, 'feature': 'original', 'offset': 60, 'overlap': 0}
 
-audio_param = {'data_type': 'audio', 'feature': 'original', 'foreground_per_minute_percentage': 0.1}
+audio_param = {'data_type': 'audio', 'feature': 'original', 'offset': 60}
 
 # segmentation_param = {'method': 'gaussian', 'segmentation_lamb': 10e0}
 segmentation_param = None

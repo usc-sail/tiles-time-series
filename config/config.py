@@ -83,8 +83,8 @@ class Config(object):
         ###########################################################
         self.config.add_section('audio')
         self.config.set('audio', 'feature', audio_param['feature'])
-        self.config.set('audio', 'preprocess_setting', 'foreground_percentage_' + str(audio_param['foreground_per_minute_percentage']))
-        self.config.set('audio', 'foreground_per_minute_percentage', str(audio_param['foreground_per_minute_percentage']))
+        self.config.set('audio', 'preprocess_setting', 'offset_%d'%(int(audio_param['offset'])))
+        self.config.set('audio', 'offset', str(audio_param['offset']))
         
         ###########################################################
         # Initiate global parameters
@@ -175,7 +175,7 @@ class Config(object):
         self.audio_sensor_dict['name'] = 'audio'
         self.audio_sensor_dict['feature'] = self.getSetting('audio', 'feature')
         self.audio_sensor_dict['preprocess_setting'] = self.getSetting('audio', 'preprocess_setting')
-        self.audio_sensor_dict['foreground_per_minute_percentage'] = self.getSetting('audio', 'foreground_per_minute_percentage')
+        self.audio_sensor_dict['offset'] = self.getSetting('audio', 'offset')
         
         ###########################################################
         # Read global parameters
