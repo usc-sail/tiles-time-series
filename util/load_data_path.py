@@ -241,7 +241,7 @@ def load_all_available_path(data_config, process_data_path,
                             segmentation_data_identifier='segmentation',
                             filter_data_identifier='filter',
                             clustering_data_identifier='clustering'):
-    """ Load the clustering data path to data_config.
+    """ Load all available data path to data_config.
 
     Params:
     data_config - config setting
