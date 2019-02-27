@@ -103,6 +103,8 @@ class Filter(object):
             last_start_str, last_end_str = last_sleep_df.start, last_sleep_df.end
             
             filter_df = pd.DataFrame()
+            filter_data_all_df = pd.DataFrame()
+            
             for i, sleep_index in enumerate(sleep_index_list):
                 
                 # Current sleep
@@ -162,10 +164,13 @@ class Filter(object):
 
                         # Save filter dict
                         filter_df = filter_df.append(row_filter_df)
+
+                        filter_data_all_df = filter_data_all_df.append(filter_data_df)
                     
                     # Update curr and last recording start
                     last_start_str, last_end_str = curr_start_str, curr_end_str
-                    
+
+            filter_data_all_df.to_csv(os.path.join(save_participant_folder, participant_id + '.csv.gz'), compression='gzip')
             filter_df.to_csv(os.path.join(save_participant_folder, 'filter_dict.csv.gz'), compression='gzip')
     
     def add_sleep_data_frame(self, sleep_begin_str, sleep_end_str):

@@ -278,3 +278,13 @@ def load_segmentation_data(path, participant_id):
     segmentation_df = pd.read_csv(os.path.join(path, participant_id + '.csv.gz'), index_col=0)
     return segmentation_df
 
+
+def load_filter_data(path, participant_id, filter_logic=None):
+    
+    filter_dict_df = pd.read_csv(os.path.join(path, 'filter_dict.csv.gz'))
+    
+    # for
+    
+    segmentation_df = pd.read_csv(os.path.join(path, participant_id + '.csv.gz'), index_col=0)
+    return segmentation_df
+

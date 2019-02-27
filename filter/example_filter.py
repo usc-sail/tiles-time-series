@@ -59,7 +59,6 @@ def main(tiles_data_path, config_path, experiment):
         fitbit_summary_df = fitbit_data_dict['summary']
 
         uid = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].index)[0]
-        primary_unit = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit[0]
         participant_mgt = mgt_df.loc[mgt_df['uid'] == uid]
 
         omsignal_data_df = load_sensor_data.read_preprocessed_omsignal(data_config.omsignal_sensor_dict['preprocess_path'], participant_id)
