@@ -239,7 +239,7 @@ class TICC:
 
         return clustered_points, train_cluster_inverse
 
-    def fit_all(self, data_df=None, mean=None, std=None):
+    def fit_multiple_sequences(self, data_df=None, dict_df=None):
         """
         Main method for ticc solver.
         Parameters:
@@ -253,7 +253,6 @@ class TICC:
         if len(data_df) == 0:
             return
     
-        data_df = data_df.fillna(data_df.mean())
         self.time_index = list(data_df.index)
         self.data_df = data_df
     
