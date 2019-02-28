@@ -279,7 +279,7 @@ def load_segmentation_data(path, participant_id):
     return segmentation_df
 
 
-def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=None):
+def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=None, valid_data_len=None):
     """ Load filter data
 
     Params:
@@ -293,7 +293,8 @@ def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=Non
         'min': minimum length of accepted recording for a day
         'max': maximum length of accepted recording for a day
         threshold_dict = {'min': 16, 'max': 32}
-
+    valid_data_len - num of valid data present
+    
     Returns:
     return_dict - contains dictionary of filter data
     keys:
@@ -340,9 +341,13 @@ def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=Non
             
             # If we only select reasonable recordings
             cond_recording_duration1, cond_recording_duration2 = True, True
+            cond_valid_data = True
             if threshold_dict is not None:
                 cond_recording_duration1 = (pd.to_datetime(row_filter_dict_series.end) - pd.to_datetime(row_filter_dict_series.start)).total_seconds() > threshold_dict['min'] * 3600
                 cond_recording_duration2 = (pd.to_datetime(row_filter_dict_series.end) - pd.to_datetime(row_filter_dict_series.start)).total_seconds() < threshold_dict['max'] * 3600
+            
+            if valid_data_len is not None
+                cond_valid_data = (row_filter_dict_series['valid_length'] / valid_data_len) < 0.8
                 
             if (not cond_recording_duration1) and (not cond_recording_duration2):
                 continue
@@ -367,7 +372,10 @@ def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=Non
             elif filter_logic is None:
                 return_dict['filter_data_list'].append(day_filter_data_dict)
     
-    return return_dict
+    if len(return_dict['filter_data_list']) == 0:
+        return None
+    else:
+        return return_dict
 
 
 def load_all_filter_data(path, participant_id_list, filter_logic=None, threshold_dict=None):
