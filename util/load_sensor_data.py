@@ -346,7 +346,7 @@ def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=Non
                 cond_recording_duration2 = (pd.to_datetime(row_filter_dict_series.end) - pd.to_datetime(row_filter_dict_series.start)).total_seconds() < threshold_dict['max'] * 3600
             
             if valid_data_len is not None:
-                cond_valid_data = (row_filter_dict_series['valid_length'] / valid_data_len) < 0.8
+                cond_valid_data = (row_filter_dict_series.valid_length / valid_data_len) > 0.8
                 
             if (not cond_recording_duration1) and (not cond_recording_duration2) and (not cond_valid_data):
                 continue
