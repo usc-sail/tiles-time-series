@@ -61,8 +61,14 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     
+    # Read args, if not parse, use default value
+    if args.tiles_path is None: print('tiles_path is not specified, use default value for now')
     tiles_data_path = '../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
+    
+    if args.config is None: print('config is not specified, use default value for now')
     config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file')) if args.config is None else args.config
-    experiment = 'baseline' if args.config is None else args.config
+    
+    if args.experiment is None: print('experiment is not specified, use default value for now')
+    experiment = 'baseline' if args.experiment is None else args.experiment
     
     main(tiles_data_path, config_path, experiment)
