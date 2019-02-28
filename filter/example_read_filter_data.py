@@ -43,10 +43,7 @@ def main(tiles_data_path, config_path, experiment):
         
         print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
         
-        # filter_logic = None, no filter, return all
-        # filter_logic = 'work', filter work days out
-        # filter_logic = 'non_work', filter non-work days out
-        load_sensor_data.load_filter_data(data_config.fitbit_sensor_dict['filter_path'], participant_id, filter_logic=None)
+        load_sensor_data.load_filter_data(data_config.fitbit_sensor_dict['filter_path'], participant_id, filter_logic=None, threshold_dict=None)
 
 
 if __name__ == '__main__':

@@ -279,12 +279,72 @@ def load_segmentation_data(path, participant_id):
     return segmentation_df
 
 
-def load_filter_data(path, participant_id, filter_logic=None):
+def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=None):
+    """ Load filter data
+
+    Params:
+    data_config - config setting
+    participant_id - participant id
+    filter_logic - how to filter the data
+        None, no filter, return all data
+        'work', return work days only
+        'off_work', return non-work days only
+    threshold_dict - extract data with only reasonable length:
+        'min': minimum length of accepted recording for a day
+        'max': maximum length of accepted recording for a day
+        threshold_dict = {'min': 16, 'max': 32}
+
+    Returns:
+    return_dict - contains dictionary of filter data
+    keys:
+        participant_id, data, filter_dict, filter_data_list
+
+    """
     
-    filter_dict_df = pd.read_csv(os.path.join(path, 'filter_dict.csv.gz'))
+    # Read filter dict df
+    filter_dict_df = pd.read_csv(os.path.join(path, participant_id, 'filter_dict.csv.gz'), index_col=0)
+
+    # Read whole data df
+    data_df = pd.read_csv(os.path.join(path, participant_id, participant_id + '.csv.gz'), index_col=0)
     
-    # for
+    # Define return dict list
+    return_dict = {}
+    return_dict['participant_id'] = participant_id
+    return_dict['data'] = data_df
+    return_dict['filter_dict'] = filter_dict_df
+    return_dict['filter_data_list'] = []
     
-    segmentation_df = pd.read_csv(os.path.join(path, participant_id + '.csv.gz'), index_col=0)
-    return segmentation_df
+    if len(filter_dict_df) > 0:
+        for index, row_filter_dict_series in filter_dict_df.iterrows():
+            
+            # If we only select reasonable recordings
+            cond_recording_duration1, cond_recording_duration2 = True, True
+            if threshold_dict is not None:
+                cond_recording_duration1 = (pd.to_datetime(row_filter_dict_series.end) - pd.to_datetime(row_filter_dict_series.start)).total_seconds() > threshold_dict['min'] * 3600
+                cond_recording_duration2 = (pd.to_datetime(row_filter_dict_series.end) - pd.to_datetime(row_filter_dict_series.start)).total_seconds() < threshold_dict['max'] * 3600
+                
+            if (not cond_recording_duration1) and (not cond_recording_duration2):
+                continue
+            
+            # Work condition
+            work_cond = row_filter_dict_series.work == 1
+
+            # Day data dict
+            day_filter_data_dict = {}
+            day_filter_data_dict['data'] = data_df[row_filter_dict_series.start:row_filter_dict_series.end]
+            
+            for tmp_index in list(row_filter_dict_series.index):
+                day_filter_data_dict[tmp_index] = row_filter_dict_series[tmp_index]
+
+            # If we want to get work days data only
+            if filter_logic == 'work' and work_cond:
+                return_dict['filter_data_list'].append(day_filter_data_dict)
+            # If we want to get off_work days data only
+            elif filter_logic == 'off_work' and not work_cond:
+                return_dict['filter_data_list'].append(day_filter_data_dict)
+            # Get everything, non-filter
+            elif filter_logic is None:
+                return_dict['filter_data_list'].append(day_filter_data_dict)
+    
+    return return_dict, data_df, filter_dict_df
 
