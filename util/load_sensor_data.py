@@ -352,3 +352,37 @@ def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=Non
     
     return return_dict, data_df, filter_dict_df
 
+
+def load_all_filter_data(path, participant_id_list, filter_logic=None, threshold_dict=None):
+    """ Load filter data
+
+    Params:
+    data_config - config setting
+    participant_id_list - participant id list
+    filter_logic - how to filter the data
+        None, no filter, return all data
+        'work', return work days only
+        'off_work', return non-work days only
+    threshold_dict - extract data with only reasonable length:
+        'min': minimum length of accepted recording for a day
+        'max': maximum length of accepted recording for a day
+        threshold_dict = {'min': 16, 'max': 32}
+
+    Returns:
+    participant_data_list - contains dictionary of filter data for all participants
+    """
+
+    participant_data_list = []
+    for idx, participant_id in enumerate(participant_id_list):
+    
+        print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(participant_id_list)))
+    
+        # Read per participant data
+        participant_data_dict = load_filter_data(path, participant_id, filter_logic=filter_logic, threshold_dict=threshold_dict)
+    
+        # Append data to the final list
+        if participant_data_dict is not None: participant_data_list.append(participant_data_dict)
+
+    print('Successfully load all participant filter data')
+    
+    return participant_data_list

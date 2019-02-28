@@ -36,6 +36,10 @@ def main(tiles_data_path, config_path, experiment):
     top_participant_id_list = list(top_participant_id_df.index)
     top_participant_id_list.sort()
     
+    # option 1
+    # top_participant_data_list = load_sensor_data.load_all_filter_data(data_config.fitbit_sensor_dict['filter_path'], top_participant_id_list, filter_logic=None, threshold_dict=None)
+    
+    # option 2
     top_participant_data_list = []
     for idx, participant_id in enumerate(top_participant_id_list):
         
