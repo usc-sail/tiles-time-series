@@ -4,22 +4,12 @@ Top level classes for the preprocess model.
 from __future__ import print_function
 
 import os
-import sys
-
-###########################################################
-# Change to your own pyspark path
-###########################################################
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'preprocess')))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'segmentation')))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'util')))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'plot')))
-
-from om_signal.helper import *
-from fitbit.helper import *
-from realizd.helper import *
 import pandas as pd
-
 import numpy as np
+
+# date_time format
+date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
+date_only_date_time_format = '%Y-%m-%d'
 
 __all__ = ['Filter']
 
@@ -41,7 +31,9 @@ class Filter(object):
         self.processed_data_dict_array = {}
     
     def filter_data(self, data_df, fitbit_summary_df=None, mgt_df=None, omsignal_df=None, owl_in_one_df=None):
-        
+        """
+        Filter data based on the config file being initiated
+        """
         participant_id = self.participant_id
         
         ###########################################################
@@ -50,13 +42,7 @@ class Filter(object):
         save_participant_folder = os.path.join(self.data_config.fitbit_sensor_dict['filter_path'], participant_id)
         if not os.path.exists(save_participant_folder):
             os.mkdir(save_participant_folder)
-        
-        ###########################################################
-        # Read data
-        ###########################################################
-        data_df = data_df.sort_index()
-        
-        fitbit_summary_df = fitbit_summary_df
+            
         sleep_df = pd.DataFrame()
         
         if self.data_config.filter_method == 'awake_period':
@@ -89,12 +75,12 @@ class Filter(object):
                                     sleep_df.loc[row.Sleep3BeginTimestamp, 'end'] = row.Sleep3EndTimestamp
                             else:
                                 sleep_df = sleep_df.append(return_df)
-                        
+            # If we have sleep data to split
+            if len(sleep_df) < 5:
+                print('%s has not enough sleep data' % participant_id)
+                return False
             sleep_df = sleep_df.sort_index()
             sleep_df = sleep_df.drop_duplicates(keep='first')
-        
-            if len(sleep_df) < 5:
-                return False
             
             # Enumerate sleep time
             sleep_index_list = list(sleep_df.index)
@@ -104,7 +90,12 @@ class Filter(object):
             
             filter_df = pd.DataFrame()
             filter_data_all_df = pd.DataFrame()
-            
+
+            ###########################################################
+            # Sort the data
+            ###########################################################
+            data_df = data_df.sort_index()
+
             for i, sleep_index in enumerate(sleep_index_list):
                 
                 # Current sleep

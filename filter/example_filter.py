@@ -9,14 +9,11 @@ import sys
 ###########################################################
 # Change to your own library path
 ###########################################################
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'preprocess')))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'segmentation')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'util')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config')))
 
 import config
 import load_sensor_data, load_data_path, load_data_basic
-import pandas as pd
 import argparse
 
 from filter import Filter
@@ -53,19 +50,27 @@ def main(tiles_data_path, config_path, experiment):
         
         # Create filter class
         filter_class = Filter(data_config=data_config, participant_id=participant_id)
-        
+
+        # If we have save the filter data before
+        if os.path.exists(os.path.join(data_config.fitbit_sensor_dict['filter_path'], participant_id, 'filter_dict.csv.gz')) is True:
+            print('%s has been filtered before' % participant_id)
+            continue
+
         # Read all data
         fitbit_data_dict = load_sensor_data.read_fitbit(fitbit_summary_path, participant_id)
         fitbit_summary_df = fitbit_data_dict['summary']
 
         uid = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].index)[0]
         participant_mgt = mgt_df.loc[mgt_df['uid'] == uid]
-
+       
+        # Read other sensor data, the aim is to detect whether people workes during a day
         omsignal_data_df = load_sensor_data.read_preprocessed_omsignal(data_config.omsignal_sensor_dict['preprocess_path'], participant_id)
         owl_in_one_df = load_sensor_data.read_preprocessed_owl_in_one(data_config.owl_in_one_sensor_dict['preprocess_path'], participant_id)
         fitbit_df, fitbit_mean, fitbit_std = load_sensor_data.read_preprocessed_fitbit_with_pad(data_config, participant_id)
 
+        # If we don't have fitbit data, no need to process it
         if fitbit_df is None:
+            print('%s has no fitbit data' % participant_id)
             continue
 
         filter_class.filter_data(fitbit_df, fitbit_summary_df=fitbit_summary_df, omsignal_df=omsignal_data_df, mgt_df=participant_mgt, owl_in_one_df=owl_in_one_df)
