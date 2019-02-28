@@ -9,14 +9,11 @@ import sys
 ###########################################################
 # Change to your own library path
 ###########################################################
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'preprocess')))
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'segmentation')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'util')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config')))
 
 import config
 import load_sensor_data, load_data_path, load_data_basic
-import pandas as pd
 import argparse
 
 
