@@ -263,6 +263,7 @@ def return_top_k_participant(path, tiles_data_path, k=None, data_config=None):
     # If we have the data, read it
     if os.path.exists(path) is True:
         top_participant_id_df = pd.read_csv(path, index_col=0, compression='gzip')
+        top_participant_id_df = top_participant_id_df[:k]
     else:
         # Get all participant id
         participant_id_list = return_participant(tiles_data_path)

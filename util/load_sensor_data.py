@@ -300,6 +300,10 @@ def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=Non
         participant_id, data, filter_dict, filter_data_list
 
     """
+    path_exist_cond = os.path.exists(os.path.join(path, participant_id, 'filter_dict.csv.gz')) == False
+    
+    if path_exist_cond:
+        return None
     
     # Read filter dict df
     filter_dict_df = pd.read_csv(os.path.join(path, participant_id, 'filter_dict.csv.gz'), index_col=0)
