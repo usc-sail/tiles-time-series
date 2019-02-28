@@ -40,7 +40,7 @@ def main(tiles_data_path, config_path, experiment):
     mgt_df = load_data_basic.read_MGT(tiles_data_path)
     
     # Get participant id list, k=None, save all participant data
-    top_participant_id_df = load_data_basic.return_top_k_participant(os.path.join(process_data_path, experiment, 'participant_id.csv.gz'), tiles_data_path, data_config=data_config)
+    top_participant_id_df = load_data_basic.return_top_k_participant(os.path.join(process_data_path, 'participant_id.csv.gz'), tiles_data_path, data_config=data_config)
     top_participant_id_list = list(top_participant_id_df.index)
     top_participant_id_list.sort()
     
