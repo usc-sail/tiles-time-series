@@ -56,19 +56,19 @@ def main(tiles_data_path, config_path, experiment):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--tiles_path", required=False, help="Path to the root folder containing TILES data")
-    parser.add_argument("--config", required=False, help="Path to a config file specifying how to perform the clustering")
+    parser.add_argument("--config", required=False, help="Path to where config files are saved")
     parser.add_argument("--experiment", required=False, help="Experiment name")
     
     args = parser.parse_args()
     
     # Read args, if not parse, use default value
-    if args.tiles_path is None: print('tiles_path is not specified, use default value for now')
+    if args.tiles_path is None: print('tiles_path (Path to the root folder containing TILES data) is not specified, use default value for now')
     tiles_data_path = '../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
     
-    if args.config is None: print('config is not specified, use default value for now')
+    if args.config is None: print('config (Path to where config files are saved) is not specified, use default value for now')
     config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file')) if args.config is None else args.config
     
-    if args.experiment is None: print('experiment is not specified, use default value for now')
+    if args.experiment is None: print('experiment (Experiment name) is not specified, use default value for now')
     experiment = 'baseline' if args.experiment is None else args.experiment
     
     main(tiles_data_path, config_path, experiment)
