@@ -154,7 +154,7 @@ def load_filter_path(data_config, process_data_path, data_name='filter'):
     data_config.audio_sensor_dict['preprocess_path'] = tmp_path
 
 
-def load_segmentation_path(data_config, process_data_path, data_name='segmentation'):
+def load_segmentation_path(data_config, process_data_path, data_name='segmentation', filter_data=False):
     """ Load the segmentation data path to data_config.
 
     Params:
@@ -167,6 +167,13 @@ def load_segmentation_path(data_config, process_data_path, data_name='segmentati
     """
     tmp_path = os.path.join(process_data_path, data_config.experiement)
     create_folder(tmp_path)
+    
+    if filter_data == True:
+        tmp_path = os.path.join(tmp_path, 'filter_data_' + data_config.filter_method)
+    else:
+        tmp_path = os.path.join(tmp_path, 'preprocess_data')
+    create_folder(tmp_path)
+    
     tmp_path = os.path.join(tmp_path, data_name)
     create_folder(tmp_path)
     
@@ -208,6 +215,13 @@ def load_clustering_path(data_config, process_data_path, data_name='clustering',
     """
     tmp_path = os.path.join(process_data_path, data_config.experiement)
     create_folder(tmp_path)
+    
+    if filter_data == True:
+        tmp_path = os.path.join(tmp_path, 'filter_data_' + data_config.filter_method)
+    else:
+        tmp_path = os.path.join(tmp_path, 'preprocess_data')
+    create_folder(tmp_path)
+
     tmp_path = os.path.join(tmp_path, data_name)
     create_folder(tmp_path)
 
@@ -224,9 +238,6 @@ def load_clustering_path(data_config, process_data_path, data_name='clustering',
     if data_config.fitbit_sensor_dict['segmentation_method'] == 'gaussian':
         preprocess_str = preprocess_str + '_ggs_' + str(data_config.fitbit_sensor_dict['segmentation_lamb'])
         
-    if filter_data == True:
-        preprocess_str = preprocess_str + '_' + data_config.filter_method
-
     if data_config.fitbit_sensor_dict['imputation'] != None:
         preprocess_str = preprocess_str + '_impute_' + data_config.fitbit_sensor_dict['imputation']
     else:
@@ -258,7 +269,7 @@ def load_all_available_path(data_config, process_data_path, filter_data=False,
     load_preprocess_path(data_config, process_data_path, data_name=preprocess_data_identifier)
 
     # Load segmentation folder
-    load_segmentation_path(data_config, process_data_path, data_name=segmentation_data_identifier)
+    load_segmentation_path(data_config, process_data_path, data_name=segmentation_data_identifier, filter_data=filter_data)
 
     # Load filter folder
     load_filter_path(data_config, process_data_path, data_name=filter_data_identifier)

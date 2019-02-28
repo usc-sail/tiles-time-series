@@ -279,7 +279,7 @@ def load_segmentation_data(path, participant_id):
     return segmentation_df
 
 
-def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=None, valid_data_len=None):
+def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=None, valid_data_rate=None):
     """ Load filter data
 
     Params:
@@ -345,18 +345,18 @@ def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=Non
                 cond_recording_duration1 = (pd.to_datetime(row_filter_dict_series.end) - pd.to_datetime(row_filter_dict_series.start)).total_seconds() > threshold_dict['min'] * 3600
                 cond_recording_duration2 = (pd.to_datetime(row_filter_dict_series.end) - pd.to_datetime(row_filter_dict_series.start)).total_seconds() < threshold_dict['max'] * 3600
             
-            if valid_data_len is not None:
-                cond_valid_data = (row_filter_dict_series.valid_length / valid_data_len) > 0.8
-                
-            if (not cond_recording_duration1) and (not cond_recording_duration2) and (not cond_valid_data):
-                continue
-            
             # Work condition
             work_cond = row_filter_dict_series.work == 1
 
             # Day data dict
             day_filter_data_dict = {}
             day_filter_data_dict['data'] = data_df[row_filter_dict_series.start:row_filter_dict_series.end]
+
+            if valid_data_rate is not None:
+                cond_valid_data = (row_filter_dict_series.valid_length / len(day_filter_data_dict['data'])) > valid_data_rate
+
+            if (not cond_recording_duration1) and (not cond_recording_duration2) and (not cond_valid_data):
+                continue
             
             for tmp_index in list(row_filter_dict_series.index):
                 day_filter_data_dict[tmp_index] = row_filter_dict_series[tmp_index]

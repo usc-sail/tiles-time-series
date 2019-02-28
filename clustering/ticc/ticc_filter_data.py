@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import os
 import sys
+import pandas as pd
 
 ###########################################################
 # Change to your own library path
@@ -38,22 +39,34 @@ def main(tiles_data_path, config_path, experiment):
     top_participant_id_list = list(top_participant_id_df.index)
     top_participant_id_list.sort()
     
-    top_participant_data_list = []
+    ticc_data_df = {'data': pd.DataFrame(), 'dict': pd.DataFrame()}
+    ticc_data_index = 0
+    
     for idx, participant_id in enumerate(top_participant_id_list):
 
         print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
 
         # Read per participant data
         participant_data_dict = load_sensor_data.load_filter_data(data_config.fitbit_sensor_dict['filter_path'],
-                                                                  participant_id, filter_logic=None,
+                                                                  participant_id, filter_logic=None, valid_data_rate=0.8,
                                                                   threshold_dict={'min': 20, 'max': 28})
 
         if participant_data_dict is not None:
             for data_dict in participant_data_dict['filter_data_list']:
                 norm_data_df = data_dict['data']
-                norm_data_df.HeartRatePPG = (data_df.HeartRatePPG - participant_data_dict['mean']) / participant_data_dict['mean']
-        # Append data to the final list
-        if participant_data_dict is not None: top_participant_data_list.append(participant_data_dict)
+                norm_data_df.HeartRatePPG = (data_dict['data'].HeartRatePPG - participant_data_dict['HeartRatePPG_mean']) / participant_data_dict['HeartRatePPG_mean']
+                norm_data_df.StepCount = (data_dict['data'].StepCount - participant_data_dict['StepCount_mean']) / participant_data_dict['StepCount_mean']
+
+                dict_df = pd.DataFrame(index=[ticc_data_index])
+                dict_df['start'] = ticc_data_index
+                ticc_data_index = ticc_data_index + len(norm_data_df)
+                dict_df['end'] = ticc_data_index
+                dict_df['participant_id'] = participant_id
+
+                ticc_data_df['data'] = ticc_data_df['data'].append(norm_data_df)
+                ticc_data_df['dict'] = ticc_data_df['dict'].append(dict_df)
+    
+    
 
     ###########################################################
     # 3. Create segmentation class
