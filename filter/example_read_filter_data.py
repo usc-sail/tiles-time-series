@@ -33,7 +33,7 @@ def main(tiles_data_path, config_path, experiment):
                                            clustering_data_identifier='clustering')
     
     # Get participant id list, k=10, read 10 participants with most data in fitbit
-    top_participant_id_df = load_data_basic.return_top_k_participant(os.path.join(process_data_path, experiment, 'participant_id.csv.gz'), tiles_data_path, k=10, data_config=data_config)
+    top_participant_id_df = load_data_basic.return_top_k_participant(os.path.join(process_data_path, 'participant_id.csv.gz'), tiles_data_path, k=10, data_config=data_config)
     top_participant_id_list = list(top_participant_id_df.index)
     top_participant_id_list.sort()
     
