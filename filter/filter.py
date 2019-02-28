@@ -144,6 +144,8 @@ class Filter(object):
                         # Calculate stats on valid data
                         mean = np.nanmean(filter_data_df[filter_data_df >= 0].dropna(), axis=0)
                         std = np.std(filter_data_df[filter_data_df >= 0].dropna(), axis=0)
+                        
+                        row_filter_df['valid_length'] = len(np.where(filter_data_df.StepCount >= 0)[0])
 
                         # Save mean and std for each stream
                         for i, col in enumerate(list(data_df.columns)):

@@ -300,9 +300,10 @@ def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=Non
         participant_id, data, filter_dict, filter_data_list
 
     """
-    path_exist_cond = os.path.exists(os.path.join(path, participant_id, 'filter_dict.csv.gz')) == False
+    filter_dict_path_exist_cond = os.path.exists(os.path.join(path, participant_id, 'filter_dict.csv.gz')) == False
+    data_path_exist_cond = os.path.exists(os.path.join(path, participant_id, participant_id + '.csv.gz')) == False
     
-    if path_exist_cond:
+    if filter_dict_path_exist_cond or data_path_exist_cond:
         return None
     
     # Read filter dict df
@@ -317,6 +318,22 @@ def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=Non
     return_dict['data'] = data_df
     return_dict['filter_dict'] = filter_dict_df
     return_dict['filter_data_list'] = []
+
+    # Add global statistics
+    for col in list(data_df.columns):
+        return_dict[col + '_mean'], return_dict[col + '_std'] = np.nan, np.nan
+
+    # If we have enough amount of data, get statistics
+    if len(np.where(data_df.StepCount >= 0)[0]) > 3 * 60:
+    
+        # Calculate stats on valid data
+        mean = np.nanmean(data_df[data_df >= 0].dropna(), axis=0)
+        std = np.std(data_df[data_df >= 0].dropna(), axis=0)
+    
+        # Save mean and std for each stream
+        for i, col in enumerate(list(data_df.columns)):
+            return_dict[col + '_mean'] = mean[i]
+            return_dict[col + '_std'] = std[i]
     
     if len(filter_dict_df) > 0:
         for index, row_filter_dict_series in filter_dict_df.iterrows():
@@ -350,7 +367,7 @@ def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=Non
             elif filter_logic is None:
                 return_dict['filter_data_list'].append(day_filter_data_dict)
     
-    return return_dict, data_df, filter_dict_df
+    return return_dict
 
 
 def load_all_filter_data(path, participant_id_list, filter_logic=None, threshold_dict=None):
