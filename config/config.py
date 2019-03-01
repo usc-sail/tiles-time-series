@@ -57,6 +57,7 @@ class Config(object):
             self.config.set('fitbit', 'ticc_window', str(fitbit_process_param['ticc_window']))
             self.config.set('fitbit', 'ticc_switch_penalty', str(fitbit_process_param['ticc_switch_penalty']))
             self.config.set('fitbit', 'ticc_sparsity', str(fitbit_process_param['ticc_sparsity']))
+            self.config.set('fitbit', 'ticc_cluster_days', str(fitbit_process_param['ticc_cluster_days']))
 
         process_col_array = list(fitbit_process_param['preprocess_cols'])
         process_col_array.sort()
@@ -149,6 +150,7 @@ class Config(object):
             self.fitbit_sensor_dict['ticc_window'] = int(self.getSetting('fitbit', 'ticc_window'))
             self.fitbit_sensor_dict['ticc_switch_penalty'] = float(self.getSetting('fitbit', 'ticc_switch_penalty'))
             self.fitbit_sensor_dict['ticc_sparsity'] = float(self.getSetting('fitbit', 'ticc_sparsity'))
+            self.fitbit_sensor_dict['ticc_cluster_days'] = int(self.getSetting('fitbit', 'ticc_cluster_days'))
             
         ###########################################################
         # Read owl_in_one
