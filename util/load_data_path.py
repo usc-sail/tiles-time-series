@@ -235,7 +235,7 @@ def load_clustering_path(data_config, process_data_path, data_name='clustering',
         preprocess_str = preprocess_str + '_penalty_' + str(data_config.fitbit_sensor_dict['ticc_switch_penalty'])
         preprocess_str = preprocess_str + '_sparsity_' + str(data_config.fitbit_sensor_dict['ticc_sparsity'])
     if filter_data == True:
-        preprocess_str = preprocess_str + '_cluster_days' + str(data_config.fitbit_sensor_dict['ticc_cluster_days'])
+        preprocess_str = preprocess_str + '_cluster_days_' + str(data_config.fitbit_sensor_dict['ticc_cluster_days'])
     
     if data_config.fitbit_sensor_dict['segmentation_method'] == 'gaussian':
         preprocess_str = preprocess_str + '_ggs_' + str(data_config.fitbit_sensor_dict['segmentation_lamb'])

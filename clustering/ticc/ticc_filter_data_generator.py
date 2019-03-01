@@ -41,43 +41,8 @@ def main(tiles_data_path, config_path, experiment):
     top_participant_id_list.sort()
     
     ticc_data_dict = {'norm_data_df': pd.DataFrame(), 'dict_df': pd.DataFrame(), 'data_df': pd.DataFrame()}
-    ticc_data_index = 0
-
     save_data_path = os.path.join(process_data_path, data_config.experiement, 'filter_data_' + data_config.filter_method)
-
-    for idx, participant_id in enumerate(top_participant_id_list):
-        # Read per participant data
-        print('Initialize dict: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
-        participant_data_dict = load_sensor_data.load_filter_data(data_config.fitbit_sensor_dict['filter_path'], participant_id, filter_logic=None, valid_data_rate=0.9, threshold_dict={'min': 20, 'max': 28})
     
-        if participant_data_dict is not None:
-    
-            work_days, off_days = 0, 0
-            for data_dict in participant_data_dict['filter_data_list']:
-                if data_dict['work'] == 1:
-                    work_days = work_days + 1
-                else:
-                    off_days = off_days + 1
-        
-            if work_days < 7 or off_days < 7:
-                print('Not enough data for %s' % participant_id)
-                continue
-        
-            for data_dict in participant_data_dict['filter_data_list']:
-                dict_df = pd.DataFrame(index=[ticc_data_index])
-                dict_df['start'] = ticc_data_index
-                ticc_data_index = ticc_data_index + len(data_dict['data'])
-                dict_df['end'] = ticc_data_index
-                dict_df['participant_id'] = participant_id
-                dict_df['work'] = data_dict['work']
-                dict_df['duration'] = len(data_dict['data'])
-
-                ticc_data_dict['dict_df'] = ticc_data_dict['dict_df'].append(dict_df)
-                
-    ticc_data_dict['dict_df'].to_csv(os.path.join(save_data_path, 'dict.csv.gz'), compression='gzip')
-    ticc_data_dict['norm_data_df'] = pd.DataFrame(np.zeros([ticc_data_index, 3]), index=[np.arange(0, ticc_data_index)], columns=['HeartRatePPG', 'StepCount', 'time'])
-    ticc_data_dict['data_df'] = pd.DataFrame(np.zeros([ticc_data_index, 3]), index=[np.arange(0, ticc_data_index)], columns=['HeartRatePPG', 'StepCount', 'time'])
-
     ticc_data_index = 0
     for idx, participant_id in enumerate(top_participant_id_list):
 
@@ -95,31 +60,62 @@ def main(tiles_data_path, config_path, experiment):
                 else:
                     off_days = off_days + 1
     
-            if work_days < 7 or off_days < 7:
+            if work_days < data_config.fitbit_sensor_dict['ticc_cluster_days'] or off_days < data_config.fitbit_sensor_dict['ticc_cluster_days']:
                 print('Not enough data for %s' % participant_id)
                 continue
             
-            for data_dict in participant_data_dict['filter_data_list']:
-                norm_data_df = data_dict['data'].copy()
+            # Randomly select data
+            work_day_index, off_day_index = [], []
+
+            for i, data_dict in enumerate(participant_data_dict['filter_data_list']):
+                if data_dict['work'] == 1:
+                    work_day_index.append(i)
+                else:
+                    off_day_index.append(i)
+            
+            index_array = np.random.choice(range(len(work_day_index)), data_config.fitbit_sensor_dict['ticc_cluster_days'], replace=False)
+            final_work_day_index = [work_day_index[i] for i in index_array]
+
+            index_array = np.random.choice(range(len(off_day_index)), data_config.fitbit_sensor_dict['ticc_cluster_days'], replace=False)
+            final_off_day_index = [off_day_index[i] for i in index_array]
+
+            final_data_index = final_off_day_index + final_work_day_index
+            
+            for i in final_data_index:
+                data_dict = participant_data_dict['filter_data_list'][i]
                 
-                tmp_index_list = list(np.arange(ticc_data_index, ticc_data_index + len(norm_data_df)))
+                # Data
+                norm_data_df = data_dict['data'].copy()
+                data_df = data_dict['data'].copy()
+                
                 norm_heart_rate = (data_dict['data'].loc[:, 'HeartRatePPG'] - participant_data_dict['HeartRatePPG_mean']) / participant_data_dict['HeartRatePPG_std']
                 norm_step_count = (data_dict['data'].loc[:, 'StepCount'] - participant_data_dict['StepCount_mean']) / participant_data_dict['StepCount_std']
 
-                ticc_data_dict['norm_data_df'].loc[tmp_index_list, 'HeartRatePPG'] = np.array(norm_heart_rate)
-                # ticc_data_dict['norm_data_df'].loc[tmp_index_list, 'StepCount'] = np.array(norm_step_count)
-                ticc_data_dict['norm_data_df'].loc[tmp_index_list, 'StepCount'] = np.array(data_dict['data'].loc[:, 'StepCount'])
-                ticc_data_dict['norm_data_df'].loc[tmp_index_list, 'time'] = list(norm_data_df.index)
+                norm_data_df.loc[:, 'HeartRatePPG'] = np.array(norm_heart_rate)
+                norm_data_df.loc[:, 'StepCount'] = np.array(norm_step_count)
+                norm_data_df.loc[:, 'time'] = list(norm_data_df.index)
 
-                ticc_data_dict['data_df'].loc[tmp_index_list, 'HeartRatePPG'] = np.array(data_dict['data'].loc[:, 'HeartRatePPG'])
-                ticc_data_dict['data_df'].loc[tmp_index_list, 'StepCount'] = np.array(data_dict['data'].loc[:, 'StepCount'])
-                ticc_data_dict['data_df'].loc[tmp_index_list, 'time'] = list(norm_data_df.index)
+                data_df.loc[:, 'time'] = list(norm_data_df.index)
+
+                ticc_data_dict['norm_data_df'] = ticc_data_dict['norm_data_df'].append(norm_data_df)
+                ticc_data_dict['data_df'] = ticc_data_dict['data_df'].append(data_dict['data'].copy())
                 
-                ticc_data_index = ticc_data_index + len(norm_data_df)
+                # Dict
+                dict_df = pd.DataFrame(index=[ticc_data_index])
+                dict_df['start'] = ticc_data_index
+                dict_df['end'] = ticc_data_index + len(data_dict['data'])
+                dict_df['participant_id'] = participant_id
+                dict_df['work'] = data_dict['work']
+                dict_df['duration'] = len(data_dict['data'])
 
-    ticc_data_dict['norm_data_df'].to_csv(os.path.join(save_data_path, 'norm_heart_rate_data.csv.gz'), compression='gzip')
-    ticc_data_dict['data_df'].to_csv(os.path.join(save_data_path, 'data.csv.gz'), compression='gzip')
-    
+                ticc_data_dict['dict_df'] = ticc_data_dict['dict_df'].append(dict_df)
+                
+                ticc_data_index = ticc_data_index + len(data_dict['data'])
+
+    ticc_data_dict['norm_data_df'].to_csv(os.path.join(save_data_path, 'norm_data_ticc_cluster_days_' + str(data_config.fitbit_sensor_dict['ticc_cluster_days']) + '.csv.gz'), compression='gzip')
+    ticc_data_dict['dict_df'].to_csv(os.path.join(save_data_path, 'dict_norm_data_cluster_days_' + str(data_config.fitbit_sensor_dict['ticc_cluster_days']) + '.csv.gz'), compression='gzip')
+    # ticc_data_dict['data_df'].to_csv(os.path.join(save_data_path, 'data_ticc_cluster_days_' + str(data_config.fitbit_sensor_dict['ticc_cluster_days']) + '.csv.gz'), compression='gzip')
+
 
 if __name__ == '__main__':
     # Read args
