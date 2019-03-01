@@ -255,32 +255,56 @@ class TICC:
     
         self.time_index = list(data_df.index)
         self.data_df = data_df
-    
-        ###########################################################
-        # 1.1 Find the row and col size of the input
-        ###########################################################
-        times_series_arr = np.array((data_df - mean) / std)
-        time_series_rows_size = times_series_arr.shape[0]
-        time_series_col_size = times_series_arr.shape[1]
-    
-        ###########################################################
-        # 1.2 Train test split
-        ###########################################################
-        training_indices = getTrainTestSplit(time_series_rows_size, self.num_blocks,
-                                             self.window_size)  # indices of the training samples
-        num_train_points = len(training_indices)
-    
-        ###########################################################
-        # 1.3 Stack the training data
-        ###########################################################
-        complete_D_train = self.stack_training_data(times_series_arr, time_series_col_size, num_train_points,
-                                                    training_indices)
-    
-        if self.complete_D_train is None:
-            self.complete_D_train = complete_D_train
-        else:
-            self.complete_D_train = np.append(self.complete_D_train, complete_D_train, axis=0)
-    
+        self.dict_df = dict_df
+
+        self.data_dict_array = []
+        self.data_index_array = []
+        last_end_index = 0
+
+        for index, row in self.dict_df.iterrows():
+            
+            start, end = row.start, row.end
+
+            ###########################################################
+            # 1.1 Find the row and col size of the input
+            ###########################################################
+            times_series_arr = np.array(data_df)[start:end, :]
+            time_series_rows_size = times_series_arr.shape[0]
+            time_series_col_size = times_series_arr.shape[1]
+
+            ###########################################################
+            # 1.2 Train test split
+            ###########################################################
+            training_indices = getTrainTestSplit(time_series_rows_size, self.num_blocks, self.window_size)  # indices of the training samples
+            num_train_points = len(training_indices)
+
+            ###########################################################
+            # 1.3 Stack the training data
+            ###########################################################
+            complete_D_train = self.stack_training_data(times_series_arr, time_series_col_size, num_train_points, training_indices)
+            complete_D_train = complete_D_train[:-self.window_size + 1]
+
+            data_dict = {}
+            if len(self.data_dict_array) == 0:
+                data_dict['start'] = 0
+                data_dict['end'] = complete_D_train.shape[0]
+            else:
+                data_dict['start'] = last_end_index
+                data_dict['end'] = last_end_index + complete_D_train.shape[0]
+
+            data_dict['participant_id'] = row.participant_id
+            data_dict['time'] = list(data_df.index)[start]
+
+            self.data_dict_array.append(data_dict)
+            self.data_index_array.append(list(data_df.index)[last_end_index:last_end_index + complete_D_train.shape[0]])
+            
+            if self.complete_D_train is None:
+                self.complete_D_train = complete_D_train
+            else:
+                self.complete_D_train = np.append(self.complete_D_train, complete_D_train, axis=0)
+
+            last_end_index = last_end_index + complete_D_train.shape[0]
+
         ###########################################################
         # 1.4 Initiate using Gaussian Mixture
         ###########################################################
@@ -316,14 +340,12 @@ class TICC:
             # for each of the clusters
             ###########################################################
             opt_res = self.train_clusters(cluster_mean_info, cluster_mean_stacked_info, self.complete_D_train,
-                                          empirical_covariances, len_train_clusters, time_series_col_size,
-                                          pool, train_clusters_arr)
+                                          empirical_covariances, len_train_clusters, time_series_col_size, pool, train_clusters_arr)
         
             ###########################################################
             # 2.2 Optimize using ADMM
             ###########################################################
-            self.optimize_clusters(computed_covariance, len_train_clusters, log_det_values, opt_res,
-                                   train_cluster_inverse)
+            self.optimize_clusters(computed_covariance, len_train_clusters, log_det_values, opt_res, train_cluster_inverse)
             self.train_cluster_inverse = train_cluster_inverse
         
             ###########################################################
@@ -339,7 +361,7 @@ class TICC:
                                   'complete_D_train': self.complete_D_train,
                                   'time_series_col_size': time_series_col_size}
         
-            clustered_points = self.predict_clusters()
+            clustered_points = self.predict_clusters_with_multiple_sequence()
         
             ###########################################################
             # 2.4 Recalculate lengths
@@ -356,8 +378,7 @@ class TICC:
             # 2.5 Handle cluster with 0 number
             ###########################################################
             if iters != 0:
-                cluster_norms = [(np.linalg.norm(old_computed_covariance[self.number_of_clusters, i]), i) for i in
-                                 range(self.number_of_clusters)]
+                cluster_norms = [(np.linalg.norm(old_computed_covariance[self.number_of_clusters, i]), i) for i in range(self.number_of_clusters)]
                 norms_sorted = sorted(cluster_norms, reverse=True)
             
                 # clusters that are not 0 as sorted by norm
@@ -372,8 +393,7 @@ class TICC:
                         cluster_selected = valid_clusters[counter]  # a cluster that is not len 0
                         counter = (counter + 1) % len(valid_clusters)
                         print("cluster that is zero is:", cluster_num, "selected cluster instead is:", cluster_selected)
-                        start_point = np.random.choice(
-                                new_train_clusters[cluster_selected])  # random point number from that cluster
+                        start_point = np.random.choice(new_train_clusters[cluster_selected])  # random point number from that cluster
                         for i in range(0, self.cluster_reassignment):
                             # put cluster_reassignment points from point_num in this cluster
                             point_to_move = start_point + i
@@ -381,13 +401,9 @@ class TICC:
                                 break
                             clustered_points[point_to_move] = cluster_num
                         
-                            computed_covariance[self.number_of_clusters, cluster_num] = old_computed_covariance[
-                                self.number_of_clusters, cluster_selected]
-                            cluster_mean_stacked_info[self.number_of_clusters, cluster_num] = self.complete_D_train[
-                                                                                              point_to_move, :]
-                            cluster_mean_info[self.number_of_clusters, cluster_num] = self.complete_D_train[
-                                                                                      point_to_move, :][(
-                                                                                                                    self.window_size - 1) * time_series_col_size:self.window_size * time_series_col_size]
+                            computed_covariance[self.number_of_clusters, cluster_num] = old_computed_covariance[self.number_of_clusters, cluster_selected]
+                            cluster_mean_stacked_info[self.number_of_clusters, cluster_num] = self.complete_D_train[point_to_move, :]
+                            cluster_mean_info[self.number_of_clusters, cluster_num] = self.complete_D_train[point_to_move, :][(self.window_size - 1) * time_series_col_size:self.window_size * time_series_col_size]
             
                 for cluster_num in range(self.number_of_clusters):
                     print("length of cluster #", cluster_num, "-------->",
@@ -417,11 +433,10 @@ class TICC:
             pool.join()
     
         if self.compute_BIC:
-            bic = computeBIC(self.number_of_clusters, self.complete_D_train.shape[0], clustered_points,
-                             train_cluster_inverse, empirical_covariances)
+            bic = computeBIC(self.number_of_clusters, self.complete_D_train.shape[0], clustered_points, train_cluster_inverse, empirical_covariances)
             return clustered_points, train_cluster_inverse, bic
     
-        self.save_cluster()
+        # self.save_cluster()
     
         return clustered_points, train_cluster_inverse
 
@@ -585,15 +600,57 @@ class TICC:
             # clustered_points_df.to_csv(save_cluster_path, compression='gzip')
             self.data_df.loc[self.time_index[:len(clustered_points)], 'cluster'] = clustered_points
             # self.data_df.to_csv(save_cluster_path, compression='gzip')
-        else:
-            clustered_points_per_segments = updateClusters(lle_all_points_clusters, switch_penalty=self.switch_penalty)
-            clustered_points = np.append(clustered_points, clustered_points_per_segments)
-    
-            clustered_points_df = pd.DataFrame(clustered_points_per_segments)
-            clustered_points_df.to_csv(save_cluster_path, compression='gzip')
-            self.data_df.loc[self.time_index[:len(clustered_points)], 'cluster'] = clustered_points
-            # self.data_df.to_csv(save_cluster_path, compression='gzip')
             
+        return (clustered_points)
+
+    def predict_clusters_with_multiple_sequence(self, test_data=None):
+        '''
+        Given the current trained models, predict clusters.  If the cluster segmentation has not been optimized yet,
+        than this will be part of the interative process.
+
+        Args:
+            numpy array of data for which to predict clusters.  Columns are dimensions of the data, each row is
+            a different timestamp
+
+        Returns:
+            vector of predicted cluster for the points
+        '''
+        if test_data is not None:
+            if not isinstance(test_data, np.ndarray):
+                raise TypeError("input must be a numpy array!")
+        else:
+            test_data = self.trained_model['complete_D_train']
+    
+        # SMOOTHENING
+        clustered_points = None
+
+        for i in range(len(self.data_dict_array)):
+            start_index = self.data_dict_array[i]['start']
+            end_index = self.data_dict_array[i]['end']
+            
+            if os.path.exists(os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], self.data_dict_array[i]['participant_id'])) is False:
+                os.mkdir(os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], self.data_dict_array[i]['participant_id']))
+            save_cluster_path = os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], self.data_dict_array[i]['participant_id'], self.data_dict_array[i]['time'] + '.csv.gz')
+
+            data_per_segment = test_data[start_index:end_index, :]
+            lle_all_points_clusters = self.smoothen_clusters(self.trained_model['cluster_mean_info'],
+                                                             self.trained_model['computed_covariance'],
+                                                             self.trained_model['cluster_mean_stacked_info'],
+                                                             data_per_segment, self.trained_model['time_series_col_size'])
+
+            # Update cluster points - using NEW smoothening
+            if clustered_points is None:
+                clustered_points = updateClusters(lle_all_points_clusters, switch_penalty=self.switch_penalty)
+                
+                clustered_points_df = pd.DataFrame(clustered_points, index=self.data_index_array[i])
+                clustered_points_df.to_csv(save_cluster_path, compression='gzip')
+            else:
+                clustered_points_per_segments = updateClusters(lle_all_points_clusters, switch_penalty=self.switch_penalty)
+                clustered_points = np.append(clustered_points, clustered_points_per_segments)
+    
+                clustered_points_df = pd.DataFrame(clustered_points_per_segments, index=self.data_index_array[i])
+                clustered_points_df.to_csv(save_cluster_path, compression='gzip')
+
         return (clustered_points)
         
     def save_model_parameters(self):

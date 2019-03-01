@@ -107,8 +107,8 @@ def main(tiles_data_path, config_path, experiment):
                 norm_step_count = (data_dict['data'].loc[:, 'StepCount'] - participant_data_dict['StepCount_mean']) / participant_data_dict['StepCount_std']
 
                 ticc_data_dict['norm_data_df'].loc[tmp_index_list, 'HeartRatePPG'] = np.array(norm_heart_rate)
-                ticc_data_dict['norm_data_df'].loc[tmp_index_list, 'StepCount'] = np.array(norm_step_count)
-                # ticc_data_dict['norm_data_df'].loc[tmp_index_list, 'StepCount'] = np.array(data_dict['data'].loc[:, 'StepCount'])
+                # ticc_data_dict['norm_data_df'].loc[tmp_index_list, 'StepCount'] = np.array(norm_step_count)
+                ticc_data_dict['norm_data_df'].loc[tmp_index_list, 'StepCount'] = np.array(data_dict['data'].loc[:, 'StepCount'])
                 ticc_data_dict['norm_data_df'].loc[tmp_index_list, 'time'] = list(norm_data_df.index)
 
                 ticc_data_dict['data_df'].loc[tmp_index_list, 'HeartRatePPG'] = np.array(data_dict['data'].loc[:, 'HeartRatePPG'])
@@ -117,7 +117,7 @@ def main(tiles_data_path, config_path, experiment):
                 
                 ticc_data_index = ticc_data_index + len(norm_data_df)
 
-    ticc_data_dict['norm_data_df'].to_csv(os.path.join(save_data_path, 'norm_data.csv.gz'), compression='gzip')
+    ticc_data_dict['norm_data_df'].to_csv(os.path.join(save_data_path, 'norm_heart_rate_data.csv.gz'), compression='gzip')
     ticc_data_dict['data_df'].to_csv(os.path.join(save_data_path, 'data.csv.gz'), compression='gzip')
     
 
