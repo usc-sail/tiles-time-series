@@ -342,8 +342,8 @@ def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=Non
             # If we only select reasonable recordings
             cond_recording_duration1, cond_recording_duration2, cond_valid_data = True, True, True
             if threshold_dict is not None:
-                cond_recording_duration1 = (pd.to_datetime(row_filter_dict_series.end) - pd.to_datetime(row_filter_dict_series.start)).total_seconds() > threshold_dict['min'] * 3600
-                cond_recording_duration2 = (pd.to_datetime(row_filter_dict_series.end) - pd.to_datetime(row_filter_dict_series.start)).total_seconds() < threshold_dict['max'] * 3600
+                cond_recording_duration1 = (pd.to_datetime(row_filter_dict_series.end) - pd.to_datetime(row_filter_dict_series.start)).total_seconds() < threshold_dict['min'] * 3600
+                cond_recording_duration2 = (pd.to_datetime(row_filter_dict_series.end) - pd.to_datetime(row_filter_dict_series.start)).total_seconds() > threshold_dict['max'] * 3600
             
             # Work condition
             work_cond = row_filter_dict_series.work == 1
@@ -353,9 +353,9 @@ def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=Non
             day_filter_data_dict['data'] = data_df[row_filter_dict_series.start:row_filter_dict_series.end]
 
             if valid_data_rate is not None:
-                cond_valid_data = (row_filter_dict_series.valid_length / len(day_filter_data_dict['data'])) > valid_data_rate
+                cond_valid_data = (row_filter_dict_series.valid_length / len(day_filter_data_dict['data'])) < valid_data_rate
 
-            if (not cond_recording_duration1) and (not cond_recording_duration2) and (not cond_valid_data):
+            if cond_recording_duration1 or cond_recording_duration2 or cond_valid_data:
                 continue
             
             for tmp_index in list(row_filter_dict_series.index):
