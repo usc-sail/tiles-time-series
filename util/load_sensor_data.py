@@ -340,7 +340,7 @@ def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=Non
         for index, row_filter_dict_series in filter_dict_df.iterrows():
             
             # If we only select reasonable recordings
-            cond_recording_duration1, cond_recording_duration2, cond_valid_data = True, True, True
+            cond_recording_duration1, cond_recording_duration2, cond_valid_data = False, False, False
             if threshold_dict is not None:
                 cond_recording_duration1 = (pd.to_datetime(row_filter_dict_series.end) - pd.to_datetime(row_filter_dict_series.start)).total_seconds() < threshold_dict['min'] * 3600
                 cond_recording_duration2 = (pd.to_datetime(row_filter_dict_series.end) - pd.to_datetime(row_filter_dict_series.start)).total_seconds() > threshold_dict['max'] * 3600
@@ -410,3 +410,23 @@ def load_all_filter_data(path, participant_id_list, filter_logic=None, threshold
     print('Successfully load all participant filter data')
     
     return participant_data_list
+
+
+def load_filter_clustering(path, participant_id):
+    
+    if os.path.exists(os.path.join(path, participant_id)) is False:
+        return None
+    
+    return_dict = []
+    file_list = os.listdir(os.path.join(path, participant_id))
+    
+    for file in file_list:
+        data_dict = {}
+        data_dict['participant_id'] = participant_id
+        data_dict['data'] = pd.read_csv(os.path.join(path, participant_id, file), index_col=0)
+        data_dict['start'] = list(data_dict['data'].index)[0]
+        data_dict['length'] = len(list(data_dict['data'].index))
+
+        return_dict.append(data_dict)
+    
+    return return_dict

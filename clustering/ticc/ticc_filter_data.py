@@ -42,7 +42,7 @@ def main(tiles_data_path, config_path, experiment):
     fitbit_norm_data_df = pd.read_csv(os.path.join(save_data_path, 'norm_data_ticc_cluster_days_' + str(data_config.fitbit_sensor_dict['ticc_cluster_days']) + '.csv.gz'), index_col=3)
     fitbit_dict_df = pd.read_csv(os.path.join(save_data_path, 'dict_norm_data_cluster_days_' + str(data_config.fitbit_sensor_dict['ticc_cluster_days']) + '.csv.gz'), index_col=0)
 
-    # fitbit_dict_df = fitbit_dict_df.loc[list(fitbit_dict_df.index)[, :]
+    # fitbit_dict_df = fitbit_dict_df.loc[list(fitbit_dict_df.index)[:10], :]
     # fitbit_norm_data_df = fitbit_norm_data_df.iloc[:fitbit_dict_df.iloc[-1].end, :]
     fitbit_norm_data_df = fitbit_norm_data_df.loc[:, list(fitbit_norm_data_df.columns)[1:]]
     
@@ -50,7 +50,7 @@ def main(tiles_data_path, config_path, experiment):
     ###########################################################
     # 3. Create segmentation class
     ###########################################################
-    ticc = TICC(data_config=data_config, maxIters=300, threshold=2e-5, num_proc=1,
+    ticc = TICC(data_config=data_config, maxIters=300, threshold=2e-5, num_proc=2,
                 lambda_parameter=data_config.fitbit_sensor_dict['ticc_sparsity'],
                 beta=data_config.fitbit_sensor_dict['ticc_switch_penalty'],
                 window_size=data_config.fitbit_sensor_dict['ticc_window'],

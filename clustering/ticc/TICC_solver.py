@@ -296,7 +296,7 @@ class TICC:
             data_dict['time'] = list(data_df.index)[start]
 
             self.data_dict_array.append(data_dict)
-            self.data_index_array.append(list(data_df.index)[last_end_index:last_end_index + complete_D_train.shape[0]])
+            self.data_index_array.append(list(data_df.index)[start:end])
             
             if self.complete_D_train is None:
                 self.complete_D_train = complete_D_train
@@ -642,13 +642,13 @@ class TICC:
             if clustered_points is None:
                 clustered_points = updateClusters(lle_all_points_clusters, switch_penalty=self.switch_penalty)
                 
-                clustered_points_df = pd.DataFrame(clustered_points, index=self.data_index_array[i])
+                clustered_points_df = pd.DataFrame(clustered_points, index=self.data_index_array[i][:len(clustered_points)])
                 clustered_points_df.to_csv(save_cluster_path, compression='gzip')
             else:
                 clustered_points_per_segments = updateClusters(lle_all_points_clusters, switch_penalty=self.switch_penalty)
                 clustered_points = np.append(clustered_points, clustered_points_per_segments)
     
-                clustered_points_df = pd.DataFrame(clustered_points_per_segments, index=self.data_index_array[i])
+                clustered_points_df = pd.DataFrame(clustered_points_per_segments, index=self.data_index_array[i][:len(clustered_points_per_segments)])
                 clustered_points_df.to_csv(save_cluster_path, compression='gzip')
 
         return (clustered_points)
