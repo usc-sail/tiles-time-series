@@ -94,6 +94,12 @@ def read_MGT(main_data_directory):
     return MGT
 
 
+# Load mgt data
+def read_app_survey(main_data_directory):
+    app_survey_df = pd.read_csv(os.path.join(main_data_directory, '2_raw_csv_data/app_surveys', 'app_surveys_processed.csv.gz'), index_col=0)
+    
+    return app_survey_df
+
 # Load pre study data
 def read_pre_study_info(main_data_directory):
     PreStudyInfo = pd.read_csv(os.path.join(main_data_directory, 'participant_info', 'Pre-Study Data 11-13-18.csv'), index_col=3)

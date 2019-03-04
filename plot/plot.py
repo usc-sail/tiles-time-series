@@ -407,7 +407,7 @@ class Plot(object):
             plt.close()
 
     def plot_app_survey(self, participant_id, fitbit_df=None, realizd_df=None, owl_in_one_df=None, segmentation_df=None,
-                        fitbit_summary_df=None, mgt_df=None, omsignal_data_df=None, audio_df=None, cluster_df=None):
+                        fitbit_summary_df=None, app_survey_df=None, omsignal_data_df=None, audio_df=None, cluster_df=None):
     
         ###########################################################
         # If folder not exist
@@ -422,14 +422,67 @@ class Plot(object):
         fitbit_df = fitbit_df.sort_index()
         realizd_data_df = None if realizd_df is None else realizd_df
         interval = int((pd.to_datetime(fitbit_df.index[1]) - pd.to_datetime(fitbit_df.index[0])).total_seconds() / 60)
-    
-        ###########################################################
-        # Define plot range
-        ###########################################################
-        start_str = fitbit_df.index[0]
-        end_str = fitbit_df.index[-1]
-        day_offset = (pd.to_datetime(end_str) - pd.to_datetime(start_str)).days
-    
+        
+        for index, day_app_survey in app_survey_df.iterrows():
+            ###########################################################
+            # Define plot range
+            ###########################################################
+            # 'Question 12'
+            start_str = (pd.to_datetime(day_app_survey.completed_ts_utc) - timedelta(hours=4)).strftime(date_time_format)[:-3]
+            end_str = pd.to_datetime(day_app_survey.completed_ts_utc).strftime(date_time_format)[:-3]
+
+            ###########################################################
+            # Read data in the range
+            ###########################################################
+            fitbit_window_df = fitbit_df[start_str:end_str]
+            fitbit_window_array = np.array(fitbit_window_df)
+            fitbit_window_time_array = pd.to_datetime(fitbit_window_df.index)
+            fitbit_window_array[:, 1] = fitbit_window_array[:, 1] / interval
+            # If we have over 10% of missing data
+            if len(np.where(fitbit_window_array[:, 1] < 0)[0]) / len(fitbit_window_time_array) > 0.1:
+                continue
+            fitbit_window_array[np.where(fitbit_window_array[:, 1] < 0)[0], :] = -25
+            
+            ###########################################################
+            # Plot
+            ###########################################################
+            f, ax = plt.subplots(4, figsize=(18, 8))
+
+            ###########################################################
+            # Plot Fitbit data
+            ###########################################################
+            self.plot_sensor_data(ax[0], fitbit_window_df, start_str, end_str, stream='fitbit')
+            
+            ###########################################################
+            # Plot omsignal data
+            ###########################################################
+            self.plot_sensor_data(ax[1], omsignal_data_df, start_str, end_str, stream='om_signal')
+            
+            ###########################################################
+            # Plot realizd data
+            ###########################################################
+            self.plot_sensor_data(ax[2], realizd_df, start_str, end_str, stream='realizd')
+            
+            ###########################################################
+            # Plot owl_in_one data
+            ###########################################################
+            self.plot_sensor_data(ax, owl_in_one_df, start_str, end_str, stream='owl_in_one')
+            ax[3].set_xlabel(self.primary_unit)
+
+            ###########################################################
+            # Plot segment data data
+            ###########################################################
+            plt_df = segmentation_df[start_str:end_str]
+            for xc in pd.to_datetime(list(plt_df.index)):
+                for i in range(4):
+                    ax[i].axvline(x=xc, color='k', linestyle='--')
+            
+
+            plt.show()
+            # plt.savefig(os.path.join(save_folder, row_cluster.start + '.png'), dpi=300)
+
+            print()
+        '''
         for day in range(day_offset):
             ###########################################################
             # Define start and end string
@@ -612,9 +665,97 @@ class Plot(object):
                             ax[i].set_ylim([ymin, ymax])
             plt.savefig(os.path.join(save_folder, day_str + '.png'), dpi=300)
             plt.close()
+    '''
+    
+    def plot_sensor_data(self, ax, data_df, start_str, end_str, stream='realizd'):
+        """ Plot sensor data based on the stream type
+
+        Params:
+        ax - axis to plot
+        data_df - whole data dataframe for one stream
+        start_str - start time in str
+        end_str - end time in str
+        stream - stream type
+
+        Returns:
+        """
+        if data_df is not None:
+            data_window_df = data_df[start_str:end_str]
+            data_window_time_array = pd.to_datetime(data_window_df.index)
             
+            # If there is no data, just return
+            if len(data_window_df) == 0:
+                return
+            
+            if stream == 'realizd':
+                # Plot realizd
+                ax.plot(data_window_time_array, np.array(data_window_df.SecondsOnPhone), label='phone usage', color='green')
+                ax.set_xlim([pd.to_datetime(start_str), pd.to_datetime(end_str)])
+            elif stream == 'om_signal':
+                # Plot om_signal
+                ax.plot(data_window_time_array, np.array(data_window_df)[:, 0], label='om heart rate', color='purple')
+                ax.plot(data_window_time_array, np.array(data_window_df)[:, 1], label='om step count', color='brown')
+                ax.legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True)
+                ax.set_xlim([pd.to_datetime(start_str), pd.to_datetime(end_str)])
+            elif stream == 'audio':
+                # Plot audio
+                ax.plot(data_window_time_array, np.array(data_window_df.foreground), label='foreground', color='blue')
+                ax.legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True)
+                ax.set_xlim([pd.to_datetime(start_str), pd.to_datetime(end_str)])
+            elif stream == 'owl_in_one':
+                # Plot owl_in_one
+                unit_in_time = np.where(np.array(data_window_df) > 0)[1]
+                unit_diff_in_time = unit_in_time[1:] - unit_in_time[:-1]
+    
+                unit_change_time_array = np.where(unit_diff_in_time != 0)[0]
+                unit_change_time_array = np.append(unit_change_time_array, len(data_window_df) - 2)
+    
+                unit_time_df = pd.DataFrame()
+                start_time, unit_type = data_window_df.index[0], data_window_df.columns[unit_in_time[0]]
+                
+                for unit_change_time in unit_change_time_array:
+    
+                    end_time = data_window_df.index[unit_change_time + 1]
+                    unit_row_df = pd.DataFrame(index=[start_time])
+                    unit_row_df['start'], unit_row_df['end'], unit_row_df['unit'] = start_time, end_time, unit_type
+                    unit_time_df = unit_time_df.append(unit_row_df)
+    
+                    if unit_type == 'med' or unit_type == 'lounge' or unit_type == 'ns' or unit_type == 'pat' or unit_type == 'other_floor' or unit_type == 'floor2':
+                        self.plot_owl_in_one_span(ax, unit_type, start_time, end_time, start_str, end_str)
+    
+                    start_time = data_window_df.index[unit_change_time + 1]
+                    unit_type = data_window_df.columns[unit_in_time[unit_change_time + 1]]
+
+                legend_elements = [Patch(facecolor=color_dict[loc], label=loc, alpha=0.3) for loc in list(color_dict.keys())]
+                ax[2].legend(handles=legend_elements, bbox_to_anchor=(1, 1), fancybox=True, shadow=True)
+            elif stream == 'sleep':
+                for index, row in data_window_df.iterrows():
+                    self.plot_sleep_span(ax, row.Sleep1BeginTimestamp, row.Sleep1EndTimestamp, start_str, end_str)
+                    self.plot_sleep_span(ax, row.Sleep2BeginTimestamp, row.Sleep2EndTimestamp, start_str, end_str)
+                    self.plot_sleep_span(ax, row.Sleep3BeginTimestamp, row.Sleep3EndTimestamp, start_str, end_str)
+            else:
+                # Plot fitbit
+                data_window_array = np.array(data_window_df)
+                data_window_array[:, 1] = data_window_array[:, 1] / int(self.data_config.fitbit_sensor_dict['offset'])
+                data_window_array[np.where(data_window_array[:, 1] < 0)[0], :] = -25
+                ax.plot(data_window_time_array, data_window_array[:, 0], label='heart rate')
+                ax.plot(data_window_time_array, data_window_array[:, 1], label='step count')
+                ax.legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True)
+                ax.set_xlim([pd.to_datetime(start_str), pd.to_datetime(end_str)])
+
     def plot_owl_in_one_span(self, ax, room_type, begin_str, end_str, day_str, day_after_str):
-        
+        """ Plot owl_in_one span
+
+        Params:
+        ax - axis to plot
+        room_type - room type
+        begin_str - start time in str
+        end_str - end time in str
+        day_str -  start time in str
+        day_after_str - end time in str
+
+        Returns:
+        """
         color = color_dict[room_type]
         
         condition1 = pd.to_datetime(day_str) < pd.to_datetime(begin_str) < pd.to_datetime(day_after_str)

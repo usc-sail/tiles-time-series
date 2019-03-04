@@ -44,7 +44,8 @@ def main(tiles_data_path, cluster_config_path, experiement):
     ###########################################################
     igtb_df = load_data_basic.read_AllBasic(tiles_data_path)
     igtb_df = igtb_df.drop_duplicates(keep='first')
-    mgt_df = load_data_basic.read_MGT(tiles_data_path)
+    survey_df = load_data_basic.read_app_survey(tiles_data_path)
+    survey_df = survey_df.loc[survey_df['survey_type'] == 'psych_flex']
     
     ###########################################################
     # 2. Get participant id list
@@ -70,7 +71,10 @@ def main(tiles_data_path, cluster_config_path, experiement):
 
         uid = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].index)[0]
         primary_unit = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit[0]
-        participant_mgt = mgt_df.loc[mgt_df['uid'] == uid]
+        participant_app_survey = survey_df.loc[survey_df['participant_id'] == participant_id]
+        
+        if len(participant_app_survey) == 0:
+            continue
 
         omsignal_data_df = load_sensor_data.read_preprocessed_omsignal(data_config.omsignal_sensor_dict['preprocess_path'], participant_id)
         owl_in_one_df = load_sensor_data.read_preprocessed_owl_in_one(data_config.owl_in_one_sensor_dict['preprocess_path'], participant_id)
@@ -84,10 +88,11 @@ def main(tiles_data_path, cluster_config_path, experiement):
         if os.path.exists(os.path.join(data_config.fitbit_sensor_dict['segmentation_path'], participant_id + '.csv.gz')) is False:
             continue
         segmentation_df = load_sensor_data.load_segmentation_data(data_config.fitbit_sensor_dict['segmentation_path'], participant_id)
-
+        '''
         # if os.path.exists(os.path.join(data_config.fitbit_sensor_dict['clustering_path'], participant_id + '.csv')) is False:
         #    continue
         # clustering_df = load_sensor_data.load_clustering_data(data_config.fitbit_sensor_dict['clustering_path'], participant_id)
+        '''
         
         ###########################################################
         # 5. Plot
@@ -95,7 +100,7 @@ def main(tiles_data_path, cluster_config_path, experiement):
         cluster_plot = plot.Plot(data_config=data_config, primary_unit=primary_unit)
 
         cluster_plot.plot_app_survey(participant_id, fitbit_df=fitbit_df, fitbit_summary_df=fitbit_summary_df, audio_df=audio_df,
-                                     mgt_df=participant_mgt, segmentation_df=segmentation_df, omsignal_data_df=omsignal_data_df,
+                                     app_survey_df=participant_app_survey, segmentation_df=segmentation_df, omsignal_data_df=omsignal_data_df,
                                      realizd_df=realizd_df, owl_in_one_df=owl_in_one_df)
         
         del ggs_segmentation
