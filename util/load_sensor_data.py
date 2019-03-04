@@ -420,6 +420,8 @@ def load_filter_clustering(path, participant_id):
     return_dict = []
     file_list = os.listdir(os.path.join(path, participant_id))
     
+    file_list = [file for file in file_list if 'heart' not in file]
+    
     for file in file_list:
         data_dict = {}
         data_dict['participant_id'] = participant_id
