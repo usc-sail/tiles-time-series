@@ -58,22 +58,37 @@ def main(tiles_data_path, config_path, experiment):
                           'shipley_abs_igtb', 'shipley_voc_igtb',
                           'itp_igtb', 'irb_igtb', 'iod_id_igtb', 'iod_od_igtb', 'ocb_igtb']
 
+    # group_label_list = ['gender', 'position']
+    group_label_list = ['shift', 'position']
+
     groundtruth_df[predict_label_list] = groundtruth_df[predict_label_list].fillna(groundtruth_df[predict_label_list].mean())
     
     for idx, participant_id in enumerate(top_participant_id_list):
         
         print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
         
-        if os.path.exists(os.path.join(save_model_path, participant_id, 'workday.csv.gz')) is False:
+        if os.path.exists(os.path.join(save_model_path, participant_id, 'offday.csv.gz')) is False:
             continue
+        
+        cond1 = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id]['currentposition'].values[0] == 1
+        cond2 = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id]['currentposition'].values[0] == 2
+        cond3 = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id]['gender'].values[0] > 0
+        cond4 = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id]['Shift'].values[0] == 'Day shift'
+        if not cond3:
+            continue
+            
+        #if not cond1 and not cond2:
+        #    continue
 
         ineffective_df = pd.read_csv(os.path.join(save_model_path, participant_id, 'workday.csv.gz'), index_col=0)
         ineffective_array = np.array(ineffective_df)
-        ineffective_array = np.delete(ineffective_array, 5, axis=0)
-        ineffective_array = np.delete(ineffective_array, 5, axis=1)
+        # ineffective_array = np.array(ineffective_array.diagonal()).reshape([1, len(ineffective_array.diagonal())])
+        
+        #ineffective_array = np.delete(ineffective_array, 5, axis=0)
+        #ineffective_array = np.delete(ineffective_array, 5, axis=1)
 
-        # ineffective_array = np.delete(ineffective_array, 3, axis=0)
-        # ineffective_array = np.delete(ineffective_array, 3, axis=1)
+        #ineffective_array = np.delete(ineffective_array, 3, axis=0)
+        #ineffective_array = np.delete(ineffective_array, 3, axis=1)
         
         participant_dict = {}
         participant_dict['participant_id'] = participant_id
@@ -85,33 +100,78 @@ def main(tiles_data_path, config_path, experiment):
         row_df = pd.DataFrame(index=[participant_id])
         for i in range(ineffective_array.shape[0] * ineffective_array.shape[1]):
             row_df['feat'+ str(i)] = np.reshape(ineffective_array, [1, ineffective_array.shape[0] * ineffective_array.shape[1]])[0][i]
+        
+        
+        ineffective_df = pd.read_csv(os.path.join(save_model_path, participant_id, 'offday.csv.gz'), index_col=0)
+        ineffective_array = np.array(ineffective_df)
+        # ineffective_array = np.array(ineffective_array.diagonal()).reshape([1, len(ineffective_array.diagonal())])
+
+        #ineffective_array = np.delete(ineffective_array, 5, axis=0)
+        #ineffective_array = np.delete(ineffective_array, 5, axis=1)
+
+        #ineffective_array = np.delete(ineffective_array, 3, axis=0)
+        #ineffective_array = np.delete(ineffective_array, 3, axis=1)
+
+        for i in range(ineffective_array.shape[0] * ineffective_array.shape[1]):
+            row_df['feat'+ str(ineffective_array.shape[0] * ineffective_array.shape[1] + i)] = np.reshape(ineffective_array, [1, ineffective_array.shape[0] * ineffective_array.shape[1]])[0][i]
+        
         data_cluster_df = data_cluster_df.append(row_df)
         
         # 'neu_igtb', 'con_igtb', 'ext_igtb', 'agr_igtb', 'ope_igtb'
         # 'pos_af_igtb', 'neg_af_igtb', 'stai_igtb'
         for predict_label in predict_label_list:
             row_df[predict_label] = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id][predict_label].values[0]
+        
+        for group_label in group_label_list:
+            if group_label == 'position':
+                if cond1 or cond2:
+                    row_df[group_label] = 1
+                else:
+                    row_df[group_label] = 2
+            elif group_label == 'shift':
+                if cond4:
+                    row_df[group_label] = 1
+                else:
+                    row_df[group_label] = 2
+            else:
+                row_df[group_label] = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id][group_label].values[0]
+
         data_df = data_df.append(row_df)
 
     from sklearn.model_selection import KFold
     from sklearn.manifold import TSNE
-    from sklearn.svm import SVR
+    from sklearn.svm import SVR, SVC
     from sklearn.metrics import r2_score
 
+    from sklearn.decomposition import PCA
+    pca = PCA(n_components=20)
+    X = pca.fit_transform(np.array(data_cluster_df))
     X = np.array(data_cluster_df)
     
     from sklearn import svm, datasets
     from sklearn.model_selection import GridSearchCV
+    from sklearn.ensemble import RandomForestClassifier
+    
     tuned_parameters = [{'kernel': ['rbf'], 'gamma': [1e2, 1e-3, 1e-4], 'C': [1, 10, 100, 1000]},
                         {'kernel': ['linear'], 'C': [1, 10, 100, 1000]}]
+
+    param_grid = {"max_depth": [3, 5, 6],
+                  "max_features": [5, 10, 15],
+                  "min_samples_split": [2, 3, 10],
+                  "bootstrap": [True, False],
+                  "criterion": ["gini", "entropy"]}
     
-    for predict_label in predict_label_list:
+    # for group_label in group_label_list:
+    for group_label in group_label_list:
         
         print('--------------------------------------------------')
-        print('predict %s' % predict_label)
-        y = np.array(data_df[predict_label])
-        svr_rbf = SVR()
-        clf = GridSearchCV(svr_rbf, tuned_parameters, cv=5, scoring='r2')
+        print('predict %s' % group_label)
+        y = np.array(data_df[group_label])
+        # svr = SVR()
+        svc = SVC()
+        # clf = GridSearchCV(svr, tuned_parameters, cv=5, scoring='r2')
+        # clf = GridSearchCV(svc, tuned_parameters, cv=5, scoring='f1')
+        clf = GridSearchCV(RandomForestClassifier(n_estimators=20), param_grid, cv=5, scoring='f1')
         clf.fit(X, y)
     
         print("Best parameters set found on development set:")

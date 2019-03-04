@@ -123,12 +123,12 @@ def main(tiles_data_path, config_path, experiment):
             os.mkdir(os.path.join(save_model_path, participant_id))
 
         # Learn causality
-        workday_learner = HawkesSumGaussians(5, max_iter=100)
+        workday_learner = HawkesSumGaussians(10, max_iter=20)
         workday_learner.fit(workday_point_list)
         ineffective_df = pd.DataFrame(workday_learner.get_kernel_norms())
         ineffective_df.to_csv(os.path.join(save_model_path, participant_id, 'workday.csv.gz'), compression='gzip')
 
-        offday_learner = HawkesSumGaussians(5, max_iter=100)
+        offday_learner = HawkesSumGaussians(10, max_iter=20)
         offday_learner.fit(offday_point_list)
         ineffective_df = pd.DataFrame(offday_learner.get_kernel_norms())
         ineffective_df.to_csv(os.path.join(save_model_path, participant_id, 'offday.csv.gz'), compression='gzip')
