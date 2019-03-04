@@ -79,7 +79,7 @@ def load_preprocess_path(data_config, process_data_path, data_name='preprocess_d
     data_config.audio_sensor_dict['preprocess_path'] = tmp_path
 
 
-def load_filter_path(data_config, process_data_path, data_name='filter'):
+def load_filter_path(data_config, process_data_path, data_name='filter_data'):
     """ Load the filter data path to data_config.
 
     Params:
@@ -171,7 +171,7 @@ def load_segmentation_path(data_config, process_data_path, data_name='segmentati
     if filter_data == True:
         tmp_path = os.path.join(tmp_path, 'filter_data_' + data_config.filter_method)
     else:
-        tmp_path = os.path.join(tmp_path, 'preprocess_data')
+        tmp_path = os.path.join(tmp_path, 'preprocess')
     create_folder(tmp_path)
     
     tmp_path = os.path.join(tmp_path, data_name)
@@ -219,7 +219,7 @@ def load_clustering_path(data_config, process_data_path, data_name='clustering',
     if filter_data == True:
         tmp_path = os.path.join(tmp_path, 'filter_data_' + data_config.filter_method)
     else:
-        tmp_path = os.path.join(tmp_path, 'preprocess_data')
+        tmp_path = os.path.join(tmp_path, 'preprocess')
     create_folder(tmp_path)
 
     tmp_path = os.path.join(tmp_path, data_name)
@@ -255,7 +255,7 @@ def load_clustering_path(data_config, process_data_path, data_name='clustering',
 def load_all_available_path(data_config, process_data_path, filter_data=False,
                             preprocess_data_identifier='preprocess',
                             segmentation_data_identifier='segmentation',
-                            filter_data_identifier='filter',
+                            filter_data_identifier='filter_data',
                             clustering_data_identifier='clustering'):
     """ Load all available data path to data_config.
 

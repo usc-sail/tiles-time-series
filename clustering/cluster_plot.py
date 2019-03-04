@@ -34,15 +34,8 @@ def main(tiles_data_path, cluster_config_path, experiement):
     data_config = config.Config()
     data_config.readConfigFile(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file')), experiement)
     
-    # Load preprocess folder
-    load_data_path.load_preprocess_path(data_config, process_data_path, data_name='preprocess_data')
+    load_data_path.load_all_available_path(data_config, process_data_path)
 
-    # Load segmentation folder
-    load_data_path.load_segmentation_path(data_config, process_data_path, data_name='segmentation')
-
-    # Load clustering folder
-    load_data_path.load_clustering_path(data_config, process_data_path, data_name='clustering')
-    
     # Load Fitbit summary folder
     fitbit_summary_path = load_data_path.load_fitbit_summary_path(tiles_data_path, data_name='3_preprocessed_data')
 
@@ -56,7 +49,8 @@ def main(tiles_data_path, cluster_config_path, experiement):
     ###########################################################
     # 2. Get participant id list
     ###########################################################
-    top_participant_id_df = pd.read_csv(os.path.join(process_data_path, experiement, 'participant_id.csv.gz'), index_col=0, compression='gzip')
+    # Get participant id list, k=10, read 10 participants with most data in fitbit
+    top_participant_id_df = load_data_basic.return_top_k_participant(os.path.join(process_data_path, 'participant_id.csv.gz'), tiles_data_path, k=150, data_config=data_config)
     top_participant_id_list = list(top_participant_id_df.index)
     top_participant_id_list.sort()
     
@@ -81,27 +75,28 @@ def main(tiles_data_path, cluster_config_path, experiement):
         omsignal_data_df = load_sensor_data.read_preprocessed_omsignal(data_config.omsignal_sensor_dict['preprocess_path'], participant_id)
         owl_in_one_df = load_sensor_data.read_preprocessed_owl_in_one(data_config.owl_in_one_sensor_dict['preprocess_path'], participant_id)
         realizd_df = load_sensor_data.read_preprocessed_realizd(data_config.realizd_sensor_dict['preprocess_path'], participant_id)
+        audio_df = load_sensor_data.read_preprocessed_audio(data_config.audio_sensor_dict['preprocess_path'], participant_id)
         fitbit_df, fitbit_mean, fitbit_std = load_sensor_data.read_preprocessed_fitbit_with_pad(data_config, participant_id)
         
         ###########################################################
-        # 4. Read clustering and segmentation data
+        # 4. Read clustering and segmentation data, skip clustering
         ###########################################################
         if os.path.exists(os.path.join(data_config.fitbit_sensor_dict['segmentation_path'], participant_id + '.csv.gz')) is False:
             continue
-        if os.path.exists(os.path.join(data_config.fitbit_sensor_dict['clustering_path'], participant_id + '.csv')) is False:
-            continue
-
         segmentation_df = load_sensor_data.load_segmentation_data(data_config.fitbit_sensor_dict['segmentation_path'], participant_id)
-        clustering_df = load_sensor_data.load_clustering_data(data_config.fitbit_sensor_dict['clustering_path'], participant_id)
+
+        # if os.path.exists(os.path.join(data_config.fitbit_sensor_dict['clustering_path'], participant_id + '.csv')) is False:
+        #    continue
+        # clustering_df = load_sensor_data.load_clustering_data(data_config.fitbit_sensor_dict['clustering_path'], participant_id)
         
         ###########################################################
         # 5. Plot
         ###########################################################
         cluster_plot = plot.Plot(data_config=data_config, primary_unit=primary_unit)
 
-        cluster_plot.plot_cluster(participant_id, fitbit_df=fitbit_df, fitbit_summary_df=fitbit_summary_df,
-                                  mgt_df=participant_mgt, segmentation_df=segmentation_df, omsignal_data_df=omsignal_data_df,
-                                  realizd_df=realizd_df, owl_in_one_df=owl_in_one_df, cluster_df=clustering_df)
+        cluster_plot.plot_app_survey(participant_id, fitbit_df=fitbit_df, fitbit_summary_df=fitbit_summary_df, audio_df=audio_df,
+                                     mgt_df=participant_mgt, segmentation_df=segmentation_df, omsignal_data_df=omsignal_data_df,
+                                     realizd_df=realizd_df, owl_in_one_df=owl_in_one_df)
         
         del ggs_segmentation
 

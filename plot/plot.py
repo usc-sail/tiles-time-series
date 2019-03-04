@@ -405,6 +405,213 @@ class Plot(object):
                             ax[i].set_ylim([ymin, ymax])
             plt.savefig(os.path.join(save_folder, day_str + '.png'), dpi=300)
             plt.close()
+
+    def plot_app_survey(self, participant_id, fitbit_df=None, realizd_df=None, owl_in_one_df=None, segmentation_df=None,
+                        fitbit_summary_df=None, mgt_df=None, omsignal_data_df=None, audio_df=None, cluster_df=None):
+    
+        ###########################################################
+        # If folder not exist
+        ###########################################################
+        save_folder = os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], participant_id)
+        if not os.path.exists(save_folder):
+            os.mkdir(save_folder)
+    
+        ###########################################################
+        # Read data
+        ###########################################################
+        fitbit_df = fitbit_df.sort_index()
+        realizd_data_df = None if realizd_df is None else realizd_df
+        interval = int((pd.to_datetime(fitbit_df.index[1]) - pd.to_datetime(fitbit_df.index[0])).total_seconds() / 60)
+    
+        ###########################################################
+        # Define plot range
+        ###########################################################
+        start_str = fitbit_df.index[0]
+        end_str = fitbit_df.index[-1]
+        day_offset = (pd.to_datetime(end_str) - pd.to_datetime(start_str)).days
+    
+        for day in range(day_offset):
+            ###########################################################
+            # Define start and end string
+            ###########################################################
+            day_start_str = (pd.to_datetime(start_str) + timedelta(days=day)).strftime(date_time_format)[:-3]
+            day_end_str = (pd.to_datetime(start_str) + timedelta(days=day + 1)).strftime(date_time_format)[:-3]
+        
+            day_str = (pd.to_datetime(day_start_str)).strftime(date_only_date_time_format)
+            day_before_str = (pd.to_datetime(day_start_str) - timedelta(days=1)).strftime(date_only_date_time_format)
+            day_after_str = (pd.to_datetime(day_start_str) + timedelta(days=1)).strftime(date_only_date_time_format)
+        
+            ###########################################################
+            # Read data in the range
+            ###########################################################
+            day_data_df = fitbit_df[day_start_str:day_end_str]
+            day_data_array = np.array(day_data_df)
+            day_time_array = pd.to_datetime(day_data_df.index)
+            day_data_array[:, 1] = day_data_array[:, 1] / interval
+            day_data_array[np.where(day_data_array[:, 1] < 0)[0], :] = -25
+        
+            ###########################################################
+            # Read plot segmentation
+            ###########################################################
+            plt_df = segmentation_df[day_start_str:day_end_str]
+            xposition = pd.to_datetime(list(plt_df.index))
+        
+            ###########################################################
+            # Plot
+            ###########################################################
+            f, ax = plt.subplots(4, figsize=(18, 8))
+        
+            ax[0].plot(day_time_array, np.array(day_data_array)[:, 0], label='heart rate')
+            ax[0].plot(day_time_array, np.array(day_data_array)[:, 1], label='step count')
+        
+            ###########################################################
+            # Plot omsignal data
+            ###########################################################
+            if omsignal_data_df is not None:
+                day_omsignal_data_df = omsignal_data_df[day_start_str:day_end_str]
+                day_omsignal_time_array = pd.to_datetime(day_omsignal_data_df.index)
+                if len(day_omsignal_time_array) > 0:
+                    ax[1].plot(day_omsignal_time_array, np.array(day_omsignal_data_df)[:, 0], label='om heart rate',
+                               color='purple')
+                    ax[1].plot(day_omsignal_time_array, np.array(day_omsignal_data_df)[:, 1], label='om step count',
+                               color='brown')
+        
+            ###########################################################
+            # Plot realizd data
+            ###########################################################
+            if realizd_df is not None:
+                day_realizd_data_df = realizd_df[day_start_str:day_end_str]
+                day_realizd_time_array = pd.to_datetime(day_realizd_data_df.index)
+            
+                if len(day_realizd_data_df) > 0:
+                    ax[2].plot(day_realizd_time_array, np.array(day_realizd_data_df.SecondsOnPhone),
+                               label='phone usage', color='green')
+        
+            ###########################################################
+            # Plot audio data
+            ###########################################################
+            if audio_df is not None:
+                day_audio_mask = np.where((audio_df.index > day_start_str) & (audio_df.index <= day_end_str))[0]
+                day_audio_df = audio_df.iloc[day_audio_mask, :]
+                day_audio_time_array = pd.to_datetime(day_audio_df.index)
+            
+                if len(day_audio_df) > 0:
+                    ax[3].plot(day_audio_time_array, np.array(day_audio_df.foreground), label='foreground',
+                               color='blue')
+        
+            ###########################################################
+            # Plot owl_in_one data
+            ###########################################################
+            if owl_in_one_df is not None:
+                day_owl_in_one_df = owl_in_one_df[day_before_str:day_end_str]
+                day_owl_in_one_time_array = pd.to_datetime(day_owl_in_one_df.index)
+                if len(day_owl_in_one_time_array) > 0:
+                
+                    unit_in_time = np.where(np.array(day_owl_in_one_df) > 0)[1]
+                    unit_diff_in_time = unit_in_time[1:] - unit_in_time[:-1]
+                
+                    unit_change_time_array = np.where(unit_diff_in_time != 0)[0]
+                    unit_change_time_array = np.append(unit_change_time_array, len(day_owl_in_one_df) - 2)
+                
+                    unit_time_df = pd.DataFrame()
+                    start_time = day_owl_in_one_df.index[0]
+                    unit_type = day_owl_in_one_df.columns[unit_in_time[0]]
+                
+                    for unit_change_time in unit_change_time_array:
+                    
+                        end_time = day_owl_in_one_df.index[unit_change_time + 1]
+                        unit_row_df = pd.DataFrame(index=[start_time])
+                        unit_row_df['start'] = start_time
+                        unit_row_df['end'] = end_time
+                        unit_row_df['unit'] = unit_type
+                        unit_time_df = unit_time_df.append(unit_row_df)
+                    
+                        if unit_type == 'med' or unit_type == 'lounge' or unit_type == 'ns' \
+                                or unit_type == 'pat' or unit_type == 'other_floor' or unit_type == 'floor2':
+                            self.plot_owl_in_one_span(ax, unit_type, start_time, end_time, day_str, day_after_str)
+                    
+                        start_time = day_owl_in_one_df.index[unit_change_time + 1]
+                        unit_type = day_owl_in_one_df.columns[unit_in_time[unit_change_time + 1]]
+        
+            for xc in xposition:
+                ax[0].axvline(x=xc, color='k', linestyle='--')
+                ax[1].axvline(x=xc, color='k', linestyle='--')
+                ax[2].axvline(x=xc, color='k', linestyle='--')
+                ax[3].axvline(x=xc, color='k', linestyle='--')
+        
+            ax[0].set_xlim([day_time_array[0], day_time_array[-1]])
+            ax[1].set_xlim([day_time_array[0], day_time_array[-1]])
+            ax[2].set_xlim([day_time_array[0], day_time_array[-1]])
+            ax[3].set_xlim([day_time_array[0], day_time_array[-1]])
+            ax[3].set_xlabel(self.primary_unit)
+        
+            legend_elements = [Patch(facecolor=color_dict[loc], label=loc, alpha=0.3) for loc in
+                               list(color_dict.keys())]
+        
+            # Plot legend
+            ax[0].legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True)
+        
+            if omsignal_data_df is not None:
+                if len(day_omsignal_data_df) > 0: ax[1].legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True)
+            if owl_in_one_df is not None and day_owl_in_one_df is not None:
+                if len(day_owl_in_one_df) > 0: ax[2].legend(handles=legend_elements, bbox_to_anchor=(1, 1),
+                                                            fancybox=True, shadow=True)
+            if audio_df is not None:
+                if len(audio_df) > 0: ax[3].legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True)
+        
+            ###########################################################
+            # Plot fitbit summary
+            ###########################################################
+            if fitbit_summary_df is not None:
+                day_fitbit_summary = fitbit_summary_df[day_before_str:day_after_str]
+            
+                if len(day_fitbit_summary) > 0:
+                    for index, row in day_fitbit_summary.iterrows():
+                        self.plot_sleep_span(ax, row.Sleep1BeginTimestamp, row.Sleep1EndTimestamp, day_str,
+                                             day_after_str)
+                        self.plot_sleep_span(ax, row.Sleep2BeginTimestamp, row.Sleep2EndTimestamp, day_str,
+                                             day_after_str)
+                        self.plot_sleep_span(ax, row.Sleep3BeginTimestamp, row.Sleep3EndTimestamp, day_str,
+                                             day_after_str)
+        
+            ###########################################################
+            # Plot mgt data
+            ###########################################################
+            if mgt_df is not None:
+                day_mgt_df = mgt_df[day_str:day_after_str]
+                if len(day_mgt_df) > 0:
+                    for index, row in day_mgt_df.iterrows():
+                        ax[0].axvline(x=pd.to_datetime(index), color='red', linestyle='--')
+                        ax[1].axvline(x=pd.to_datetime(index), color='red', linestyle='--')
+                        ax[2].axvline(x=pd.to_datetime(index), color='red', linestyle='--')
+                        ax[3].axvline(x=pd.to_datetime(index), color='red', linestyle='--')
+                    
+                        plt_str = 'loc:' + str(day_mgt_df.location_mgt.values[0]) + ',' + \
+                                  'pos:' + str(day_mgt_df.pos_af_mgt.values[0]) + ',' + \
+                                  'neg:' + str(day_mgt_df.neg_af_mgt.values[0]) + ', \n' + \
+                                  'stress:' + str(day_mgt_df.stress_mgt.values[0]) + ',' + \
+                                  'anx:' + str(day_mgt_df.anxiety_mgt.values[0])
+                    
+                        if pd.to_datetime(index).hour > 22:
+                            ax[0].text(pd.to_datetime(index) - timedelta(hours=1),
+                                       np.nanmax(np.array(day_data_array)[:, 0]) + 15, plt_str)
+                        else:
+                            ax[0].text(pd.to_datetime(index), np.nanmax(np.array(day_data_array)[:, 0]) + 15, plt_str)
+        
+            ###########################################################
+            # Plot cluster data
+            ###########################################################
+            if cluster_df is not None:
+                day_cluster_df = cluster_df[day_before_str:day_after_str]
+                if len(day_cluster_df) > 0:
+                    for index, row_cluster in day_cluster_df.iterrows():
+                        for i in range(4):
+                            ymin, ymax = ax[i].get_ylim()
+                            self.plot_cluster_span(ax[i], row_cluster.start, row_cluster.end, row_cluster.cluster_id,
+                                                   day_str, day_after_str)
+                            ax[i].set_ylim([ymin, ymax])
+            plt.savefig(os.path.join(save_folder, day_str + '.png'), dpi=300)
+            plt.close()
             
     def plot_owl_in_one_span(self, ax, room_type, begin_str, end_str, day_str, day_after_str):
         
