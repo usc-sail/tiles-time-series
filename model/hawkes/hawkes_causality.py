@@ -118,50 +118,20 @@ def main(tiles_data_path, config_path, experiment):
                     workday_point_list.append(day_point_list)
                 else:
                     offday_point_list.append(day_point_list)
-                    
-        # cond1 = len(offday_point_list) != int(data_config.fitbit_sensor_dict['ticc_cluster_days'])
-        # cond2 = len(workday_point_list) != int(data_config.fitbit_sensor_dict['ticc_cluster_days'])
-        #if cond1 or cond2:
-        #    continue
-        
-        # Learn causality
-        workday_learner = HawkesSumGaussians(3, max_iter=100)
-        workday_learner.fit(workday_point_list)
         
         if os.path.exists(os.path.join(save_model_path, participant_id)) is False:
             os.mkdir(os.path.join(save_model_path, participant_id))
-        
-        for i, causality_array in enumerate(workday_learner.amplitudes):
-    
-            # for i in range(data_config.fitbit_sensor_dict['num_cluster']):
-            #    for j in range(data_config.fitbit_sensor_dict['num_cluster']):
-            ineffective_df = workday_learner.get_kernel_norms()
-            
-            causality_return_array = np.zeros([1, causality_array.shape[0] * causality_array.shape[1]])
-            causality_return_col = []
-            for row_index, causality_row_array in enumerate(causality_array):
-                for col_index, element in enumerate(causality_row_array):
-                    causality_return_array[0][row_index*causality_array.shape[0]+col_index] = element
-                    causality_return_col.append(str(row_index) + '->' + str(col_index))
-                    
-            causality_df = pd.DataFrame(causality_return_array, index=['cluster_' + str(i)], columns=causality_return_col)
-            causality_df.to_csv(os.path.join(save_model_path, participant_id, 'workday.csv.gz'), compression='gzip')
 
-        offday_learner = HawkesSumGaussians(3, max_iter=100)
+        # Learn causality
+        workday_learner = HawkesSumGaussians(5, max_iter=100)
+        workday_learner.fit(workday_point_list)
+        ineffective_df = pd.DataFrame(workday_learner.get_kernel_norms())
+        ineffective_df.to_csv(os.path.join(save_model_path, participant_id, 'workday.csv.gz'), compression='gzip')
+
+        offday_learner = HawkesSumGaussians(5, max_iter=100)
         offday_learner.fit(offday_point_list)
-
-        for i, causality in enumerate(offday_learner.amplitudes):
-            causality_return_array = np.zeros([1, causality_array.shape[0] * causality_array.shape[1]])
-            causality_return_col = []
-            for row_index, causality_row_array in enumerate(causality_array):
-                for col_index, element in enumerate(causality_row_array):
-                    causality_return_array[0][row_index * causality_array.shape[0] + col_index] = element
-                    causality_return_col.append(str(row_index) + '->' + str(col_index))
-    
-            causality_df = pd.DataFrame(causality_return_array, index=['cluster_' + str(i)],
-                                        columns=causality_return_col)
-            causality_df.to_csv(os.path.join(save_model_path, participant_id, 'offday.csv.gz'), compression='gzip')
-
+        ineffective_df = pd.DataFrame(offday_learner.get_kernel_norms())
+        ineffective_df.to_csv(os.path.join(save_model_path, participant_id, 'offday.csv.gz'), compression='gzip')
     print('Successfully cluster all participant filter data')
 
 
@@ -174,104 +144,4 @@ if __name__ == '__main__':
     config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'config_file')) if args.config is None else args.config
     experiment = 'ticc' if args.experiment is None else args.experiment
 
-    end_time = 1000
-    n_nodes = 2
-    n_realizations = 10
-    n_gaussians = 10
-    
-    kernel_timefunction = HawkesKernelTimeFunc(t_values=np.array([0., .7, 2.5, 3., 4.]),
-                                               y_values=np.array([.3, .03, .03, .2, 0.]))
-    kernels = [[HawkesKernelExp(.2, 2.), HawkesKernelPowerLaw(.2, .5, 1.3)], [HawkesKernel0(), kernel_timefunction]]
-
-    hawkes = SimuHawkes(baseline=[.5, .2], kernels=kernels, end_time=end_time, verbose=False, seed=1039)
-
-    multi = SimuHawkesMulti(hawkes, n_simulations=n_realizations)
-
-    multi.simulate()
-
-    learner = HawkesSumGaussians(n_gaussians, max_iter=10)
-    time = multi.timestamps
-    learner.fit(time)
-
-    from tick.plot import plot_hawkes_kernels
-    # plot_hawkes_kernels(learner, hawkes=hawkes, support=4)
-
     main(tiles_data_path, config_path, experiment)
-    
-    '''
-    from tick.dataset import fetch_hawkes_bund_data
-    from tick.hawkes import HawkesConditionalLaw
-    from tick.plot import plot_hawkes_kernel_norms
-
-    timestamps_list = fetch_hawkes_bund_data()
-
-    kernel_discretization = np.hstack((0, np.logspace(-5, 0, 50)))
-    hawkes_learner = HawkesConditionalLaw(
-            claw_method="log", delta_lag=0.1, min_lag=5e-4, max_lag=500,
-            quad_method="log", n_quad=10, min_support=1e-4, max_support=1, n_threads=4)
-
-    hawkes_learner.fit(timestamps_list)
-    
-    
-    np.random.seed(7168)
-
-    n_nodes = 3
-    baselines = 0.3 * np.ones(n_nodes)
-    decays = 0.5 + np.random.rand(n_nodes, n_nodes)
-    adjacency = np.array([
-        [1, 1, -0.5],
-        [0, 1, 0],
-        [0, 0, 2],], dtype=float)
-
-    adjacency /= 4
-
-    end_time = 1e5
-    integration_support = 5
-    n_realizations = 5
-
-    simu_hawkes = SimuHawkesExpKernels(baseline=baselines, adjacency=adjacency, decays=decays, end_time=end_time, verbose=False, seed=7168)
-    simu_hawkes.threshold_negative_intensity(True)
-
-    multi = SimuHawkesMulti(simu_hawkes, n_simulations=n_realizations, n_threads=-1)
-    multi.simulate()
-
-    nphc = HawkesCumulantMatching(integration_support, cs_ratio=.15, tol=1e-10, step=0.3)
-    nphc.fit(multi.timestamps)
-    
-    '''
-
-'''
-if __name__ == '__main__':
-    timestamps_list = fetch_hawkes_bund_data()
-    
-    kernel_discretization = np.hstack((0, np.logspace(-5, 0, 50)))
-    hawkes_learner = HawkesConditionalLaw(claw_method="log", delta_lag=0.1, min_lag=5e-4, max_lag=500,
-                                          quad_method="log", n_quad=10, min_support=1e-4, max_support=1, n_threads=4)
-    
-    hawkes_learner.fit(timestamps_list)
-'''
-'''
-end_time = 1000
-n_nodes = 2
-n_realizations = 10
-n_gaussians = 5
-
-timestamps_list = []
-
-if __name__ == '__main__':
-    
-
-    kernel_timefunction = HawkesKernelTimeFunc(t_values=np.array([0., .7, 2.5, 3., 4.]), y_values=np.array([.3, .03, .03, .2, 0.]))
-    kernels = [[HawkesKernelExp(.2, 2.), HawkesKernelPowerLaw(.2, .5, 1.3)], [HawkesKernel0(), kernel_timefunction]]
-    
-    hawkes = SimuHawkes(baseline=[.5, .2], kernels=kernels, end_time=end_time, verbose=False, seed=1039)
-    
-    multi = SimuHawkesMulti(hawkes, n_simulations=n_realizations)
-    
-    multi.simulate()
-    
-    learner = HawkesSumGaussians(n_gaussians, max_iter=10)
-    learner.fit(multi.timestamps)
-    
-    plot_hawkes_kernels(learner, hawkes=hawkes, support=4)
-'''
