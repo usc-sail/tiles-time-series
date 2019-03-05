@@ -6,7 +6,7 @@ def create_folder(folder_dir):
         os.mkdir(folder_dir)
 
 
-def load_preprocess_path(data_config, process_data_path, data_name='preprocess_data'):
+def load_preprocess_path(data_config, process_data_path, data_name='preprocess'):
     """ Load the preprocess path to data_config
 
     Params:
@@ -78,6 +78,78 @@ def load_preprocess_path(data_config, process_data_path, data_name='preprocess_d
 
     data_config.audio_sensor_dict['preprocess_path'] = tmp_path
 
+
+def load_plot_path(data_config, process_data_path, data_name='plot'):
+    """ Load the plot path to data_config
+
+    Params:
+    data_config - config setting
+    process_data_path - the path contains all processed stream
+    data_name - data name
+
+    Returns:
+
+    """
+    tmp_path = os.path.join(process_data_path, data_name)
+    create_folder(tmp_path)
+    
+    # om signal
+    tmp_path = os.path.join(tmp_path, data_config.omsignal_sensor_dict['name'])
+    create_folder(tmp_path)
+    preprocess_str = data_config.omsignal_sensor_dict['feature']
+    preprocess_str = preprocess_str + '_' + data_config.omsignal_sensor_dict['preprocess_setting']
+    preprocess_str = preprocess_str + '_' + data_config.omsignal_sensor_dict['preprocess_cols']
+    tmp_path = os.path.join(tmp_path, preprocess_str)
+    create_folder(tmp_path)
+    
+    data_config.omsignal_sensor_dict['plot_path'] = tmp_path
+    
+    # Fitbit
+    tmp_path = os.path.join(process_data_path, data_name, data_config.fitbit_sensor_dict['name'])
+    create_folder(tmp_path)
+    
+    if data_config.fitbit_sensor_dict['imputation'] != None:
+        preprocess_str = 'impute_' + data_config.fitbit_sensor_dict['imputation']
+    else:
+        preprocess_str = data_config.fitbit_sensor_dict['feature']
+    preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['preprocess_setting']
+    preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['preprocess_cols']
+    tmp_path = os.path.join(tmp_path, preprocess_str)
+    create_folder(tmp_path)
+    
+    data_config.fitbit_sensor_dict['plot_path'] = tmp_path
+    
+    # owl_in_one
+    tmp_path = os.path.join(process_data_path, data_name, data_config.owl_in_one_sensor_dict['name'])
+    create_folder(tmp_path)
+    
+    preprocess_str = data_config.owl_in_one_sensor_dict['feature']
+    preprocess_str = preprocess_str + '_' + data_config.owl_in_one_sensor_dict['preprocess_setting']
+    
+    tmp_path = os.path.join(tmp_path, preprocess_str)
+    create_folder(tmp_path)
+    
+    data_config.owl_in_one_sensor_dict['plot_path'] = tmp_path
+    
+    # realizd
+    tmp_path = os.path.join(process_data_path, data_name, data_config.realizd_sensor_dict['name'])
+    create_folder(tmp_path)
+    preprocess_str = data_config.realizd_sensor_dict['feature']
+    preprocess_str = preprocess_str + '_' + data_config.realizd_sensor_dict['preprocess_setting']
+    tmp_path = os.path.join(tmp_path, preprocess_str)
+    create_folder(tmp_path)
+    
+    data_config.realizd_sensor_dict['plot_path'] = tmp_path
+    
+    # audio
+    tmp_path = os.path.join(process_data_path, data_name, data_config.audio_sensor_dict['name'])
+    create_folder(tmp_path)
+    preprocess_str = data_config.audio_sensor_dict['feature']
+    preprocess_str = preprocess_str + '_' + data_config.audio_sensor_dict['preprocess_setting']
+    tmp_path = os.path.join(tmp_path, preprocess_str)
+    create_folder(tmp_path)
+    
+    data_config.audio_sensor_dict['plot_path'] = tmp_path
 
 def load_filter_path(data_config, process_data_path, data_name='filter_data'):
     """ Load the filter data path to data_config.
@@ -256,6 +328,7 @@ def load_all_available_path(data_config, process_data_path, filter_data=False,
                             preprocess_data_identifier='preprocess',
                             segmentation_data_identifier='segmentation',
                             filter_data_identifier='filter_data',
+                            plot_identifier='plot',
                             clustering_data_identifier='clustering'):
     """ Load all available data path to data_config.
 
@@ -278,3 +351,7 @@ def load_all_available_path(data_config, process_data_path, filter_data=False,
 
     # Load clustering folder
     load_clustering_path(data_config, process_data_path, data_name=clustering_data_identifier, filter_data=filter_data)
+
+    # Load plot folder
+    load_plot_path(data_config, process_data_path, data_name=plot_identifier)
+

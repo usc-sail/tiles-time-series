@@ -71,6 +71,7 @@ def main(tiles_data_path, cluster_config_path, experiement):
 
         uid = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].index)[0]
         primary_unit = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit[0]
+        shift = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].Shift[0]
         participant_app_survey = survey_df.loc[survey_df['participant_id'] == participant_id]
         
         if len(participant_app_survey) == 0:
@@ -88,16 +89,11 @@ def main(tiles_data_path, cluster_config_path, experiement):
         if os.path.exists(os.path.join(data_config.fitbit_sensor_dict['segmentation_path'], participant_id + '.csv.gz')) is False:
             continue
         segmentation_df = load_sensor_data.load_segmentation_data(data_config.fitbit_sensor_dict['segmentation_path'], participant_id)
-        '''
-        # if os.path.exists(os.path.join(data_config.fitbit_sensor_dict['clustering_path'], participant_id + '.csv')) is False:
-        #    continue
-        # clustering_df = load_sensor_data.load_clustering_data(data_config.fitbit_sensor_dict['clustering_path'], participant_id)
-        '''
         
         ###########################################################
         # 5. Plot
         ###########################################################
-        cluster_plot = plot.Plot(data_config=data_config, primary_unit=primary_unit)
+        cluster_plot = plot.Plot(data_config=data_config, primary_unit=primary_unit, shift=shift)
 
         cluster_plot.plot_app_survey(participant_id, fitbit_df=fitbit_df, fitbit_summary_df=fitbit_summary_df, audio_df=audio_df,
                                      app_survey_df=participant_app_survey, segmentation_df=segmentation_df, omsignal_data_df=omsignal_data_df,

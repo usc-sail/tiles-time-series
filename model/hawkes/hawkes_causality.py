@@ -108,27 +108,29 @@ def main(tiles_data_path, config_path, experiment):
                     else:
                         day_point_list[i] = np.sort(day_point_list[i][1:])
 
-                # If we have point data
+                # If we have no point data
                 if len(day_point_list) == 0:
                     continue
                     
                 if filter_data_dict['work'] == 1:
                     # from collections import Counter
                     # data = Counter(elem[0] for elem in change_list)
-                    workday_point_list.append(day_point_list)
+                    if len(workday_point_list) < 4:
+                        workday_point_list.append(day_point_list)
                 else:
-                    offday_point_list.append(day_point_list)
+                    if len(offday_point_list) < 4:
+                        offday_point_list.append(day_point_list)
         
         if os.path.exists(os.path.join(save_model_path, participant_id)) is False:
             os.mkdir(os.path.join(save_model_path, participant_id))
 
         # Learn causality
-        workday_learner = HawkesSumGaussians(10, max_iter=20)
+        workday_learner = HawkesSumGaussians(5, max_iter=20)
         workday_learner.fit(workday_point_list)
         ineffective_df = pd.DataFrame(workday_learner.get_kernel_norms())
         ineffective_df.to_csv(os.path.join(save_model_path, participant_id, 'workday.csv.gz'), compression='gzip')
 
-        offday_learner = HawkesSumGaussians(10, max_iter=20)
+        offday_learner = HawkesSumGaussians(5, max_iter=20)
         offday_learner.fit(offday_point_list)
         ineffective_df = pd.DataFrame(offday_learner.get_kernel_norms())
         ineffective_df.to_csv(os.path.join(save_model_path, participant_id, 'offday.csv.gz'), compression='gzip')
