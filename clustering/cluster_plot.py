@@ -2,7 +2,6 @@
 
 import os
 import sys
-from configparser import ConfigParser
 import argparse
 
 ###########################################################
@@ -79,7 +78,7 @@ def main(tiles_data_path, cluster_config_path, experiement):
 
         omsignal_data_df = load_sensor_data.read_preprocessed_omsignal(data_config.omsignal_sensor_dict['preprocess_path'], participant_id)
         owl_in_one_df = load_sensor_data.read_preprocessed_owl_in_one(data_config.owl_in_one_sensor_dict['preprocess_path'], participant_id)
-        realizd_df = load_sensor_data.read_preprocessed_realizd(data_config.realizd_sensor_dict['preprocess_path'], participant_id)
+        realizd_df = load_sensor_data.read_preprocessed_realizd(os.path.join(data_config.realizd_sensor_dict['preprocess_path'], participant_id), participant_id)
         audio_df = load_sensor_data.read_preprocessed_audio(data_config.audio_sensor_dict['preprocess_path'], participant_id)
         fitbit_df, fitbit_mean, fitbit_std = load_sensor_data.read_preprocessed_fitbit_with_pad(data_config, participant_id)
         
@@ -95,9 +94,8 @@ def main(tiles_data_path, cluster_config_path, experiement):
         ###########################################################
         cluster_plot = plot.Plot(data_config=data_config, primary_unit=primary_unit, shift=shift)
 
-        cluster_plot.plot_app_survey(participant_id, fitbit_df=fitbit_df, fitbit_summary_df=fitbit_summary_df, audio_df=audio_df,
-                                     app_survey_df=participant_app_survey, segmentation_df=segmentation_df, omsignal_data_df=omsignal_data_df,
-                                     realizd_df=realizd_df, owl_in_one_df=owl_in_one_df)
+        cluster_plot.plot_app_survey(participant_id, fitbit_df=fitbit_df, fitbit_summary_df=fitbit_summary_df, audio_df=audio_df, app_survey_df=participant_app_survey,
+                                     segmentation_df=segmentation_df, omsignal_data_df=omsignal_data_df, realizd_df=realizd_df, owl_in_one_df=owl_in_one_df)
         
         del ggs_segmentation
 

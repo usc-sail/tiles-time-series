@@ -419,7 +419,8 @@ class Plot(object):
         ###########################################################
         # If folder not exist
         ###########################################################
-        save_folder = os.path.join(self.data_config.fitbit_sensor_dict['plot_path'], participant_id)
+        save_folder = os.path.join(self.data_config.fitbit_sensor_dict['plot_path'],
+                                   self.primary_unit + '_' + self.shift + '_' + participant_id)
         if not os.path.exists(save_folder):
             os.mkdir(save_folder)
     
@@ -428,6 +429,12 @@ class Plot(object):
         ###########################################################
         fitbit_df = fitbit_df.sort_index()
         
+        if len(app_survey_df) < 15:
+            return
+
+        if owl_in_one_df is None:
+            return 
+        
         for index, day_app_survey in app_survey_df.iterrows():
             ###########################################################
             # Define plot range
@@ -435,7 +442,7 @@ class Plot(object):
             # 'Question 12'
             utc_end_str = pd.to_datetime(day_app_survey.completed_ts_utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
             end_str = util.GetLocalTimestamp(utc_end_str)
-            start_str = (pd.to_datetime(end_str) - timedelta(hours=6)).strftime(date_time_format)[:-3]
+            start_str = (pd.to_datetime(end_str) - timedelta(hours=4)).strftime(date_time_format)[:-3]
 
             ###########################################################
             # Read data in the range
@@ -445,6 +452,9 @@ class Plot(object):
             fitbit_window_time_array = pd.to_datetime(fitbit_window_df.index)
             # If we have over 10% of missing data
             if len(fitbit_window_df) < 60 * 4:
+                continue
+            
+            if len(owl_in_one_df[start_str:end_str]) < 60 * 3:
                 continue
             
             if len(np.where(fitbit_window_array[:, 1] < 0)[0]) / len(fitbit_window_time_array) > 0.1:
@@ -477,6 +487,11 @@ class Plot(object):
             self.plot_sensor_data(ax, owl_in_one_df, start_str, end_str, stream='owl_in_one')
             ax[3].set_xlabel(self.primary_unit + '(' + self.shift + ')')
 
+            ###########################################################
+            # Plot audio data
+            ###########################################################
+            self.plot_sensor_data(ax[3], audio_df, start_str, end_str, stream='audio')
+            
             ###########################################################
             # Plot owl_in_one data
             ###########################################################

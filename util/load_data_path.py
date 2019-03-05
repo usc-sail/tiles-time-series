@@ -223,7 +223,7 @@ def load_filter_path(data_config, process_data_path, data_name='filter_data'):
     tmp_path = os.path.join(tmp_path, preprocess_str)
     create_folder(tmp_path)
     
-    data_config.audio_sensor_dict['preprocess_path'] = tmp_path
+    data_config.audio_sensor_dict['filter_path'] = tmp_path
 
 
 def load_segmentation_path(data_config, process_data_path, data_name='segmentation', filter_data=False):
