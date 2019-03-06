@@ -235,6 +235,110 @@ def predict(groundtruth_df, save_model_path, top_participant_id_list, index):
     return result
 
 
+def predict_demographic(groundtruth_df, save_model_path, top_participant_id_list, index):
+    data_dict_list = []
+    data_cluster_df, data_df = pd.DataFrame(), pd.DataFrame()
+    
+    predict_label_list = ['nurseyears', 'age']
+    
+    # group_label_list = ['gender', 'position']
+    group_label_list = ['shift', 'position']
+    
+    # groundtruth_df[predict_label_list] = groundtruth_df[predict_label_list].fillna(groundtruth_df[predict_label_list].mean())
+
+    feat_len = 0
+    for idx, participant_id in enumerate(top_participant_id_list):
+        
+        print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
+        
+        if os.path.exists(os.path.join(save_model_path, participant_id, 'offday.csv.gz')) is False:
+            continue
+        
+        cond1 = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id]['currentposition'].values[0] == 1
+        cond2 = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id]['currentposition'].values[0] == 2
+        cond3 = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id]['gender'].values[0] > 0
+        cond4 = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id]['Shift'].values[0] == 'Day shift'
+        if not cond3:
+            continue
+        
+        # if not cond1 and not cond2:
+        #    continue
+        
+        ineffective_df = pd.read_csv(os.path.join(save_model_path, participant_id, 'workday.csv.gz'), index_col=0)
+        ineffective_array = np.array(ineffective_df)
+        ineffective_array = np.delete(ineffective_array, 2, axis=0)
+        ineffective_array = np.delete(ineffective_array, 2, axis=1)
+        
+        participant_dict = {}
+        participant_dict['participant_id'] = participant_id
+        participant_dict['groundtruth_df'] = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id]
+        participant_dict['data'] = ineffective_array
+        
+        data_dict_list.append(participant_dict)
+        
+        row_df = pd.DataFrame(index=[participant_id])
+        for i in range(ineffective_array.shape[0] * ineffective_array.shape[1]):
+            row_df['feat' + str(i)] = np.reshape(ineffective_array, [1, ineffective_array.shape[0] * ineffective_array.shape[1]])[0][i]
+        
+        ineffective_df = pd.read_csv(os.path.join(save_model_path, participant_id, 'offday.csv.gz'), index_col=0)
+        ineffective_array = np.array(ineffective_df)
+        ineffective_array = np.delete(ineffective_array, 2, axis=0)
+        ineffective_array = np.delete(ineffective_array, 2, axis=1)
+        
+        for i in range(ineffective_array.shape[0] * ineffective_array.shape[1]):
+            row_df['feat' + str(ineffective_array.shape[0] * ineffective_array.shape[1] + i)] = np.reshape(ineffective_array, [1, ineffective_array.shape[0] * ineffective_array.shape[1]])[0][i]
+        
+        feat_len = len(row_df)
+        
+        invalid_data = False
+        for predict_label in predict_label_list:
+            cond_null = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id][predict_label].values[0] != ' '
+            if cond_null:
+                row_df[predict_label] = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id][predict_label].values[0]
+            else:
+                invalid_data = True
+        if invalid_data:
+            continue
+            
+        data_df = data_df.append(row_df)
+
+    data_df = data_df.dropna()
+    feat_cols = ['feat' + str(i) for i in range(feat_len)]
+    data_cluster_df = data_df[feat_cols]
+
+    X = np.array(data_cluster_df)
+
+    from sklearn.model_selection import GridSearchCV
+    from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+
+    param_grid = {"max_depth": [3, 4, 5],
+                  "min_samples_split": [2, 3, 5],
+                  "bootstrap": [True, False],
+                  'max_features': ['auto', 'sqrt'],
+                  'n_estimators': [5, 10, 20, 30]}
+    
+    # for group_label in group_label_list:
+    result = pd.DataFrame(columns=predict_label_list, index=[index])
+    for group_label in predict_label_list:
+        print('--------------------------------------------------')
+        print('predict %s' % group_label)
+        y = np.array(data_df[group_label])
+        clf = GridSearchCV(RandomForestRegressor(), param_grid, cv=5, scoring='r2')
+        clf.fit(X, y)
+        
+        print("Best parameters set found on development set:")
+        print()
+        print(clf.best_params_)
+        print(clf.best_score_)
+        print()
+        print("Grid scores on development set:")
+        print()
+        print('--------------------------------------------------')
+        result[group_label] = clf.best_score_
+    
+    return result
+
+
 def main(tiles_data_path, config_path, experiment):
     # Create Config
     process_data_path = os.path.abspath(os.path.join(os.pardir, os.pardir, 'data'))
@@ -263,17 +367,16 @@ def main(tiles_data_path, config_path, experiment):
     if os.path.exists(os.path.join(os.curdir, 'result')) is False:
         os.mkdir(os.path.join(os.curdir, 'result'))
     
-    save_model_path = os.path.join(os.curdir, 'result',
-                                   data_config.fitbit_sensor_dict['clustering_path'].split('/')[-1])
+    save_model_path = os.path.join(os.curdir, 'result', data_config.fitbit_sensor_dict['clustering_path'].split('/')[-1])
     if os.path.exists(save_model_path) is False:
         os.mkdir(save_model_path)
 
     final_result_df = pd.DataFrame()
-    for i in range(3, 8, 2):
+    for i in range(3, 6):
         final_result_per_day_setting_df = pd.DataFrame()
         for j in range(5):
             save_hawkes_kernel(data_config, top_participant_id_list, save_model_path, num_of_days=i)
-            result_df = predict(groundtruth_df, save_model_path, top_participant_id_list, j)
+            result_df = predict_demographic(groundtruth_df, save_model_path, top_participant_id_list, j)
             final_result_per_day_setting_df = final_result_per_day_setting_df.append(result_df)
 
         tmp_df = pd.DataFrame(np.mean(np.array(final_result_per_day_setting_df), axis=0).reshape([1, -1]), index=[i], columns=final_result_per_day_setting_df.columns)
