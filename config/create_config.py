@@ -12,8 +12,8 @@ fitbit_param = {'data_type': 'fitbit', 'imputation': 'iterative', 'feature': 'or
 '''
 fitbit_param = {'data_type': 'fitbit', 'imputation': 'iterative', 'feature': 'original', 'offset': 60, 'overlap': 0,
                 'preprocess_cols': ['HeartRatePPG', 'StepCount'],
-                'cluster_method': 'ticc', 'num_cluster': 5, 'ticc_window': 10,
-                'ticc_switch_penalty': 100, 'ticc_sparsity': 1e-2, 'ticc_cluster_days': 7,
+                'cluster_method': 'ticc', 'num_cluster': 6, 'ticc_window': 10,
+                'ticc_switch_penalty': 10, 'ticc_sparsity': 1e-1, 'ticc_cluster_days': 7,
                 'segmentation_method': None, 'segmentation_lamb': 10e0}
 
 

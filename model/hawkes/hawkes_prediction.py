@@ -170,8 +170,8 @@ def predict(groundtruth_df, save_model_path, top_participant_id_list, index):
         ###########################################################
         ineffective_df = pd.read_csv(os.path.join(save_model_path, participant_id, 'workday.csv.gz'), index_col=0)
         ineffective_array = np.array(ineffective_df)
-        ineffective_array = np.delete(ineffective_array, 5, axis=0)
-        ineffective_array = np.delete(ineffective_array, 5, axis=1)
+        ineffective_array = np.delete(ineffective_array, 2, axis=0)
+        ineffective_array = np.delete(ineffective_array, 2, axis=1)
 
         participant_dict = {}
         participant_dict['participant_id'] = participant_id
@@ -187,8 +187,8 @@ def predict(groundtruth_df, save_model_path, top_participant_id_list, index):
     
         ineffective_df = pd.read_csv(os.path.join(save_model_path, participant_id, 'offday.csv.gz'), index_col=0)
         ineffective_array = np.array(ineffective_df)
-        ineffective_array = np.delete(ineffective_array, 5, axis=0)
-        ineffective_array = np.delete(ineffective_array, 5, axis=1)
+        ineffective_array = np.delete(ineffective_array, 2, axis=0)
+        ineffective_array = np.delete(ineffective_array, 2, axis=1)
         
         for i in range(ineffective_array.shape[0] * ineffective_array.shape[1]):
             row_df['feat' + str(ineffective_array.shape[0] * ineffective_array.shape[1] + i)] = np.reshape(ineffective_array, [1, ineffective_array.shape[0] * ineffective_array.shape[1]])[0][i]
