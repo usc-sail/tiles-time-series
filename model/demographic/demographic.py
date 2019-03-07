@@ -107,6 +107,9 @@ def main(tiles_data_path, config_path, experiment):
                         'supervise', 'supervise_size', 'employer_duration', 'income',
                         'commute_type', 'commute_time', 'nurseyears', 'housing', 'overtime']
 
+    demographic_cols = ['gender', 'age', 'language', 'income',
+                        'nurseyears', 'housing', 'overtime']
+
     ml_df = groundtruth_df[demographic_cols+igtb_cols]
     ml_df[~(ml_df >= 0)] = np.nan
     ml_df = ml_df.dropna()
@@ -132,6 +135,7 @@ def main(tiles_data_path, config_path, experiment):
     for index, row_series in ml_df.iterrows():
         ml_df.loc[index, 'age'] = 1 if ml_df.loc[index, 'age'] <= 40 else 2
         ml_df.loc[index, 'nurseyears'] = 1 if int(ml_df.loc[index, 'nurseyears']) <= 15 else 2
+        ml_df.loc[index, 'overtime'] = int(int(ml_df.loc[index, 'nurseyears']) / 10)
         
     # Read feature and label
     feature_df, label_df = ml_df[demographic_cols], ml_df[igtb_cols]
@@ -148,7 +152,7 @@ def main(tiles_data_path, config_path, experiment):
         # Append the score
         final_result_df = final_result_df.append(result_df)
         # Save the score
-        final_result_df.to_csv(os.path.join(os.curdir, 'result', 'result.csv'))
+        final_result_df.to_csv(os.path.join(os.curdir, 'result', 'result_condense.csv'))
     
 
 if __name__ == '__main__':

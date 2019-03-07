@@ -122,13 +122,26 @@ def predict(groundtruth_df, save_model_path, top_participant_id_list, index):
     
     predict_label_list = ['neu_igtb', 'con_igtb', 'ext_igtb', 'agr_igtb', 'ope_igtb',
                           'pos_af_igtb', 'neg_af_igtb', 'stai_igtb', 'audit_igtb',
-                          'shipley_abs_igtb', 'shipley_voc_igtb',
+                          'shipley_abs_igtb', 'shipley_voc_igtb', 'Inflexbility', 'Flexbility',
                           'itp_igtb', 'irb_igtb', 'iod_id_igtb', 'iod_od_igtb', 'ocb_igtb']
     
     # group_label_list = ['gender', 'position']
-    group_label_list = ['shift', 'position']
-    
+    group_label_list = ['shift', 'position', 'neu_igtb', 'con_igtb', 'ext_igtb', 'agr_igtb', 'ope_igtb',
+                        'fatigue', 'Inflexbility', 'Flexbility']
     groundtruth_df[predict_label_list] = groundtruth_df[predict_label_list].fillna(groundtruth_df[predict_label_list].mean())
+
+    mean_dict = {'neu_igtb': np.nanmean(groundtruth_df['neu_igtb']),
+                 'con_igtb': np.nanmean(groundtruth_df['con_igtb']),
+                 'ext_igtb': np.nanmean(groundtruth_df['ext_igtb']),
+                 'agr_igtb': np.nanmean(groundtruth_df['agr_igtb']),
+                 'ope_igtb': np.nanmean(groundtruth_df['ope_igtb']),
+                 'Inflexbility': np.nanmean(groundtruth_df['Inflexbility']),
+                 'Flexbility': np.nanmean(groundtruth_df['Flexbility'])}
+    
+    fitbit_cols = ['Cardio_caloriesOut_mean', 'Cardio_caloriesOut_std', 'Cardio_minutes_mean', 'Cardio_minutes_std',
+                   'Peak_caloriesOut_mean', 'Peak_caloriesOut_std', 'Peak_minutes_mean', 'Peak_minutes_std',
+                   'Fat_Burn_caloriesOut_mean', 'Fat_Burn_caloriesOut_std', 'NumberSteps_mean', 'NumberSteps_std',
+                   'RestingHeartRate_std', 'SleepMinutesInBed_mean', 'SleepMinutesInBed_std', 'SleepEfficiency_mean', 'SleepEfficiency_std']
 
     for idx, participant_id in enumerate(top_participant_id_list):
     
@@ -144,13 +157,21 @@ def predict(groundtruth_df, save_model_path, top_participant_id_list, index):
         if not cond3:
             continue
 
-        # if not cond1 and not cond2:
-        #    continue
-    
+        ###########################################################
+        # Read Fitbit summary
+        ###########################################################
+        fitbit_summary_path = load_data_path.load_fitbit_summary_path(tiles_data_path, data_name='3_preprocessed_data')
+
+        fitbit_data_dict = load_sensor_data.read_fitbit(fitbit_summary_path, participant_id)
+        fitbit_summary_df = fitbit_data_dict['summary']
+
+        ###########################################################
+        # Read hawkes feature
+        ###########################################################
         ineffective_df = pd.read_csv(os.path.join(save_model_path, participant_id, 'workday.csv.gz'), index_col=0)
         ineffective_array = np.array(ineffective_df)
-        ineffective_array = np.delete(ineffective_array, 2, axis=0)
-        ineffective_array = np.delete(ineffective_array, 2, axis=1)
+        ineffective_array = np.delete(ineffective_array, 5, axis=0)
+        ineffective_array = np.delete(ineffective_array, 5, axis=1)
 
         participant_dict = {}
         participant_dict['participant_id'] = participant_id
@@ -158,21 +179,44 @@ def predict(groundtruth_df, save_model_path, top_participant_id_list, index):
         participant_dict['data'] = ineffective_array
     
         data_dict_list.append(participant_dict)
-    
+        
+        # Hawkes features
         row_df = pd.DataFrame(index=[participant_id])
         for i in range(ineffective_array.shape[0] * ineffective_array.shape[1]):
             row_df['feat' + str(i)] = np.reshape(ineffective_array, [1, ineffective_array.shape[0] * ineffective_array.shape[1]])[0][i]
     
         ineffective_df = pd.read_csv(os.path.join(save_model_path, participant_id, 'offday.csv.gz'), index_col=0)
         ineffective_array = np.array(ineffective_df)
-        ineffective_array = np.delete(ineffective_array, 2, axis=0)
-        ineffective_array = np.delete(ineffective_array, 2, axis=1)
+        ineffective_array = np.delete(ineffective_array, 5, axis=0)
+        ineffective_array = np.delete(ineffective_array, 5, axis=1)
         
         for i in range(ineffective_array.shape[0] * ineffective_array.shape[1]):
             row_df['feat' + str(ineffective_array.shape[0] * ineffective_array.shape[1] + i)] = np.reshape(ineffective_array, [1, ineffective_array.shape[0] * ineffective_array.shape[1]])[0][i]
     
         data_cluster_df = data_cluster_df.append(row_df)
-    
+        
+        # Summary features
+        row_df['Cardio_caloriesOut_mean'] = np.nanmean(fitbit_summary_df.Cardio_caloriesOut)
+        row_df['Cardio_caloriesOut_std'] = np.nanstd(fitbit_summary_df.Cardio_caloriesOut)
+        row_df['Cardio_minutes_mean'] = np.nanmean(fitbit_summary_df.Cardio_minutes)
+        row_df['Cardio_minutes_std'] = np.nanstd(fitbit_summary_df.Cardio_minutes)
+        
+        row_df['Peak_caloriesOut_mean'] = np.nanmean(fitbit_summary_df.Peak_caloriesOut)
+        row_df['Peak_caloriesOut_std'] = np.nanstd(fitbit_summary_df.Peak_caloriesOut)
+        row_df['Peak_minutes_mean'] = np.nanmean(fitbit_summary_df.Peak_minutes)
+        row_df['Peak_minutes_std'] = np.nanstd(fitbit_summary_df.Peak_minutes)
+        
+        row_df['Fat_Burn_caloriesOut_mean'] = np.nanmean(fitbit_summary_df['Fat Burn_caloriesOut'])
+        row_df['Fat_Burn_caloriesOut_std'] = np.nanstd(fitbit_summary_df['Fat Burn_caloriesOut'])
+        row_df['NumberSteps_mean'] = np.nanmean(fitbit_summary_df.NumberSteps)
+        row_df['NumberSteps_std'] = np.nanstd(fitbit_summary_df.NumberSteps)
+        row_df['RestingHeartRate_std'] = np.nanstd(fitbit_summary_df.RestingHeartRate)
+        
+        row_df['SleepMinutesInBed_mean'] = np.nanmean(fitbit_summary_df.SleepMinutesInBed)
+        row_df['SleepMinutesInBed_std'] = np.nanstd(fitbit_summary_df.SleepMinutesInBed)
+        row_df['SleepEfficiency_mean'] = np.nanmean(np.array(list(fitbit_summary_df.Sleep1Efficiency) + list(fitbit_summary_df.Sleep2Efficiency)))
+        row_df['SleepEfficiency_std'] = np.nanstd(np.array(list(fitbit_summary_df.Sleep1Efficiency) + list(fitbit_summary_df.Sleep2Efficiency)))
+        
         for predict_label in predict_label_list:
             row_df[predict_label] = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id][predict_label].values[0]
     
@@ -187,29 +231,45 @@ def predict(groundtruth_df, save_model_path, top_participant_id_list, index):
                     row_df[group_label] = 1
                 else:
                     row_df[group_label] = 2
+            elif 'igtb' in group_label or 'Flexbility' in group_label or 'Inflexbility' in group_label:
+                score = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id][group_label].values[0]
+                cond_igtb = score >= mean_dict[group_label]
+
+                if cond_igtb:
+                    row_df[group_label] = 1
+                else:
+                    row_df[group_label] = 2
+            elif group_label == 'fatigue':
+                score = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id][group_label].values[0]
+                if score == ' ' or score == 'nan' or score == np.nan:
+                    row_df[group_label] = 1
+                else:
+                    if float(score) > 60:
+                        row_df[group_label] = 1
+                    else:
+                        row_df[group_label] = 2
+                    
             else:
                 row_df[group_label] = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id][group_label].values[0]
     
         data_df = data_df.append(row_df)
 
-    from sklearn.svm import SVR, SVC
-    from sklearn.metrics import r2_score
-
-    from sklearn.decomposition import PCA
-    pca = PCA(n_components=20)
-    X = pca.fit_transform(np.array(data_cluster_df))
     X = np.array(data_cluster_df)
+
+    for group_label in group_label_list:
+        print('label: %s' % group_label)
+        print('class balance: %d, %d, %.2f' % (len(data_df.loc[data_df[group_label] == 1]),
+                                               len(data_df.loc[data_df[group_label] == 2]),
+                                               len(data_df.loc[data_df[group_label] == 1]) / len(data_df)))
 
     from sklearn.model_selection import GridSearchCV
     from sklearn.ensemble import RandomForestClassifier
 
-    tuned_parameters = [{'kernel': ['rbf'], 'gamma': [1e2, 1e-3, 1e-4], 'C': [1, 10, 100, 1000]},
-                        {'kernel': ['linear'], 'C': [1, 10, 100, 1000]}]
-
-    param_grid = {"max_depth": [3, 5, 6],
-                  "max_features": [5, 10, 15],
-                  "min_samples_split": [2, 3, 10],
+    param_grid = {"max_depth": [4, 5, 6],
+                  # "max_features": [5, 10, 15],
+                  "min_samples_split": [2, 3, 5],
                   "bootstrap": [True, False],
+                  "n_estimators": [10, 20, 30],
                   "criterion": ["gini", "entropy"]}
 
     # for group_label in group_label_list:
@@ -218,8 +278,7 @@ def predict(groundtruth_df, save_model_path, top_participant_id_list, index):
         print('--------------------------------------------------')
         print('predict %s' % group_label)
         y = np.array(data_df[group_label])
-        svc = SVC()
-        clf = GridSearchCV(RandomForestClassifier(n_estimators=20), param_grid, cv=5, scoring='f1')
+        clf = GridSearchCV(RandomForestClassifier(), param_grid, cv=5, scoring='f1')
         clf.fit(X, y)
     
         print("Best parameters set found on development set:")
@@ -231,8 +290,27 @@ def predict(groundtruth_df, save_model_path, top_participant_id_list, index):
         print()
         print('--------------------------------------------------')
         result[group_label] = clf.best_score_
+
+    fitbit_result = pd.DataFrame(columns=group_label_list, index=[index])
+    X = np.array(data_df[fitbit_cols])
+    for group_label in group_label_list:
+        print('--------------------------------------------------')
+        print('predict %s' % group_label)
+        y = np.array(data_df[group_label])
+        clf = GridSearchCV(RandomForestClassifier(), param_grid, cv=5, scoring='f1')
+        clf.fit(X, y)
     
-    return result
+        print("Best parameters set found on development set:")
+        print()
+        print(clf.best_params_)
+        print(clf.best_score_)
+        print()
+        print("Grid scores on development set:")
+        print()
+        print('--------------------------------------------------')
+        fitbit_result[group_label] = clf.best_score_
+    
+    return result, fitbit_result
 
 
 def predict_demographic(groundtruth_df, save_model_path, top_participant_id_list, index):
@@ -348,7 +426,7 @@ def main(tiles_data_path, config_path, experiment):
     
     # Load all data path according to config file
     load_data_path.load_all_available_path(data_config, process_data_path, filter_data=True,
-                                           preprocess_data_identifier='preprocess_data',
+                                           preprocess_data_identifier='preprocess',
                                            segmentation_data_identifier='segmentation',
                                            filter_data_identifier='filter_data',
                                            clustering_data_identifier='clustering')
@@ -371,17 +449,35 @@ def main(tiles_data_path, config_path, experiment):
     if os.path.exists(save_model_path) is False:
         os.mkdir(save_model_path)
 
-    final_result_df = pd.DataFrame()
+    for index, row_series in groundtruth_df.iterrows():
+        # Extra process for feature
+        groundtruth_df.loc[index, 'nurseyears'] = groundtruth_df.loc[index, 'nurseyears'] if groundtruth_df.loc[index, 'nurseyears'] != ' ' else np.nan
+        groundtruth_df.loc[index, 'housing'] = float(groundtruth_df.loc[index, 'housing']) if groundtruth_df.loc[index, 'housing'] != ' ' else np.nan
+        groundtruth_df.loc[index, 'overtime'] = float(groundtruth_df.loc[index, 'overtime']) if groundtruth_df.loc[index, 'overtime'] != ' ' else np.nan
+        
+        # Extra process for label
+        groundtruth_df.loc[index, 'Flexbility'] = float(groundtruth_df.loc[index, 'Flexbility']) if groundtruth_df.loc[index, 'Flexbility'] != ' ' else np.nan
+        groundtruth_df.loc[index, 'Inflexbility'] = float(groundtruth_df.loc[index, 'Inflexbility']) if groundtruth_df.loc[index, 'Inflexbility'] != ' ' else np.nan
+
+    final_result_df, fitbit_final_result_df = pd.DataFrame(), pd.DataFrame()
+    
     for i in range(3, 6):
-        final_result_per_day_setting_df = pd.DataFrame()
+        final_result_per_day_setting_df, final_fitbit_result_per_day_setting_df = pd.DataFrame(), pd.DataFrame()
         for j in range(5):
             save_hawkes_kernel(data_config, top_participant_id_list, save_model_path, num_of_days=i)
-            result_df = predict_demographic(groundtruth_df, save_model_path, top_participant_id_list, j)
+            # result_df = predict_demographic(groundtruth_df, save_model_path, top_participant_id_list, j)
+            result_df, fitbit_result_df = predict(groundtruth_df, save_model_path, top_participant_id_list, j)
             final_result_per_day_setting_df = final_result_per_day_setting_df.append(result_df)
+            final_fitbit_result_per_day_setting_df = final_fitbit_result_per_day_setting_df.append(fitbit_result_df)
 
         tmp_df = pd.DataFrame(np.mean(np.array(final_result_per_day_setting_df), axis=0).reshape([1, -1]), index=[i], columns=final_result_per_day_setting_df.columns)
         final_result_df = final_result_df.append(tmp_df)
-    
+        final_result_df.to_csv(os.path.join(os.curdir, 'result', 'result.csv'))
+
+        tmp_df = pd.DataFrame(np.mean(np.array(final_fitbit_result_per_day_setting_df), axis=0).reshape([1, -1]), index=[i], columns=final_fitbit_result_per_day_setting_df.columns)
+        fitbit_final_result_df = fitbit_final_result_df.append(tmp_df)
+        fitbit_final_result_df.to_csv(os.path.join(os.curdir, 'result', 'fitbit_result.csv'))
+
     print(final_result_df)
 
 
