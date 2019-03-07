@@ -9,15 +9,12 @@ import pandas as pd
 import numpy as np
 from random import shuffle
 
-from tick.dataset import fetch_hawkes_bund_data
-from tick.hawkes import HawkesConditionalLaw
-from tick.plot import plot_hawkes_kernel_norms
 
-from tick.hawkes import (SimuHawkes, SimuHawkesMulti, HawkesKernelExp,
-                         HawkesKernelTimeFunc, HawkesKernelPowerLaw,
-                         HawkesKernel0, HawkesSumGaussians)
+from tick.hawkes import (HawkesSumGaussians)
 
-from tick.hawkes import (HawkesCumulantMatching, SimuHawkesExpKernels, SimuHawkesMulti)
+from sklearn.model_selection import GridSearchCV
+from sklearn.ensemble import RandomForestClassifier
+
 
 ###########################################################
 # Change to your own library path
@@ -30,6 +27,21 @@ from TICC_solver import TICC
 import config
 import load_sensor_data, load_data_path, load_data_basic
 import parser
+
+# igtb values
+igtb_label_list = ['neu_igtb', 'con_igtb', 'ext_igtb', 'agr_igtb', 'ope_igtb',
+                   'pos_af_igtb', 'neg_af_igtb', 'stai_igtb', 'audit_igtb',
+                   'shipley_abs_igtb', 'shipley_voc_igtb', 'Inflexbility', 'Flexbility',
+                   'itp_igtb', 'irb_igtb', 'iod_id_igtb', 'iod_od_igtb', 'ocb_igtb']
+
+# fitbit columns
+fitbit_cols = ['Cardio_caloriesOut_mean', 'Cardio_caloriesOut_std', 'Cardio_minutes_mean', 'Cardio_minutes_std',
+               'Peak_caloriesOut_mean', 'Peak_caloriesOut_std', 'Peak_minutes_mean', 'Peak_minutes_std',
+               'Fat_Burn_caloriesOut_mean', 'Fat_Burn_caloriesOut_std', 'NumberSteps_mean', 'NumberSteps_std',
+               'RestingHeartRate_std', 'SleepMinutesInBed_mean', 'SleepMinutesInBed_std', 'SleepEfficiency_mean', 'SleepEfficiency_std']
+
+group_label_list = ['shift', 'position', 'fatigue', 'Inflexbility', 'Flexbility',
+                    'neu_igtb', 'con_igtb', 'ext_igtb', 'agr_igtb', 'ope_igtb']
 
 
 def save_hawkes_kernel(data_config, top_participant_id_list, save_model_path, num_of_days):
@@ -104,52 +116,132 @@ def save_hawkes_kernel(data_config, top_participant_id_list, save_model_path, nu
             os.mkdir(os.path.join(save_model_path, participant_id))
         
         # Learn causality
-        workday_learner = HawkesSumGaussians(5, max_iter=20)
+        workday_learner = HawkesSumGaussians(10, max_iter=20)
         workday_learner.fit(workday_point_list)
         ineffective_df = pd.DataFrame(workday_learner.get_kernel_norms())
         ineffective_df.to_csv(os.path.join(save_model_path, participant_id, 'workday.csv.gz'), compression='gzip')
         
-        offday_learner = HawkesSumGaussians(5, max_iter=20)
+        offday_learner = HawkesSumGaussians(10, max_iter=20)
         offday_learner.fit(offday_point_list)
         ineffective_df = pd.DataFrame(offday_learner.get_kernel_norms())
         ineffective_df.to_csv(os.path.join(save_model_path, participant_id, 'offday.csv.gz'), compression='gzip')
     print('Successfully cluster all participant filter data')
+
+
+def get_hawkes_kernel(data_config, participant_id, num_of_days, remove_col_index=2, num_of_gaussian=10):
+    
+    print('hawkes: participant: %s' % (participant_id))
+    row_df = pd.DataFrame(index=[participant_id])
+    
+    # Read per participant clustering
+    clustering_data_list = load_sensor_data.load_filter_clustering(data_config.fitbit_sensor_dict['clustering_path'], participant_id)
+    
+    # Read per participant data
+    participant_data_dict = load_sensor_data.load_filter_data(data_config.fitbit_sensor_dict['filter_path'], participant_id, filter_logic=None, valid_data_rate=0.9, threshold_dict={'min': 20, 'max': 28})
+    
+    if clustering_data_list is None or participant_data_dict is None:
+        return None
+    
+    # Read filtered data
+    filter_data_list = participant_data_dict['filter_data_list']
+    workday_point_list, offday_point_list = [], []
+    shuffle(clustering_data_list)
+    
+    # Iterate clustering data
+    for clustering_data_dict in clustering_data_list:
+        start = clustering_data_dict['start']
+        
+        for filter_data_index, filter_data_dict in enumerate(filter_data_list):
+            if np.abs((pd.to_datetime(start) - pd.to_datetime(filter_data_dict['start'])).total_seconds()) > 300:
+                continue
+            
+            cluster_data = clustering_data_dict['data']
+            
+            cluster_array = np.array(cluster_data)
+            change_point = cluster_array[1:] - cluster_array[:-1]
+            change_point_index = np.where(change_point != 0)
+            
+            change_list = [(cluster_array[0][0], 0)]
+            
+            for i in change_point_index[0]:
+                change_list.append((cluster_array[i + 1][0], i + 1))
+            
+            # Initiate list for counter
+            day_point_list = []
+            for i in range(data_config.fitbit_sensor_dict['num_cluster']):
+                day_point_list.append(np.zeros(1))
+            
+            for change_tuple in change_list:
+                day_point_list[int(change_tuple[0])] = np.append(day_point_list[int(change_tuple[0])],
+                                                                 change_tuple[1])
+            
+            for i, day_point_array in enumerate(day_point_list):
+                day_point_list[i] = np.array(len(cluster_array)) if len(day_point_list[i]) == 0 else np.sort(day_point_list[i][1:])
+                
+            # If we have no point data
+            if len(day_point_list) == 0:
+                continue
+            
+            if filter_data_dict['work'] == 1:
+                # from collections import Counter
+                # data = Counter(elem[0] for elem in change_list)
+                if len(workday_point_list) < num_of_days:
+                    workday_point_list.append(day_point_list)
+            else:
+                if len(offday_point_list) < num_of_days:
+                    offday_point_list.append(day_point_list)
+    
+    # Learn causality
+    workday_learner = HawkesSumGaussians(num_of_gaussian, max_iter=20)
+    workday_learner.fit(workday_point_list)
+    ineffective_array = np.array(workday_learner.get_kernel_norms())
+    ineffective_array = np.delete(ineffective_array, remove_col_index, axis=0)
+    ineffective_array = np.delete(ineffective_array, remove_col_index, axis=1)
+    for i in range(ineffective_array.shape[0] * ineffective_array.shape[1]):
+        row_df['feat' + str(i)] = np.reshape(ineffective_array, [1, ineffective_array.shape[0] * ineffective_array.shape[1]])[0][i]
+
+    offday_learner = HawkesSumGaussians(num_of_gaussian, max_iter=20)
+    offday_learner.fit(offday_point_list)
+    ineffective_array = np.array(offday_learner.get_kernel_norms())
+    ineffective_array = np.delete(ineffective_array, remove_col_index, axis=0)
+    ineffective_array = np.delete(ineffective_array, remove_col_index, axis=1)
+    
+    for i in range(ineffective_array.shape[0] * ineffective_array.shape[1]):
+        row_df['feat' + str(ineffective_array.shape[0] * ineffective_array.shape[1] + i)] = np.reshape(ineffective_array, [1, ineffective_array.shape[0] * ineffective_array.shape[1]])[0][i]
+    
+    return row_df
     
 
-def predict(groundtruth_df, save_model_path, top_participant_id_list, index):
-    data_dict_list = []
-    data_cluster_df, data_df = pd.DataFrame(), pd.DataFrame()
+def predict(data_config, groundtruth_df, top_participant_id_list, index, fitbit=False,
+            num_of_days=5, num_of_gaussian=10, remove_col_index=2):
     
-    predict_label_list = ['neu_igtb', 'con_igtb', 'ext_igtb', 'agr_igtb', 'ope_igtb',
-                          'pos_af_igtb', 'neg_af_igtb', 'stai_igtb', 'audit_igtb',
-                          'shipley_abs_igtb', 'shipley_voc_igtb', 'Inflexbility', 'Flexbility',
-                          'itp_igtb', 'irb_igtb', 'iod_id_igtb', 'iod_od_igtb', 'ocb_igtb']
+    # Initiate data df
+    hawkes_kernel_df, data_df = pd.DataFrame(), pd.DataFrame()
     
-    # group_label_list = ['gender', 'position']
-    group_label_list = ['shift', 'position', 'neu_igtb', 'con_igtb', 'ext_igtb', 'agr_igtb', 'ope_igtb',
-                        'fatigue', 'Inflexbility', 'Flexbility']
-    groundtruth_df[predict_label_list] = groundtruth_df[predict_label_list].fillna(groundtruth_df[predict_label_list].mean())
+    groundtruth_df[igtb_label_list] = groundtruth_df[igtb_label_list].fillna(groundtruth_df[igtb_label_list].mean())
 
-    mean_dict = {'neu_igtb': np.nanmean(groundtruth_df['neu_igtb']),
-                 'con_igtb': np.nanmean(groundtruth_df['con_igtb']),
-                 'ext_igtb': np.nanmean(groundtruth_df['ext_igtb']),
-                 'agr_igtb': np.nanmean(groundtruth_df['agr_igtb']),
-                 'ope_igtb': np.nanmean(groundtruth_df['ope_igtb']),
-                 'Inflexbility': np.nanmean(groundtruth_df['Inflexbility']),
-                 'Flexbility': np.nanmean(groundtruth_df['Flexbility'])}
+    mean_dict = {'neu_igtb': np.nanmean(groundtruth_df['neu_igtb']), 'con_igtb': np.nanmean(groundtruth_df['con_igtb']),
+                 'ext_igtb': np.nanmean(groundtruth_df['ext_igtb']), 'agr_igtb': np.nanmean(groundtruth_df['agr_igtb']),
+                 'ope_igtb': np.nanmean(groundtruth_df['ope_igtb']), 'Inflexbility': np.nanmean(groundtruth_df['Inflexbility']), 'Flexbility': np.nanmean(groundtruth_df['Flexbility'])}
     
-    fitbit_cols = ['Cardio_caloriesOut_mean', 'Cardio_caloriesOut_std', 'Cardio_minutes_mean', 'Cardio_minutes_std',
-                   'Peak_caloriesOut_mean', 'Peak_caloriesOut_std', 'Peak_minutes_mean', 'Peak_minutes_std',
-                   'Fat_Burn_caloriesOut_mean', 'Fat_Burn_caloriesOut_std', 'NumberSteps_mean', 'NumberSteps_std',
-                   'RestingHeartRate_std', 'SleepMinutesInBed_mean', 'SleepMinutesInBed_std', 'SleepEfficiency_mean', 'SleepEfficiency_std']
-
     for idx, participant_id in enumerate(top_participant_id_list):
     
+        ###########################################################
+        # Print out
+        ###########################################################
         print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
     
-        if os.path.exists(os.path.join(save_model_path, participant_id, 'offday.csv.gz')) is False:
+        ###########################################################
+        # Read hawkes feature, if None, continue
+        ###########################################################
+        row_df = get_hawkes_kernel(data_config, participant_id, num_of_days, remove_col_index=remove_col_index, num_of_gaussian=num_of_gaussian)
+        
+        if row_df is None:
             continue
-    
+
+        ###########################################################
+        # Conditions for label
+        ###########################################################
         cond1 = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id]['currentposition'].values[0] == 1
         cond2 = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id]['currentposition'].values[0] == 2
         cond3 = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id]['gender'].values[0] > 0
@@ -161,123 +253,74 @@ def predict(groundtruth_df, save_model_path, top_participant_id_list, index):
         # Read Fitbit summary
         ###########################################################
         fitbit_summary_path = load_data_path.load_fitbit_summary_path(tiles_data_path, data_name='3_preprocessed_data')
-
         fitbit_data_dict = load_sensor_data.read_fitbit(fitbit_summary_path, participant_id)
         fitbit_summary_df = fitbit_data_dict['summary']
 
         ###########################################################
-        # Read hawkes feature
+        # Feature data
         ###########################################################
-        ineffective_df = pd.read_csv(os.path.join(save_model_path, participant_id, 'workday.csv.gz'), index_col=0)
-        ineffective_array = np.array(ineffective_df)
-        ineffective_array = np.delete(ineffective_array, 2, axis=0)
-        ineffective_array = np.delete(ineffective_array, 2, axis=1)
-
-        participant_dict = {}
-        participant_dict['participant_id'] = participant_id
-        participant_dict['groundtruth_df'] = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id]
-        participant_dict['data'] = ineffective_array
-    
-        data_dict_list.append(participant_dict)
+        hawkes_kernel_df = hawkes_kernel_df.append(row_df)
         
-        # Hawkes features
-        row_df = pd.DataFrame(index=[participant_id])
-        for i in range(ineffective_array.shape[0] * ineffective_array.shape[1]):
-            row_df['feat' + str(i)] = np.reshape(ineffective_array, [1, ineffective_array.shape[0] * ineffective_array.shape[1]])[0][i]
-    
-        ineffective_df = pd.read_csv(os.path.join(save_model_path, participant_id, 'offday.csv.gz'), index_col=0)
-        ineffective_array = np.array(ineffective_df)
-        ineffective_array = np.delete(ineffective_array, 2, axis=0)
-        ineffective_array = np.delete(ineffective_array, 2, axis=1)
+        if fitbit:
+            # Summary features
+            row_df['Cardio_caloriesOut_mean'] = np.nanmean(fitbit_summary_df.Cardio_caloriesOut)
+            row_df['Cardio_caloriesOut_std'] = np.nanstd(fitbit_summary_df.Cardio_caloriesOut)
+            row_df['Cardio_minutes_mean'] = np.nanmean(fitbit_summary_df.Cardio_minutes)
+            row_df['Cardio_minutes_std'] = np.nanstd(fitbit_summary_df.Cardio_minutes)
+            
+            row_df['Peak_caloriesOut_mean'] = np.nanmean(fitbit_summary_df.Peak_caloriesOut)
+            row_df['Peak_caloriesOut_std'] = np.nanstd(fitbit_summary_df.Peak_caloriesOut)
+            row_df['Peak_minutes_mean'] = np.nanmean(fitbit_summary_df.Peak_minutes)
+            row_df['Peak_minutes_std'] = np.nanstd(fitbit_summary_df.Peak_minutes)
+            
+            row_df['Fat_Burn_caloriesOut_mean'] = np.nanmean(fitbit_summary_df['Fat Burn_caloriesOut'])
+            row_df['Fat_Burn_caloriesOut_std'] = np.nanstd(fitbit_summary_df['Fat Burn_caloriesOut'])
+            row_df['NumberSteps_mean'] = np.nanmean(fitbit_summary_df.NumberSteps)
+            row_df['NumberSteps_std'] = np.nanstd(fitbit_summary_df.NumberSteps)
+            row_df['RestingHeartRate_std'] = np.nanstd(fitbit_summary_df.RestingHeartRate)
+            
+            row_df['SleepMinutesInBed_mean'] = np.nanmean(fitbit_summary_df.SleepMinutesInBed)
+            row_df['SleepMinutesInBed_std'] = np.nanstd(fitbit_summary_df.SleepMinutesInBed)
+            row_df['SleepEfficiency_mean'] = np.nanmean(np.array(list(fitbit_summary_df.Sleep1Efficiency) + list(fitbit_summary_df.Sleep2Efficiency)))
+            row_df['SleepEfficiency_std'] = np.nanstd(np.array(list(fitbit_summary_df.Sleep1Efficiency) + list(fitbit_summary_df.Sleep2Efficiency)))
         
-        for i in range(ineffective_array.shape[0] * ineffective_array.shape[1]):
-            row_df['feat' + str(ineffective_array.shape[0] * ineffective_array.shape[1] + i)] = np.reshape(ineffective_array, [1, ineffective_array.shape[0] * ineffective_array.shape[1]])[0][i]
-    
-        data_cluster_df = data_cluster_df.append(row_df)
-        
-        # Summary features
-        row_df['Cardio_caloriesOut_mean'] = np.nanmean(fitbit_summary_df.Cardio_caloriesOut)
-        row_df['Cardio_caloriesOut_std'] = np.nanstd(fitbit_summary_df.Cardio_caloriesOut)
-        row_df['Cardio_minutes_mean'] = np.nanmean(fitbit_summary_df.Cardio_minutes)
-        row_df['Cardio_minutes_std'] = np.nanstd(fitbit_summary_df.Cardio_minutes)
-        
-        row_df['Peak_caloriesOut_mean'] = np.nanmean(fitbit_summary_df.Peak_caloriesOut)
-        row_df['Peak_caloriesOut_std'] = np.nanstd(fitbit_summary_df.Peak_caloriesOut)
-        row_df['Peak_minutes_mean'] = np.nanmean(fitbit_summary_df.Peak_minutes)
-        row_df['Peak_minutes_std'] = np.nanstd(fitbit_summary_df.Peak_minutes)
-        
-        row_df['Fat_Burn_caloriesOut_mean'] = np.nanmean(fitbit_summary_df['Fat Burn_caloriesOut'])
-        row_df['Fat_Burn_caloriesOut_std'] = np.nanstd(fitbit_summary_df['Fat Burn_caloriesOut'])
-        row_df['NumberSteps_mean'] = np.nanmean(fitbit_summary_df.NumberSteps)
-        row_df['NumberSteps_std'] = np.nanstd(fitbit_summary_df.NumberSteps)
-        row_df['RestingHeartRate_std'] = np.nanstd(fitbit_summary_df.RestingHeartRate)
-        
-        row_df['SleepMinutesInBed_mean'] = np.nanmean(fitbit_summary_df.SleepMinutesInBed)
-        row_df['SleepMinutesInBed_std'] = np.nanstd(fitbit_summary_df.SleepMinutesInBed)
-        row_df['SleepEfficiency_mean'] = np.nanmean(np.array(list(fitbit_summary_df.Sleep1Efficiency) + list(fitbit_summary_df.Sleep2Efficiency)))
-        row_df['SleepEfficiency_std'] = np.nanstd(np.array(list(fitbit_summary_df.Sleep1Efficiency) + list(fitbit_summary_df.Sleep2Efficiency)))
-        
-        for predict_label in predict_label_list:
-            row_df[predict_label] = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id][predict_label].values[0]
-    
         for group_label in group_label_list:
             if group_label == 'position':
-                if cond1 or cond2:
-                    row_df[group_label] = 1
-                else:
-                    row_df[group_label] = 2
+                row_df[group_label] = 1 if cond1 or cond2 else 2
             elif group_label == 'shift':
-                if cond4:
-                    row_df[group_label] = 1
-                else:
-                    row_df[group_label] = 2
+                row_df[group_label] = 1 if cond4 else 2
             elif 'igtb' in group_label or 'Flexbility' in group_label or 'Inflexbility' in group_label:
                 score = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id][group_label].values[0]
                 cond_igtb = score >= mean_dict[group_label]
-
-                if cond_igtb:
-                    row_df[group_label] = 1
-                else:
-                    row_df[group_label] = 2
+                row_df[group_label] = 1 if cond_igtb else 2
             elif group_label == 'fatigue':
                 score = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id][group_label].values[0]
                 if score == ' ' or score == 'nan' or score == np.nan:
                     row_df[group_label] = 1
                 else:
-                    if float(score) > 60:
-                        row_df[group_label] = 1
-                    else:
-                        row_df[group_label] = 2
-                    
+                    row_df[group_label] = 1 if float(score) > 60 else 2
             else:
                 row_df[group_label] = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id][group_label].values[0]
     
         data_df = data_df.append(row_df)
 
-    X = np.array(data_cluster_df)
-
     for group_label in group_label_list:
         print('label: %s' % group_label)
-        print('class balance: %d, %d, %.2f' % (len(data_df.loc[data_df[group_label] == 1]),
-                                               len(data_df.loc[data_df[group_label] == 2]),
+        print('class balance: %d, %d, %.2f' % (len(data_df.loc[data_df[group_label] == 1]), len(data_df.loc[data_df[group_label] == 2]),
                                                len(data_df.loc[data_df[group_label] == 1]) / len(data_df)))
 
-    from sklearn.model_selection import GridSearchCV
-    from sklearn.ensemble import RandomForestClassifier
-
-    param_grid = {"max_depth": [4, 5, 6],
-                  # "max_features": [5, 10, 15],
-                  "min_samples_split": [2, 3, 5],
-                  "bootstrap": [True, False],
-                  "n_estimators": [10, 20, 30],
-                  "criterion": ["gini", "entropy"]}
+    param_grid = {"max_depth": [4, 5, 6], "min_samples_split": [2, 3, 5], "bootstrap": [True, False], "n_estimators": [10, 20, 30], "criterion": ["gini", "entropy"]}
 
     # for group_label in group_label_list:
     result = pd.DataFrame(columns=group_label_list, index=[index])
     for group_label in group_label_list:
         print('--------------------------------------------------')
         print('predict %s' % group_label)
+        
+        # ML data
+        X = np.array(hawkes_kernel_df)
         y = np.array(data_df[group_label])
+        
         clf = GridSearchCV(RandomForestClassifier(), param_grid, cv=5, scoring='f1')
         clf.fit(X, y)
     
@@ -292,23 +335,26 @@ def predict(groundtruth_df, save_model_path, top_participant_id_list, index):
         result[group_label] = clf.best_score_
 
     fitbit_result = pd.DataFrame(columns=group_label_list, index=[index])
-    X = np.array(data_df[fitbit_cols])
-    for group_label in group_label_list:
-        print('--------------------------------------------------')
-        print('predict %s' % group_label)
-        y = np.array(data_df[group_label])
-        clf = GridSearchCV(RandomForestClassifier(), param_grid, cv=5, scoring='f1')
-        clf.fit(X, y)
-    
-        print("Best parameters set found on development set:")
-        print()
-        print(clf.best_params_)
-        print(clf.best_score_)
-        print()
-        print("Grid scores on development set:")
-        print()
-        print('--------------------------------------------------')
-        fitbit_result[group_label] = clf.best_score_
+    if fitbit:
+        for group_label in group_label_list:
+            print('--------------------------------------------------')
+            print('predict %s' % group_label)
+
+            # ML data
+            X = np.array(data_df[fitbit_cols])
+            y = np.array(data_df[group_label])
+            clf = GridSearchCV(RandomForestClassifier(), param_grid, cv=5, scoring='f1')
+            clf.fit(X, y)
+        
+            print("Best parameters set found on development set:")
+            print()
+            print(clf.best_params_)
+            print(clf.best_score_)
+            print()
+            print("Grid scores on development set:")
+            print()
+            print('--------------------------------------------------')
+            fitbit_result[group_label] = clf.best_score_
     
     return result, fitbit_result
 
@@ -459,24 +505,35 @@ def main(tiles_data_path, config_path, experiment):
         groundtruth_df.loc[index, 'Flexbility'] = float(groundtruth_df.loc[index, 'Flexbility']) if groundtruth_df.loc[index, 'Flexbility'] != ' ' else np.nan
         groundtruth_df.loc[index, 'Inflexbility'] = float(groundtruth_df.loc[index, 'Inflexbility']) if groundtruth_df.loc[index, 'Inflexbility'] != ' ' else np.nan
 
+    # Save data and path
     final_result_df, fitbit_final_result_df = pd.DataFrame(), pd.DataFrame()
-    
+
+    num_of_gaussian = 10
+    prefix = data_config.fitbit_sensor_dict['clustering_path'].split('_impute_')[0]
+    prefix = prefix.split('clustering/fitbit/')[1]
+    save_path = prefix + '_num_of_gaussian_' + str(num_of_gaussian) + '.csv'
+
+    # for i in range(3, 8, 2):
     for i in range(3, 6):
         final_result_per_day_setting_df, final_fitbit_result_per_day_setting_df = pd.DataFrame(), pd.DataFrame()
+        
         for j in range(5):
-            save_hawkes_kernel(data_config, top_participant_id_list, save_model_path, num_of_days=i)
+            # save_hawkes_kernel(data_config, top_participant_id_list, save_model_path, num_of_days=i)
             # result_df = predict_demographic(groundtruth_df, save_model_path, top_participant_id_list, j)
-            result_df, fitbit_result_df = predict(groundtruth_df, save_model_path, top_participant_id_list, j)
+            result_df, fitbit_result_df = predict(data_config, groundtruth_df, top_participant_id_list, j,
+                                                  fitbit=False, num_of_days=i, num_of_gaussian=8, remove_col_index=2)
             final_result_per_day_setting_df = final_result_per_day_setting_df.append(result_df)
             final_fitbit_result_per_day_setting_df = final_fitbit_result_per_day_setting_df.append(fitbit_result_df)
 
         tmp_df = pd.DataFrame(np.mean(np.array(final_result_per_day_setting_df), axis=0).reshape([1, -1]), index=[i], columns=final_result_per_day_setting_df.columns)
         final_result_df = final_result_df.append(tmp_df)
-        final_result_df.to_csv(os.path.join(os.curdir, 'result', 'result.csv'))
-
+        final_result_df.to_csv(os.path.join(os.curdir, 'result', save_path))
+        
+        '''
         tmp_df = pd.DataFrame(np.mean(np.array(final_fitbit_result_per_day_setting_df), axis=0).reshape([1, -1]), index=[i], columns=final_fitbit_result_per_day_setting_df.columns)
         fitbit_final_result_df = fitbit_final_result_df.append(tmp_df)
         fitbit_final_result_df.to_csv(os.path.join(os.curdir, 'result', 'fitbit_result.csv'))
+        '''
 
     print(final_result_df)
 

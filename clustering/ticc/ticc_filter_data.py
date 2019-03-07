@@ -30,7 +30,7 @@ def main(tiles_data_path, config_path, experiment):
     
     # Load all data path according to config file
     load_data_path.load_all_available_path(data_config, process_data_path, filter_data=True,
-                                           preprocess_data_identifier='preprocess_data',
+                                           preprocess_data_identifier='preprocess',
                                            segmentation_data_identifier='segmentation',
                                            filter_data_identifier='filter_data',
                                            clustering_data_identifier='clustering')
