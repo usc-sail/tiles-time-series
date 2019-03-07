@@ -630,7 +630,7 @@ class TICC:
             
             if os.path.exists(os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], self.data_dict_array[i]['participant_id'])) is False:
                 os.mkdir(os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], self.data_dict_array[i]['participant_id']))
-            save_cluster_path = os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], self.data_dict_array[i]['participant_id'], self.data_dict_array[i]['time'] + '_heart.csv.gz')
+            save_cluster_path = os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], self.data_dict_array[i]['participant_id'], self.data_dict_array[i]['time'] + '.csv.gz')
 
             data_per_segment = test_data[start_index:end_index, :]
             lle_all_points_clusters = self.smoothen_clusters(self.trained_model['cluster_mean_info'],

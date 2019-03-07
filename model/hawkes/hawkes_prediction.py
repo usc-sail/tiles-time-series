@@ -512,6 +512,15 @@ def main(tiles_data_path, config_path, experiment):
     prefix = data_config.fitbit_sensor_dict['clustering_path'].split('_impute_')[0]
     prefix = prefix.split('clustering/fitbit/')[1]
     save_path = prefix + '_num_of_gaussian_' + str(num_of_gaussian) + '.csv'
+    
+    '''
+    ticc_num_cluster_6_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 2
+    ticc_num_cluster_6_window_10_penalty_10.0_sparsity_0.1_cluster_days_7: 5
+    ticc_num_cluster_4_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 3
+    ticc_num_cluster_4_window_10_penalty_10.0_sparsity_0.1_cluster_days_7: 3
+    ticc_num_cluster_5_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 3
+    ticc_num_cluster_5_window_10_penalty_10.0_sparsity_0.1_cluster_days_7: 3
+    '''
 
     # for i in range(3, 8, 2):
     for i in range(3, 6):
@@ -521,7 +530,7 @@ def main(tiles_data_path, config_path, experiment):
             # save_hawkes_kernel(data_config, top_participant_id_list, save_model_path, num_of_days=i)
             # result_df = predict_demographic(groundtruth_df, save_model_path, top_participant_id_list, j)
             result_df, fitbit_result_df = predict(data_config, groundtruth_df, top_participant_id_list, j,
-                                                  fitbit=False, num_of_days=i, num_of_gaussian=8, remove_col_index=2)
+                                                  fitbit=False, num_of_days=i, num_of_gaussian=6, remove_col_index=2)
             final_result_per_day_setting_df = final_result_per_day_setting_df.append(result_df)
             final_fitbit_result_per_day_setting_df = final_fitbit_result_per_day_setting_df.append(fitbit_result_df)
 
