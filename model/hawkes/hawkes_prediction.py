@@ -44,90 +44,6 @@ group_label_list = ['shift', 'position', 'fatigue', 'Inflexbility', 'Flexbility'
                     'neu_igtb', 'con_igtb', 'ext_igtb', 'agr_igtb', 'ope_igtb']
 
 
-def save_hawkes_kernel(data_config, top_participant_id_list, save_model_path, num_of_days):
-    
-    for idx, participant_id in enumerate(top_participant_id_list):
-        
-        print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
-        
-        # Read per participant clustering
-        clustering_data_list = load_sensor_data.load_filter_clustering(data_config.fitbit_sensor_dict['clustering_path'], participant_id)
-        
-        # Read per participant data
-        participant_data_dict = load_sensor_data.load_filter_data(data_config.fitbit_sensor_dict['filter_path'], participant_id, filter_logic=None, valid_data_rate=0.9, threshold_dict={'min': 20, 'max': 28})
-        
-        if clustering_data_list is None or participant_data_dict is None:
-            continue
-        
-        filter_data_list = participant_data_dict['filter_data_list']
-        
-        workday_point_list, offday_point_list = [], []
-        
-        shuffle(clustering_data_list)
-        
-        # Iterate clustering data
-        for clustering_data_dict in clustering_data_list:
-            start = clustering_data_dict['start']
-            
-            for filter_data_index, filter_data_dict in enumerate(filter_data_list):
-                if np.abs((pd.to_datetime(start) - pd.to_datetime(filter_data_dict['start'])).total_seconds()) > 300:
-                    continue
-                
-                cluster_data = clustering_data_dict['data']
-                
-                cluster_array = np.array(cluster_data)
-                change_point = cluster_array[1:] - cluster_array[:-1]
-                change_point_index = np.where(change_point != 0)
-                
-                change_list = [(cluster_array[0][0], 0)]
-                
-                for i in change_point_index[0]:
-                    change_list.append((cluster_array[i + 1][0], i + 1))
-                
-                # Initiate list for counter
-                day_point_list = []
-                for i in range(data_config.fitbit_sensor_dict['num_cluster']):
-                    day_point_list.append(np.zeros(1))
-                
-                for change_tuple in change_list:
-                    day_point_list[int(change_tuple[0])] = np.append(day_point_list[int(change_tuple[0])],
-                                                                     change_tuple[1])
-                
-                for i, day_point_array in enumerate(day_point_list):
-                    if len(day_point_list[i]) == 0:
-                        day_point_list[i] = np.array(len(cluster_array))
-                    else:
-                        day_point_list[i] = np.sort(day_point_list[i][1:])
-                
-                # If we have no point data
-                if len(day_point_list) == 0:
-                    continue
-                
-                if filter_data_dict['work'] == 1:
-                    # from collections import Counter
-                    # data = Counter(elem[0] for elem in change_list)
-                    if len(workday_point_list) < num_of_days:
-                        workday_point_list.append(day_point_list)
-                else:
-                    if len(offday_point_list) < num_of_days:
-                        offday_point_list.append(day_point_list)
-        
-        if os.path.exists(os.path.join(save_model_path, participant_id)) is False:
-            os.mkdir(os.path.join(save_model_path, participant_id))
-        
-        # Learn causality
-        workday_learner = HawkesSumGaussians(10, max_iter=20)
-        workday_learner.fit(workday_point_list)
-        ineffective_df = pd.DataFrame(workday_learner.get_kernel_norms())
-        ineffective_df.to_csv(os.path.join(save_model_path, participant_id, 'workday.csv.gz'), compression='gzip')
-        
-        offday_learner = HawkesSumGaussians(10, max_iter=20)
-        offday_learner.fit(offday_point_list)
-        ineffective_df = pd.DataFrame(offday_learner.get_kernel_norms())
-        ineffective_df.to_csv(os.path.join(save_model_path, participant_id, 'offday.csv.gz'), compression='gzip')
-    print('Successfully cluster all participant filter data')
-
-
 def get_hawkes_kernel(data_config, participant_id, num_of_days, remove_col_index=2, num_of_gaussian=10):
     
     print('hawkes: participant: %s' % (participant_id))
@@ -508,7 +424,7 @@ def main(tiles_data_path, config_path, experiment):
     # Save data and path
     final_result_df, fitbit_final_result_df = pd.DataFrame(), pd.DataFrame()
 
-    num_of_gaussian = 10
+    num_of_gaussian = 4
     prefix = data_config.fitbit_sensor_dict['clustering_path'].split('_impute_')[0]
     prefix = prefix.split('clustering/fitbit/')[1]
     save_path = prefix + '_num_of_gaussian_' + str(num_of_gaussian) + '.csv'
@@ -530,7 +446,7 @@ def main(tiles_data_path, config_path, experiment):
             # save_hawkes_kernel(data_config, top_participant_id_list, save_model_path, num_of_days=i)
             # result_df = predict_demographic(groundtruth_df, save_model_path, top_participant_id_list, j)
             result_df, fitbit_result_df = predict(data_config, groundtruth_df, top_participant_id_list, j,
-                                                  fitbit=False, num_of_days=i, num_of_gaussian=6, remove_col_index=2)
+                                                  fitbit=False, num_of_days=i, num_of_gaussian=num_of_gaussian, remove_col_index=2)
             final_result_per_day_setting_df = final_result_per_day_setting_df.append(result_df)
             final_fitbit_result_per_day_setting_df = final_fitbit_result_per_day_setting_df.append(fitbit_result_df)
 
