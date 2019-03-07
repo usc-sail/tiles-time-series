@@ -4,6 +4,7 @@ import json
 import pytz
 import time
 import datetime
+import numpy as np
 import pandas as pd
 try:
    from StringIO import StringIO
@@ -40,7 +41,7 @@ def SortCsvRows(out_folder):
    return
 
 def GetLocalTimestamp(zulu_timestamp_list, parse_expr='%Y-%m-%dT%H:%M:%S.%fZ'):
-   is_list = isinstance(zulu_timestamp_list, list)
+   is_list = isinstance(zulu_timestamp_list, list) or isinstance(zulu_timestamp_list, np.ndarray)
    if not is_list:
       zulu_timestamp_list = [zulu_timestamp_list]
    if '%z' in parse_expr:
@@ -51,7 +52,7 @@ def GetLocalTimestamp(zulu_timestamp_list, parse_expr='%Y-%m-%dT%H:%M:%S.%fZ'):
    return time_stamps if is_list else time_stamps[0]
 
 def GetLocalTimestampFromUnixTime(unix_time_list):
-   is_list = isinstance(unix_time_list, list)
+   is_list = isinstance(unix_time_list, list) or isinstance(unix_time_list, np.ndarray)
    if not is_list:
       unix_time_list = [unix_time_list]
 
@@ -61,7 +62,7 @@ def GetLocalTimestampFromUnixTime(unix_time_list):
    return time_stamps if is_list else time_stamps[0]
 
 def GetUnixTimeFromTimestamp(timestamp_list, parse_expr='%Y-%m-%dT%H:%M:%S.%f'):
-   is_list = isinstance(timestamp_list, list)
+   is_list = isinstance(timestamp_list, list) or isinstance(timestamp_list, np.ndarray)
    if not is_list:
       timestamp_list = [timestamp_list]
    timestamp_datetimes = [datetime.datetime.now().strptime(t, parse_expr) for t in timestamp_list]
