@@ -27,7 +27,7 @@ def main(tiles_data_path, config_path, experiment):
     
     # Load all data path according to config file
     load_data_path.load_all_available_path(data_config, process_data_path,
-                                           preprocess_data_identifier='preprocess_data', segmentation_data_identifier='segmentation',
+                                           preprocess_data_identifier='preprocess', segmentation_data_identifier='segmentation',
                                            filter_data_identifier='filter_data', clustering_data_identifier='clustering')
     
     # Load Fitbit summary folder
@@ -65,14 +65,15 @@ def main(tiles_data_path, config_path, experiment):
         # Read other sensor data, the aim is to detect whether people workes during a day
         omsignal_data_df = load_sensor_data.read_preprocessed_omsignal(data_config.omsignal_sensor_dict['preprocess_path'], participant_id)
         owl_in_one_df = load_sensor_data.read_preprocessed_owl_in_one(data_config.owl_in_one_sensor_dict['preprocess_path'], participant_id)
+        realizd_df = load_sensor_data.read_preprocessed_realizd(os.path.join(data_config.realizd_sensor_dict['preprocess_path'], participant_id), participant_id)
         fitbit_df, fitbit_mean, fitbit_std = load_sensor_data.read_preprocessed_fitbit_with_pad(data_config, participant_id)
-
+        
         # If we don't have fitbit data, no need to process it
         if fitbit_df is None:
             print('%s has no fitbit data' % participant_id)
             continue
 
-        filter_class.filter_data(fitbit_df, fitbit_summary_df=fitbit_summary_df, omsignal_df=omsignal_data_df, mgt_df=participant_mgt, owl_in_one_df=owl_in_one_df)
+        filter_class.filter_data(fitbit_df, fitbit_summary_df=fitbit_summary_df, omsignal_df=omsignal_data_df, mgt_df=participant_mgt, owl_in_one_df=owl_in_one_df, realizd_df=realizd_df)
         
         del filter_class
 

@@ -424,7 +424,7 @@ def main(tiles_data_path, config_path, experiment):
     # Save data and path
     final_result_df, fitbit_final_result_df = pd.DataFrame(), pd.DataFrame()
 
-    num_of_gaussian = 4
+    num_of_gaussian = 6
     prefix = data_config.fitbit_sensor_dict['clustering_path'].split('_impute_')[0]
     prefix = prefix.split('clustering/fitbit/')[1]
     save_path = prefix + '_num_of_gaussian_' + str(num_of_gaussian) + '.csv'

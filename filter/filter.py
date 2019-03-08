@@ -30,22 +30,40 @@ class Filter(object):
         
         self.processed_data_dict_array = {}
     
-    def filter_data(self, data_df, fitbit_summary_df=None, mgt_df=None, omsignal_df=None, owl_in_one_df=None):
+    def filter_data(self, data_df, fitbit_summary_df=None, mgt_df=None, omsignal_df=None, owl_in_one_df=None, realizd_df=None):
         """
         Filter data based on the config file being initiated
         """
         participant_id = self.participant_id
         
-        ###########################################################
-        # If folder not exist
-        ###########################################################
-        save_participant_folder = os.path.join(self.data_config.fitbit_sensor_dict['filter_path'], participant_id)
-        if not os.path.exists(save_participant_folder):
-            os.mkdir(save_participant_folder)
-            
         sleep_df = pd.DataFrame()
         
-        if self.data_config.filter_method == 'awake_period':
+        if self.data_config.filter_method == 'realizd':
+            
+            ###########################################################
+            # If there is no realizd data or not enough data, return
+            ###########################################################
+            if realizd_df is None:
+                return
+
+            if len(realizd_df.loc[realizd_df['SecondsOnPhone'] > 0]) < 500:
+                return
+
+            ###########################################################
+            # Save the realizd data and fitbit data for now
+            ###########################################################
+            realizd_df.to_csv(os.path.join(self.data_config.realizd_sensor_dict['filter_path'], participant_id + '.csv.gz'), compression='gzip')
+            data_df.to_csv(os.path.join(self.data_config.fitbit_sensor_dict['filter_path'], participant_id + '.csv.gz'), compression='gzip')
+
+        elif self.data_config.filter_method == 'awake_period':
+    
+            ###########################################################
+            # If folder not exist
+            ###########################################################
+            save_participant_folder = os.path.join(self.data_config.fitbit_sensor_dict['filter_path'], participant_id)
+            if not os.path.exists(save_participant_folder):
+                os.mkdir(save_participant_folder)
+    
             ###########################################################
             # Parse sleep df
             ###########################################################
