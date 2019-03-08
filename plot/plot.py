@@ -217,20 +217,20 @@ class Plot(object):
             plt.close()
 
     def plot_cluster(self, participant_id, fitbit_df=None, realizd_df=None, owl_in_one_df=None, segmentation_df=None,
-                     fitbit_summary_df=None, mgt_df=None, omsignal_data_df=None, audio_df=None, cluster_df=None):
+                     fitbit_summary_df=None, mgt_df=None, omsignal_data_df=None, audio_df=None, cluster_df=None, save_folder=None):
             
         ###########################################################
         # If folder not exist
         ###########################################################
-        save_folder = os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], participant_id)
-        if not os.path.exists(save_folder):
-            os.mkdir(save_folder)
+        if save_folder is None:
+            save_folder = os.path.join(self.data_config.fitbit_sensor_dict['clustering_path'], participant_id)
+            if not os.path.exists(save_folder):
+                os.mkdir(save_folder)
     
         ###########################################################
         # Read data
         ###########################################################
         fitbit_df = fitbit_df.sort_index()
-        realizd_data_df = None if realizd_df is None else realizd_df
         interval = int((pd.to_datetime(fitbit_df.index[1]) - pd.to_datetime(fitbit_df.index[0])).total_seconds() / 60)
     
         ###########################################################
@@ -263,8 +263,9 @@ class Plot(object):
             ###########################################################
             # Read plot segmentation
             ###########################################################
-            plt_df = segmentation_df[day_start_str:day_end_str]
-            xposition = pd.to_datetime(list(plt_df.index))
+            if segmentation_df is not None:
+                plt_df = segmentation_df[day_start_str:day_end_str]
+                xposition = pd.to_datetime(list(plt_df.index))
             
             ###########################################################
             # Plot
@@ -339,12 +340,12 @@ class Plot(object):
                     
                         start_time = day_owl_in_one_df.index[unit_change_time + 1]
                         unit_type = day_owl_in_one_df.columns[unit_in_time[unit_change_time + 1]]
-        
-            for xc in xposition:
-                ax[0].axvline(x=xc, color='k', linestyle='--')
-                ax[1].axvline(x=xc, color='k', linestyle='--')
-                ax[2].axvline(x=xc, color='k', linestyle='--')
-                ax[3].axvline(x=xc, color='k', linestyle='--')
+            if segmentation_df is not None:
+                for xc in xposition:
+                    ax[0].axvline(x=xc, color='k', linestyle='--')
+                    ax[1].axvline(x=xc, color='k', linestyle='--')
+                    ax[2].axvline(x=xc, color='k', linestyle='--')
+                    ax[3].axvline(x=xc, color='k', linestyle='--')
         
             ax[0].set_xlim([day_time_array[0], day_time_array[-1]])
             ax[1].set_xlim([day_time_array[0], day_time_array[-1]])
@@ -419,8 +420,7 @@ class Plot(object):
         ###########################################################
         # If folder not exist
         ###########################################################
-        save_folder = os.path.join(self.data_config.fitbit_sensor_dict['plot_path'],
-                                   self.primary_unit + '_' + self.shift + '_' + participant_id)
+        save_folder = os.path.join(self.data_config.fitbit_sensor_dict['plot_path'], self.primary_unit + '_' + self.shift + '_' + participant_id)
         if not os.path.exists(save_folder):
             os.mkdir(save_folder)
     
@@ -433,7 +433,7 @@ class Plot(object):
             return
 
         if owl_in_one_df is None:
-            return 
+            return
         
         for index, day_app_survey in app_survey_df.iterrows():
             ###########################################################

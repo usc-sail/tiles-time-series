@@ -41,7 +41,7 @@ if __name__ == '__main__':
     parser.add_argument('--experiment', required=False, help="Name of the experiment, which will become the name of the output configuration file")
     args = parser.parse_args()
 
-    args.experiment = 'ticc' if args.experiment is None else args.experiment
+    args.experiment = 'baseline' if args.experiment is None else args.experiment
     config = Config()
     config.saveConfig(om_param, fitbit_param, owl_in_one_param, realizd_param, audio_param, segmentation_param, cluster_param, feature_engineering_param, global_param, args.experiment)
 

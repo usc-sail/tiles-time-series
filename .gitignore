@@ -8,3 +8,5 @@ data/
 **.swp
 config_file/
 *.cfg
+*.png
+*.csv

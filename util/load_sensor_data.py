@@ -31,6 +31,9 @@ def read_fitbit(path, participant_id):
     ppg_file_abs_path = os.path.join(path, participant_id + '_heartRate.csv.gz')
     step_file_abs_path = os.path.join(path, participant_id + '_stepCount.csv.gz')
     summary_file_abs_path = os.path.join(path, participant_id + '_dailySummary.csv.gz')
+    
+    if os.path.exists(ppg_file_abs_path) is False:
+        return None
 
     ppg_df = pd.read_csv(ppg_file_abs_path, index_col=0)
     ppg_df = ppg_df.sort_index()
@@ -186,6 +189,7 @@ def read_preprocessed_realizd(path, participant_id):
         return realizd_all_df
     else:
         return None
+
 
 def read_preprocessed_audio(path, participant_id):
     ###########################################################

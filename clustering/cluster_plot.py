@@ -45,6 +45,7 @@ def main(tiles_data_path, cluster_config_path, experiement):
     igtb_df = igtb_df.drop_duplicates(keep='first')
     survey_df = load_data_basic.read_app_survey(tiles_data_path)
     survey_df = survey_df.loc[survey_df['survey_type'] == 'psych_flex']
+    mgt_df = load_data_basic.read_MGT(tiles_data_path)
     
     ###########################################################
     # 2. Get participant id list
@@ -54,7 +55,7 @@ def main(tiles_data_path, cluster_config_path, experiement):
     top_participant_id_list = list(top_participant_id_df.index)
     top_participant_id_list.sort()
     
-    for idx, participant_id in enumerate(top_participant_id_list):
+    for idx, participant_id in enumerate(top_participant_id_list[120:]):
         
         print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
         ###########################################################
@@ -72,9 +73,10 @@ def main(tiles_data_path, cluster_config_path, experiement):
         primary_unit = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit[0]
         shift = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].Shift[0]
         participant_app_survey = survey_df.loc[survey_df['participant_id'] == participant_id]
+        participant_mgt = mgt_df.loc[mgt_df['uid'] == uid]
         
-        if len(participant_app_survey) == 0:
-            continue
+        #if len(participant_app_survey) == 0:
+        #    continue
 
         omsignal_data_df = load_sensor_data.read_preprocessed_omsignal(data_config.omsignal_sensor_dict['preprocess_path'], participant_id)
         owl_in_one_df = load_sensor_data.read_preprocessed_owl_in_one(data_config.owl_in_one_sensor_dict['preprocess_path'], participant_id)
@@ -85,17 +87,20 @@ def main(tiles_data_path, cluster_config_path, experiement):
         ###########################################################
         # 4. Read clustering and segmentation data, skip clustering
         ###########################################################
-        if os.path.exists(os.path.join(data_config.fitbit_sensor_dict['segmentation_path'], participant_id + '.csv.gz')) is False:
-            continue
-        segmentation_df = load_sensor_data.load_segmentation_data(data_config.fitbit_sensor_dict['segmentation_path'], participant_id)
+        # if os.path.exists(os.path.join(data_config.fitbit_sensor_dict['segmentation_path'], participant_id + '.csv.gz')) is False:
+        #    continue
+        # segmentation_df = load_sensor_data.load_segmentation_data(data_config.fitbit_sensor_dict['segmentation_path'], participant_id)
+        segmentation_df = None
         
         ###########################################################
         # 5. Plot
         ###########################################################
         cluster_plot = plot.Plot(data_config=data_config, primary_unit=primary_unit, shift=shift)
 
-        cluster_plot.plot_app_survey(participant_id, fitbit_df=fitbit_df, fitbit_summary_df=fitbit_summary_df, audio_df=audio_df, app_survey_df=participant_app_survey,
-                                     segmentation_df=segmentation_df, omsignal_data_df=omsignal_data_df, realizd_df=realizd_df, owl_in_one_df=owl_in_one_df)
+        # cluster_plot.plot_app_survey(participant_id, fitbit_df=fitbit_df, fitbit_summary_df=fitbit_summary_df, audio_df=audio_df, app_survey_df=participant_app_survey,
+        #                             segmentation_df=segmentation_df, omsignal_data_df=omsignal_data_df, realizd_df=realizd_df, owl_in_one_df=owl_in_one_df)
+        cluster_plot.plot_cluster(participant_id, fitbit_df=fitbit_df, fitbit_summary_df=fitbit_summary_df, audio_df=audio_df, mgt_df=participant_mgt,
+                                  segmentation_df=segmentation_df, omsignal_data_df=omsignal_data_df, realizd_df=realizd_df, owl_in_one_df=owl_in_one_df)
         
         del ggs_segmentation
 
