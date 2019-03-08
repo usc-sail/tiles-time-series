@@ -24,7 +24,7 @@ class Config(object):
         self.config = ConfigParser()
         
     def saveConfig(self, om_process_param, fitbit_process_param, owl_in_one_param, realizd_param, audio_param,
-                   segmentation_param, cluster_param, global_param, experiement):
+                   segmentation_param, cluster_param, feature_engineering_param, global_param, experiement):
     
         ###########################################################
         # Initiate OMSignal
@@ -86,6 +86,12 @@ class Config(object):
         self.config.set('audio', 'feature', audio_param['feature'])
         self.config.set('audio', 'preprocess_setting', 'offset_%d'%(int(audio_param['offset'])))
         self.config.set('audio', 'offset', str(audio_param['offset']))
+
+        ###########################################################
+        # Initiate feature engineering parameters
+        ###########################################################
+        self.config.add_section('feature_engineering')
+        self.config.set('feature_engineering', 'features', str(feature_engineering_param['features']))
         
         ###########################################################
         # Initiate global parameters
@@ -178,6 +184,12 @@ class Config(object):
         self.audio_sensor_dict['feature'] = self.getSetting('audio', 'feature')
         self.audio_sensor_dict['preprocess_setting'] = self.getSetting('audio', 'preprocess_setting')
         self.audio_sensor_dict['offset'] = self.getSetting('audio', 'offset')
+
+        ###########################################################
+        # Read feature engineering parameters
+        ###########################################################
+        self.feature_engineering_dict = {}
+        self.feature_engineering_dict['features'] = self.getSetting('feature_engineering', 'features')
         
         ###########################################################
         # Read global parameters
