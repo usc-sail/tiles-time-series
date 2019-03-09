@@ -30,7 +30,7 @@ class Filter(object):
         
         self.processed_data_dict_array = {}
     
-    def filter_data(self, data_df, fitbit_summary_df=None, mgt_df=None, omsignal_df=None, owl_in_one_df=None, realizd_df=None):
+    def filter_data(self, data_df, audio_df=None, fitbit_summary_df=None, mgt_df=None, omsignal_df=None, owl_in_one_df=None, realizd_df=None):
         """
         Filter data based on the config file being initiated
         """
@@ -54,6 +54,23 @@ class Filter(object):
             ###########################################################
             realizd_df.to_csv(os.path.join(self.data_config.realizd_sensor_dict['filter_path'], participant_id + '.csv.gz'), compression='gzip')
             data_df.to_csv(os.path.join(self.data_config.fitbit_sensor_dict['filter_path'], participant_id + '.csv.gz'), compression='gzip')
+
+        elif self.data_config.filter_method == 'audio':
+    
+            ###########################################################
+            # If there is no realizd data or not enough data, return
+            ###########################################################
+            if audio_df is None:
+                return
+            if owl_in_one_df is None:
+                return
+    
+            ###########################################################
+            # Save the realizd data and fitbit data for now
+            ###########################################################
+            owl_in_one_df.to_csv(os.path.join(self.data_config.owl_in_one_sensor_dict['filter_path'], participant_id + '.csv.gz'), compression='gzip')
+            data_df.to_csv(os.path.join(self.data_config.fitbit_sensor_dict['filter_path'], participant_id + '.csv.gz'), compression='gzip')
+            audio_df.to_csv(os.path.join(self.data_config.audio_sensor_dict['filter_path'], participant_id + '.csv.gz'), compression='gzip')
 
         elif self.data_config.filter_method == 'awake_period':
     
