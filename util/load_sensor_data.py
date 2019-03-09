@@ -439,3 +439,8 @@ def load_filter_clustering(path, participant_id):
         return_dict.append(data_dict)
     
     return return_dict
+
+
+def load_filter_fitbit_data(path, participant_id, filter_logic=None, threshold_dict=None, valid_data_rate=None):
+    # Read whole data df
+    data_df = pd.read_csv(os.path.join(path, participant_id, participant_id + '.csv.gz'), index_col=0)

@@ -160,6 +160,24 @@ def read_AllBasic(main_data_directory):
     return UserInfo
 
 
+def read_IGTB_sub(tiles_data_path):
+    igtb_pilot_df = pd.read_csv(os.path.join(tiles_data_path, 'ground_truth/IGTB', 'USC_PILOT_IGTB.csv'), index_col=2)
+    igtb_pilot_df = igtb_pilot_df.drop(index=['Name'])
+    
+    igtb_night_df = pd.read_csv(os.path.join(tiles_data_path, 'ground_truth/IGTB', 'USC_NIGHT_IGTB.csv'), index_col=2)
+    igtb_night_df = igtb_night_df.drop(index=['Name'])
+    
+    igtb_day_df = pd.read_csv(os.path.join(tiles_data_path, 'ground_truth/IGTB', 'USC_DAY_IGTB.csv'), index_col=2)
+    igtb_day_df = igtb_day_df.drop(index=['Name'])
+
+    igtb_df = pd.DataFrame()
+    igtb_df = igtb_df.append(igtb_pilot_df)
+    igtb_df = igtb_df.append(igtb_night_df)
+    igtb_df = igtb_df.append(igtb_day_df)
+    
+    return igtb_df
+
+
 # Load IGTB data per unit
 def read_IGTB_per_unit(user_df, participant_unit_dict):
     
