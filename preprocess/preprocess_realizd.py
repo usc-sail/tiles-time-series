@@ -17,6 +17,7 @@ from preprocess import Preprocess
 
 
 def main(tiles_data_path, config_path, experiment):
+    
     ###########################################################
     # 0. Read configs
     ###########################################################
@@ -26,7 +27,7 @@ def main(tiles_data_path, config_path, experiment):
     data_config.readConfigFile(config_path, experiment)
     
     # Load preprocess folder
-    load_data_path.load_preprocess_path(data_config, process_data_path, data_name='preprocess_data')
+    load_data_path.load_preprocess_path(data_config, process_data_path, data_name='preprocess')
     
     ###########################################################
     # 1. Read all participant

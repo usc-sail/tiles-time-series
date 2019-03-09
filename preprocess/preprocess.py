@@ -90,6 +90,9 @@ class Preprocess(object):
         print('Function: process_realizd')
         print('---------------------------------------------------------------------')
         self.preprocess_data_all_df = pd.DataFrame()
+        
+        if os.path.exists(os.path.join(self.data_config.realizd_sensor_dict['preprocess_path'], self.participant_id + '.csv.gz')) is True:
+            return
     
         ###########################################################
         # Get start and end time of a shift
