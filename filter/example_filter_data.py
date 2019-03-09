@@ -65,7 +65,7 @@ def main(tiles_data_path, config_path, experiment):
         # Read other sensor data, the aim is to detect whether people workes during a day
         omsignal_data_df = load_sensor_data.read_preprocessed_omsignal(data_config.omsignal_sensor_dict['preprocess_path'], participant_id)
         owl_in_one_df = load_sensor_data.read_preprocessed_owl_in_one(data_config.owl_in_one_sensor_dict['preprocess_path'], participant_id)
-        realizd_df = load_sensor_data.read_preprocessed_realizd(os.path.join(data_config.realizd_sensor_dict['preprocess_path'], participant_id), participant_id)
+        realizd_df = load_sensor_data.read_preprocessed_realizd(data_config.realizd_sensor_dict['preprocess_path'], participant_id)
         fitbit_df, fitbit_mean, fitbit_std = load_sensor_data.read_preprocessed_fitbit_with_pad(data_config, participant_id)
         audio_df = load_sensor_data.read_preprocessed_owl_in_one(data_config.audio_sensor_dict['preprocess_path'], participant_id)
 

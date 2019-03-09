@@ -8,6 +8,12 @@ import sys
 import numpy as np
 import pandas as pd
 
+import scipy.cluster.hierarchy as shc
+import matplotlib.pyplot as plt
+
+from sklearn.cluster import AgglomerativeClustering
+
+
 ###########################################################
 # Change to your own library path
 ###########################################################
@@ -69,9 +75,10 @@ def compute_igtb_std(filter_igtb):
             igtb_array = (igtb_array - np.min(igtb_array)) / (np.max(igtb_array) - np.min(igtb_array))
         else:
             igtb_array = (igtb_array - min_dict[col]) / (max_dict[col] - min_dict[col])
-        std_igtb_array = np.std(igtb_array)
+        std_igtb_array = np.nanstd(igtb_array)
         igtb_std_df.loc[col, 'igtb_std'] = std_igtb_array
-    
+        
+    return_std_df = igtb_std_df.sort_values(by=['igtb_std'])
     seq_rank = np.argsort(np.array(igtb_std_df).reshape([1, -1]))[0][::-1]
     final_dict = []
     
@@ -96,14 +103,24 @@ def compute_igtb_std(filter_igtb):
             row_df = pd.DataFrame(index=[participant_id])
             row_df['igtb_val'] = filter_igtb.loc[user_id, igtb_col]
             row_df['igtb_col'] = igtb_col
+            row_df['neu_igtb'] = filter_igtb.loc[user_id, 'neu_igtb']
+            row_df['stai_igtb'] = filter_igtb.loc[user_id, 'stai_igtb']
+            row_df['pos_af_igtb'] = filter_igtb.loc[user_id, 'pos_af_igtb']
+            row_df['neg_af_igtb'] = filter_igtb.loc[user_id, 'neg_af_igtb']
+            row_df['fatigue'] = float(filter_igtb.loc[user_id, 'fatigue'])
+            row_df['Flexbility'] = float(filter_igtb.loc[user_id, 'Flexbility'])
+            row_df['Inflexbility'] = float(filter_igtb.loc[user_id, 'Inflexbility'])
+            row_df['cluster'] = filter_igtb.loc[user_id, 'cluster']
             row_df['duration'] = float(filter_igtb.loc[user_id, 'employer_duration'])
+            row_df['age'] = float(filter_igtb.loc[user_id, 'age'])
             row_df['icu'] = 'ICU' if 'ICU' in filter_igtb.loc[user_id, 'PrimaryUnit'] or '5 North' in filter_igtb.loc[user_id, 'PrimaryUnit'] else 'Non-ICU'
             row_df['unit'] = filter_igtb.loc[user_id, 'PrimaryUnit']
             row_df['position'] = filter_igtb.loc[user_id, 'currentposition']
+            row_df['language'] = filter_igtb.loc[user_id, 'language']
             row_df['shift'] = filter_igtb.loc[user_id, 'Shift']
             row_df['supervise'] = float(filter_igtb.loc[user_id, 'supervise'])
             row_df['sex'] = filter_igtb.loc[user_id, 'Sex']
-            row_df['LifeSatisfaction'] = filter_igtb.loc[user_id, 'LifeSatisfaction']
+            row_df['LifeSatisfaction'] = float(filter_igtb.loc[user_id, 'LifeSatisfaction'])
             row_df['igtb_rank'] = index + 1
             row_df['igtb_status'] = 'high'
             final_df = final_df.append(row_df)
@@ -111,7 +128,7 @@ def compute_igtb_std(filter_igtb):
         igtb_dict['data'] = final_df
         final_dict.append(igtb_dict)
 
-    return final_dict
+    return final_dict, return_std_df
 
 
 def compute_igtb_sub_std(filter_igtb):
@@ -214,46 +231,21 @@ def main(tiles_data_path, config_path, experiment):
     filter_igtb = igtb_df[igtb_df['ParticipantID'].isin(filter_participant_id_list)]
     filter_igtb = filter_igtb.loc[filter_igtb['currentposition'] == 1]
     filter_igtb = filter_igtb.loc[filter_igtb['Shift'] == 'Day shift']
-    final_dict = compute_igtb_std(filter_igtb)
+    
+    '''
+    plt.figure(figsize=(10, 7))
+    plt.title("Customer Dendograms")
+    dend = shc.dendrogram(shc.linkage(np.array(filter_igtb[['neu_igtb', 'pos_af_igtb', 'neg_af_igtb', 'stai_igtb']]), method='ward'))
+    '''
+    
+    cluster = AgglomerativeClustering(n_clusters=3, affinity='euclidean', linkage='ward')
+    cluster_data = np.array(filter_igtb[['neu_igtb', 'pos_af_igtb', 'neg_af_igtb', 'stai_igtb']])
+    cluster_data = (cluster_data - np.mean(cluster_data, axis=0)) / np.std(cluster_data, axis=0)
+    cluster_array = cluster.fit_predict(cluster_data)
+    filter_igtb.loc[:, 'cluster'] = cluster_array
 
+    final_dict, igtb_std_df = compute_igtb_std(filter_igtb)
     # final_dict = compute_igtb_sub_std(filter_igtb)
-
-    load_sensor_data.load_filter_fitbit_data(data_config.fitbit_sensor_dict['filter_path'], participant_id)
-
-    final_df = pd.DataFrame()
-    
-    for index, i in enumerate(seq_rank):
-        igtb_col = igtb_std_df.index[i]
-        user_igtb = igtb_df[igtb_col]
-        
-        # Highest
-        user_rank_array = np.argsort(np.array(user_igtb).reshape([1, -1]))[0][::-1][:5]
-        user_id_list = igtb_df.index[user_rank_array]
-        
-        for user_id in user_id_list:
-            participant_id = igtb_df.loc[user_id, 'ParticipantID']
-            row_df = pd.DataFrame(index=[participant_id])
-            row_df['igtb_val'] = igtb_df.loc[user_id, igtb_col]
-            row_df['igtb_rank'] = index + 1
-            row_df['igtb_status'] = 'high'
-            row_df['igtb_col'] = igtb_col
-            final_df = final_df.append(row_df)
-        
-        # Lowest
-        user_rank_array = np.argsort(np.array(user_igtb).reshape([1, -1]))[0][:5]
-        user_id_list = igtb_df.index[user_rank_array]
-        
-        for user_id in user_id_list:
-            participant_id = igtb_df.loc[user_id, 'ParticipantID']
-            row_df = pd.DataFrame(index=[participant_id])
-            row_df['igtb_val'] = igtb_df.loc[user_id, igtb_col]
-            row_df['igtb_rank'] = index + 1
-            row_df['igtb_status'] = 'low'
-            row_df['igtb_col'] = igtb_col
-            final_df = final_df.append(row_df)
-    
-    final_df.to_csv('igtb_rank.csv')
-    print('Success!')
     
     ###########################################################
     # Plot code
@@ -265,9 +257,7 @@ def main(tiles_data_path, config_path, experiment):
     process_data_path = os.path.abspath(os.path.join(os.pardir, os.pardir, 'data'))
     
     data_config = config.Config()
-    data_config.readConfigFile(
-        os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'config_file')),
-        experiment)
+    data_config.readConfigFile(config_path, experiment)
     
     load_data_path.load_all_available_path(data_config, process_data_path)
     
@@ -283,45 +273,48 @@ def main(tiles_data_path, config_path, experiment):
     survey_df = survey_df.loc[survey_df['survey_type'] == 'psych_flex']
     mgt_df = load_data_basic.read_MGT(tiles_data_path)
     
-    final_df = final_df[60:100]
-    
-    for index, row_series in final_df.iterrows():
-        # row_series.igtb_status
+    for index, row_series in filter_igtb.iterrows():
         
-        if os.path.exists(os.path.join(row_series.igtb_col)) is False:
-            os.mkdir(os.path.join(row_series.igtb_col))
-        if os.path.exists(os.path.join(row_series.igtb_col, row_series.igtb_status)) is False:
-            os.mkdir(os.path.join(row_series.igtb_col, row_series.igtb_status))
-        if os.path.exists(os.path.join(row_series.igtb_col, row_series.igtb_status, index)) is False:
-            os.mkdir(os.path.join(row_series.igtb_col, row_series.igtb_status, index))
+        participant_id = row_series.ParticipantID
+        cluster = row_series.cluster
         
-        print('read_preprocess_data: participant: %s' % (index))
+        max_pos_igtb = np.nanmean(filter_igtb.loc[filter_igtb['cluster'] == cluster].pos_af_igtb)
+        
+        print('read_preprocess_data: participant: %s' % (participant_id))
         
         ###########################################################
         # 3. Read summary data, mgt, omsignal
         ###########################################################
-        fitbit_data_dict = load_sensor_data.read_fitbit(fitbit_summary_path, index)
+        fitbit_data_dict = load_sensor_data.read_fitbit(fitbit_summary_path, participant_id)
         if fitbit_data_dict is None:
             continue
         
         fitbit_summary_df = fitbit_data_dict['summary']
         
-        uid = list(igtb_df.loc[igtb_df['ParticipantID'] == index].index)[0]
-        primary_unit = igtb_df.loc[igtb_df['ParticipantID'] == index].PrimaryUnit[0]
-        shift = igtb_df.loc[igtb_df['ParticipantID'] == index].Shift[0]
-        participant_app_survey = survey_df.loc[survey_df['participant_id'] == index]
+        uid = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].index)[0]
+        primary_unit = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit[0]
+        shift = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].Shift[0]
+        participant_app_survey = survey_df.loc[survey_df['participant_id'] == participant_id]
         participant_mgt = mgt_df.loc[mgt_df['uid'] == uid]
         
-        omsignal_data_df = load_sensor_data.read_preprocessed_omsignal(
-                data_config.omsignal_sensor_dict['preprocess_path'], index)
-        owl_in_one_df = load_sensor_data.read_preprocessed_owl_in_one(
-                data_config.owl_in_one_sensor_dict['preprocess_path'], index)
-        realizd_df = load_sensor_data.read_preprocessed_realizd(
-            os.path.join(data_config.realizd_sensor_dict['preprocess_path'], index), index)
-        audio_df = load_sensor_data.read_preprocessed_audio(data_config.audio_sensor_dict['preprocess_path'], index)
-        fitbit_df, fitbit_mean, fitbit_std = load_sensor_data.read_preprocessed_fitbit_with_pad(data_config, index)
+        omsignal_data_df = load_sensor_data.read_preprocessed_omsignal(data_config.omsignal_sensor_dict['preprocess_path'], participant_id)
+        owl_in_one_df = load_sensor_data.read_preprocessed_owl_in_one(data_config.owl_in_one_sensor_dict['preprocess_path'], participant_id)
+        realizd_df = load_sensor_data.read_preprocessed_realizd(os.path.join(data_config.realizd_sensor_dict['preprocess_path'], participant_id), participant_id)
+        audio_df = load_sensor_data.read_preprocessed_audio(data_config.audio_sensor_dict['preprocess_path'], participant_id)
+        fitbit_df, fitbit_mean, fitbit_std = load_sensor_data.read_preprocessed_fitbit_with_pad(data_config, participant_id)
         
         segmentation_df = None
+        
+        if fitbit_df is None or realizd_df is None:
+            continue
+        
+        if os.path.exists(os.path.join('plot')) is False:
+            os.mkdir(os.path.join('plot'))
+        if os.path.exists(os.path.join('plot', str(cluster) + '_pos_' + str(max_pos_igtb))) is False:
+            os.mkdir(os.path.join('plot', str(cluster) + '_pos_' + str(max_pos_igtb)))
+        if os.path.exists(os.path.join('plot', str(cluster) + '_pos_' + str(max_pos_igtb), participant_id)) is False:
+            os.mkdir(os.path.join('plot', str(cluster) + '_pos_' + str(max_pos_igtb), participant_id))
+
         ###########################################################
         # 4. Plot
         ###########################################################
@@ -331,7 +324,7 @@ def main(tiles_data_path, config_path, experiment):
                                   audio_df=audio_df, mgt_df=participant_mgt,
                                   segmentation_df=segmentation_df, omsignal_data_df=omsignal_data_df,
                                   realizd_df=realizd_df, owl_in_one_df=owl_in_one_df,
-                                  save_folder=os.path.join(row_series.igtb_col, row_series.igtb_status, index))
+                                  save_folder=os.path.join('plot', str(cluster) + '_pos_' + str(max_pos_igtb), participant_id))
 
 
 if __name__ == '__main__':
