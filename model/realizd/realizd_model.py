@@ -18,8 +18,7 @@ from sklearn.cluster import AgglomerativeClustering
 # Change to your own library path
 ###########################################################
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'config')))
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'segmentation')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'segmentation')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'util')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'plot')))
 
@@ -230,16 +229,19 @@ def main(tiles_data_path, config_path, experiment):
     
     filter_igtb = igtb_df[igtb_df['ParticipantID'].isin(filter_participant_id_list)]
     filter_igtb = filter_igtb.loc[filter_igtb['currentposition'] == 1]
+    # filter_igtb = filter_igtb.loc[(filter_igtb['currentposition'] == 1) | (filter_igtb['currentposition'] == 8)]
     filter_igtb = filter_igtb.loc[filter_igtb['Shift'] == 'Day shift']
     
     '''
     plt.figure(figsize=(10, 7))
     plt.title("Customer Dendograms")
     dend = shc.dendrogram(shc.linkage(np.array(filter_igtb[['neu_igtb', 'pos_af_igtb', 'neg_af_igtb', 'stai_igtb']]), method='ward'))
+    plt.show()
     '''
     
     cluster = AgglomerativeClustering(n_clusters=3, affinity='euclidean', linkage='ward')
-    cluster_data = np.array(filter_igtb[['neu_igtb', 'pos_af_igtb', 'neg_af_igtb', 'stai_igtb']])
+    # cluster_data = np.array(filter_igtb[['neu_igtb', 'pos_af_igtb', 'neg_af_igtb', 'stai_igtb']])
+    cluster_data = np.array(filter_igtb[['neu_igtb', 'stai_igtb']])
     cluster_data = (cluster_data - np.mean(cluster_data, axis=0)) / np.std(cluster_data, axis=0)
     cluster_array = cluster.fit_predict(cluster_data)
     filter_igtb.loc[:, 'cluster'] = cluster_array
@@ -279,6 +281,8 @@ def main(tiles_data_path, config_path, experiment):
         cluster = row_series.cluster
         
         max_pos_igtb = np.nanmean(filter_igtb.loc[filter_igtb['cluster'] == cluster].pos_af_igtb)
+        max_stai_igtb = np.nanmean(filter_igtb.loc[filter_igtb['cluster'] == cluster].stai_igtb)
+        max_neu_igtb = np.nanmean(filter_igtb.loc[filter_igtb['cluster'] == cluster].neu_igtb)
         
         print('read_preprocess_data: participant: %s' % (participant_id))
         
@@ -310,10 +314,18 @@ def main(tiles_data_path, config_path, experiment):
         
         if os.path.exists(os.path.join('plot')) is False:
             os.mkdir(os.path.join('plot'))
+        '''
         if os.path.exists(os.path.join('plot', str(cluster) + '_pos_' + str(max_pos_igtb))) is False:
             os.mkdir(os.path.join('plot', str(cluster) + '_pos_' + str(max_pos_igtb)))
         if os.path.exists(os.path.join('plot', str(cluster) + '_pos_' + str(max_pos_igtb), participant_id)) is False:
             os.mkdir(os.path.join('plot', str(cluster) + '_pos_' + str(max_pos_igtb), participant_id))
+        '''
+        
+        igtb_str = str(cluster) + '_stai_' + str(max_stai_igtb) + '_neu_' + str(max_neu_igtb)
+        if os.path.exists(os.path.join('plot', igtb_str)) is False:
+            os.mkdir(os.path.join('plot', igtb_str))
+        if os.path.exists(os.path.join('plot', igtb_str, participant_id)) is False:
+            os.mkdir(os.path.join('plot', igtb_str, participant_id))
 
         ###########################################################
         # 4. Plot
@@ -324,7 +336,7 @@ def main(tiles_data_path, config_path, experiment):
                                   audio_df=audio_df, mgt_df=participant_mgt,
                                   segmentation_df=segmentation_df, omsignal_data_df=omsignal_data_df,
                                   realizd_df=realizd_df, owl_in_one_df=owl_in_one_df,
-                                  save_folder=os.path.join('plot', str(cluster) + '_pos_' + str(max_pos_igtb), participant_id))
+                                  save_folder=os.path.join('plot', igtb_str, participant_id))
 
 
 if __name__ == '__main__':

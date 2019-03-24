@@ -16,6 +16,7 @@ date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
 
 __all__ = ['Preprocess']
 
+
 class Preprocess(object):
     """
     Preprocess script for all signal
@@ -71,7 +72,7 @@ class Preprocess(object):
                 # Process sliced data
                 ###########################################################
                 preprocess_data_df = fitbit_process_sliced_data(tmp_ppg_data_df, tmp_step_data_df,
-                                                                participant=self.participant_id,
+                                                                participant=self.participant_id, check_saved=True,
                                                                 data_config=self.data_config)
 
                 if len(preprocess_data_df) > 0:
@@ -80,7 +81,7 @@ class Preprocess(object):
                         os.mkdir(os.path.join(self.data_config.fitbit_sensor_dict['preprocess_path'], self.participant_id))
                     
                     preprocess_data_df.to_csv(os.path.join(self.data_config.fitbit_sensor_dict['preprocess_path'], self.participant_id, start_time + '.csv.gz'), compression='gzip')
-                    preprocess_data_all_df.to_csv(os.path.join(self.data_config.fitbit_sensor_dict['preprocess_path'], self.participant_id + '.csv.gz'), compression='gzip')
+        preprocess_data_all_df.to_csv(os.path.join(self.data_config.fitbit_sensor_dict['preprocess_path'], self.participant_id + '.csv.gz'), compression='gzip')
                     
     def preprocess_realizd(self, data_df):
         """
@@ -186,7 +187,6 @@ class Preprocess(object):
 
         return self.sliced_data_array
 
-    
     def preprocess_slice_raw_data_full_feature(self, check_saved=False):
         
         for index, sliced_data_df in enumerate(self.sliced_data_array):

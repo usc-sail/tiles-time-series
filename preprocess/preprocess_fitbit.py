@@ -24,10 +24,10 @@ def main(tiles_data_path, config_path, experiment):
     process_data_path = os.path.abspath(os.path.join(os.pardir, 'data'))
 
     data_config = config.Config()
-    data_config.readConfigFile(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file')), experiment)
+    data_config.readConfigFile(config_path, experiment)
 
     # Load preprocess folder
-    load_data_path.load_preprocess_path(data_config, process_data_path, data_name='preprocess_data')
+    load_data_path.load_preprocess_path(data_config, process_data_path, data_name='preprocess')
 
     ###########################################################
     # 1. Read all participant
@@ -37,7 +37,7 @@ def main(tiles_data_path, config_path, experiment):
     ###########################################################
     # 2. Iterate all participant
     ###########################################################
-    for i, participant_id in enumerate(participant_id_list[:]):
+    for i, participant_id in enumerate(participant_id_list[150:]):
     
         print('Complete process for %s: %.2f' % (participant_id, 100 * i / len(participant_id_list)))
         

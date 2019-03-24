@@ -7,8 +7,11 @@ import scipy.signal
 
 from fancyimpute import (
 	IterativeImputer,
+    SoftImpute,
     KNN
 )
+
+from statsmodels.tsa.arima_model import ARIMA
 
 # date_time format
 date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
@@ -102,7 +105,7 @@ def fitbit_process_sliced_data(ppg_data_df, step_data_df, participant=None, data
         # If check saved or not
         ###########################################################
         if check_saved is True:
-            if len(preprocess_data_df) > 0 and os.path.join(data_config.fitbit_sensor_dict['preprocess_path'], participant, preprocess_data_df.index[0] + '.csv') is True:
+            if len(preprocess_data_df) > 0 and os.path.join(data_config.fitbit_sensor_dict['preprocess_path'], participant, preprocess_data_df.index[0] + '.csv.gz') is True:
                 return None
 
     ###########################################################
@@ -119,7 +122,37 @@ def fitbit_process_sliced_data(ppg_data_df, step_data_df, participant=None, data
             model = IterativeImputer()
 
         if len(preprocess_data_df.dropna()) / len(preprocess_data_df) > 0.75:
-            impute_array = model.fit_transform(np.array(preprocess_data_df))
+            if data_config.fitbit_sensor_dict['imputation'] == 'arima':
+                nan_index = np.where((np.array(preprocess_data_df) >= -1) == False)
+                impute_array = np.array(preprocess_data_df)
+                if len(np.where(nan_index[0] < 50)[0]) > 25:
+                    impute_array = impute_array[50:, :]
+                    preprocess_data_df = preprocess_data_df.loc[list(preprocess_data_df.index)[50:], :]
+                    
+                knn_imputed_array = KNN(k=5).fit_transform(impute_array)
+                nan_index = np.where((impute_array >= -1) == False)
+
+                for i in range(len(nan_index[0])):
+                    
+                    if nan_index[0][i] <= 5 or nan_index[1][i] == 1:
+                        impute_array[nan_index[0][i], nan_index[1][i]] = np.nanmean(impute_array[:, nan_index[1][i]])
+                    elif 5 < nan_index[0][i] < 50:
+                        impute_array[nan_index[0][i], nan_index[1][i]] = knn_imputed_array[nan_index[0][i], nan_index[1][i]]
+                    else:
+                        start_index = nan_index[0][i] - 200 if nan_index[0][i] > 200 else 0
+                        
+                        if len(np.unique(np.array(impute_array)[start_index:nan_index[0][i], nan_index[1][i]])) < 25:
+                            impute_array[nan_index[0][i], nan_index[1][i]] = knn_imputed_array[nan_index[0][i], nan_index[1][i]]
+                        else:
+                            model = ARIMA(np.array(impute_array)[start_index:nan_index[0][i], nan_index[1][i]], order=(3, 1, 0))
+                            try:
+                                model_fit = model.fit(disp=0)
+                            except Exception:
+                                print()
+                            impute_array[nan_index[0][i], nan_index[1][i]] = model_fit.forecast()[0]
+            else:
+                impute_array = model.fit_transform(np.array(preprocess_data_df))
+            
             hr_array = impute_array[:, 0]
             hr_array = scipy.signal.savgol_filter(hr_array, 5, 3)
 

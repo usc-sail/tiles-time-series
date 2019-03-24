@@ -423,8 +423,8 @@ def load_filter_clustering(path, participant_id):
     
     return_dict = []
     file_list = os.listdir(os.path.join(path, participant_id))
-    # file_list = [file for file in file_list if 'heart' not in file and 'DS_Store' not in file]
-    file_list = [file for file in file_list if 'DS_Store' not in file]
+    file_list = [file for file in file_list if 'heart' not in file and 'DS_Store' not in file]
+    # file_list = [file for file in file_list if 'DS_Store' not in file]
     
     if len(file_list) is 0:
         return None

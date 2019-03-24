@@ -40,12 +40,12 @@ def main(tiles_data_path, config_path, experiment):
     for participant_id in participant_id_list:
         
         ###########################################################
-        # 2.1 Init realizd preprocess
+        # 2.0 Init realizd preprocess
         ###########################################################
         realizd_preprocess = Preprocess(data_config=data_config, participant_id=participant_id)
 
         ###########################################################
-        # 4. Read realizd data
+        # 2.1 Read realizd data
         ###########################################################
         realizd_df = load_sensor_data.read_realizd(os.path.join(tiles_data_path, '2_raw_csv_data/realizd/'), participant_id)
 
