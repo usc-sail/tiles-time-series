@@ -39,8 +39,8 @@ def main(tiles_data_path, config_path, experiment):
     save_data_path = os.path.join(process_data_path, data_config.experiement, 'filter_data_' + data_config.filter_method)
 
     # Read fitbit norm data and dict
-    fitbit_norm_data_df = pd.read_csv(os.path.join(save_data_path, 'norm_heart_data_ticc_cluster_days_' + str(data_config.fitbit_sensor_dict['ticc_cluster_days']) + '.csv.gz'), index_col=3)
-    fitbit_dict_df = pd.read_csv(os.path.join(save_data_path, 'dict_norm_heart_data_cluster_days_' + str(data_config.fitbit_sensor_dict['ticc_cluster_days']) + '.csv.gz'), index_col=0)
+    fitbit_norm_data_df = pd.read_csv(os.path.join(save_data_path, data_config.fitbit_sensor_dict['filter_path'].split('/')[-1], 'norm_heart_data_ticc_cluster_days_' + str(data_config.fitbit_sensor_dict['ticc_cluster_days']) + '.csv.gz'), index_col=3)
+    fitbit_dict_df = pd.read_csv(os.path.join(save_data_path, data_config.fitbit_sensor_dict['filter_path'].split('/')[-1], 'dict_norm_heart_data_cluster_days_' + str(data_config.fitbit_sensor_dict['ticc_cluster_days']) + '.csv.gz'), index_col=0)
 
     # fitbit_dict_df = fitbit_dict_df.loc[list(fitbit_dict_df.index)[:10], :]
     # fitbit_norm_data_df = fitbit_norm_data_df.iloc[:fitbit_dict_df.iloc[-1].end, :]

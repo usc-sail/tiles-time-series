@@ -134,22 +134,28 @@ def fitbit_process_sliced_data(ppg_data_df, step_data_df, participant=None, data
 
                 for i in range(len(nan_index[0])):
                     
-                    if nan_index[0][i] <= 5 or nan_index[1][i] == 1:
-                        impute_array[nan_index[0][i], nan_index[1][i]] = np.nanmean(impute_array[:, nan_index[1][i]])
-                    elif 5 < nan_index[0][i] < 50:
-                        impute_array[nan_index[0][i], nan_index[1][i]] = knn_imputed_array[nan_index[0][i], nan_index[1][i]]
+                    if nan_index[1][i] == 1:
+                        if nan_index[0][i] <= 5:
+                            impute_array[nan_index[0][i], nan_index[1][i]] = np.nanmean(impute_array[:, nan_index[1][i]])
+                        else:
+                            impute_array[nan_index[0][i], nan_index[1][i]] = np.nanmean(impute_array[nan_index[0][i]-3:nan_index[0][i]+3, nan_index[1][i]])
                     else:
-                        start_index = nan_index[0][i] - 200 if nan_index[0][i] > 200 else 0
-                        
-                        if len(np.unique(np.array(impute_array)[start_index:nan_index[0][i], nan_index[1][i]])) < 25:
+                        if nan_index[0][i] <= 5:
+                            impute_array[nan_index[0][i], nan_index[1][i]] = np.nanmean(impute_array[:, nan_index[1][i]])
+                        elif 5 < nan_index[0][i] < 50:
                             impute_array[nan_index[0][i], nan_index[1][i]] = knn_imputed_array[nan_index[0][i], nan_index[1][i]]
                         else:
-                            model = ARIMA(np.array(impute_array)[start_index:nan_index[0][i], nan_index[1][i]], order=(3, 1, 0))
-                            try:
-                                model_fit = model.fit(disp=0)
-                            except Exception:
-                                print()
-                            impute_array[nan_index[0][i], nan_index[1][i]] = model_fit.forecast()[0]
+                            start_index = nan_index[0][i] - 200 if nan_index[0][i] > 200 else 0
+                            
+                            if len(np.unique(np.array(impute_array)[start_index:nan_index[0][i], nan_index[1][i]])) < 25:
+                                impute_array[nan_index[0][i], nan_index[1][i]] = knn_imputed_array[nan_index[0][i], nan_index[1][i]]
+                            else:
+                                model = ARIMA(np.array(impute_array)[start_index:nan_index[0][i], nan_index[1][i]], order=(3, 1, 0))
+                                try:
+                                    model_fit = model.fit(disp=0)
+                                except Exception:
+                                    print()
+                                impute_array[nan_index[0][i], nan_index[1][i]] = model_fit.forecast()[0]
             else:
                 impute_array = model.fit_transform(np.array(preprocess_data_df))
             

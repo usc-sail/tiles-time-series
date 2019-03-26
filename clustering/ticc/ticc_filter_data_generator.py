@@ -30,7 +30,7 @@ def main(tiles_data_path, config_path, experiment):
     
     # Load all data path according to config file
     load_data_path.load_all_available_path(data_config, process_data_path, filter_data=True,
-                                           preprocess_data_identifier='preprocess_data',
+                                           preprocess_data_identifier='preprocess',
                                            segmentation_data_identifier='segmentation',
                                            filter_data_identifier='filter_data',
                                            clustering_data_identifier='clustering')
@@ -92,7 +92,7 @@ def main(tiles_data_path, config_path, experiment):
                 norm_step_count = (data_dict['data'].loc[:, 'StepCount'] - participant_data_dict['StepCount_mean']) / participant_data_dict['StepCount_std']
 
                 norm_data_df.loc[:, 'HeartRatePPG'] = np.array(norm_heart_rate)
-                # norm_data_df.loc[:, 'StepCount'] = np.array(norm_step_count)
+                norm_data_df.loc[:, 'StepCount'] = np.array(norm_step_count)
                 norm_data_df.loc[:, 'time'] = list(norm_data_df.index)
 
                 data_df.loc[:, 'time'] = list(norm_data_df.index)
@@ -112,8 +112,11 @@ def main(tiles_data_path, config_path, experiment):
                 
                 ticc_data_index = ticc_data_index + len(data_dict['data'])
 
-    ticc_data_dict['norm_data_df'].to_csv(os.path.join(save_data_path, 'norm_heart_data_ticc_cluster_days_' + str(data_config.fitbit_sensor_dict['ticc_cluster_days']) + '.csv.gz'), compression='gzip')
-    ticc_data_dict['dict_df'].to_csv(os.path.join(save_data_path, 'dict_norm_heart_data_cluster_days_' + str(data_config.fitbit_sensor_dict['ticc_cluster_days']) + '.csv.gz'), compression='gzip')
+    if os.path.exists(os.path.join(save_data_path, data_config.fitbit_sensor_dict['filter_path'].split('/')[-1])) is False:
+        os.mkdir(os.path.join(save_data_path, data_config.fitbit_sensor_dict['filter_path'].split('/')[-1]))
+    
+    ticc_data_dict['norm_data_df'].to_csv(os.path.join(save_data_path, data_config.fitbit_sensor_dict['filter_path'].split('/')[-1], 'norm_data_ticc_cluster_days_' + str(data_config.fitbit_sensor_dict['ticc_cluster_days']) + '.csv.gz'), compression='gzip')
+    ticc_data_dict['dict_df'].to_csv(os.path.join(save_data_path, data_config.fitbit_sensor_dict['filter_path'].split('/')[-1], 'dict_norm_data_cluster_days_' + str(data_config.fitbit_sensor_dict['ticc_cluster_days']) + '.csv.gz'), compression='gzip')
     # ticc_data_dict['data_df'].to_csv(os.path.join(save_data_path, 'data_ticc_cluster_days_' + str(data_config.fitbit_sensor_dict['ticc_cluster_days']) + '.csv.gz'), compression='gzip')
 
 
