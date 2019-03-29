@@ -143,16 +143,21 @@ def get_hawkes_kernel(data_config, participant_id, num_of_days, remove_col_index
     workday_learner = HawkesSumGaussians(num_of_gaussian, max_iter=50)
     workday_learner.fit(workday_point_list)
     ineffective_array = np.array(workday_learner.get_kernel_norms())
-    for i in range(ineffective_array.shape[0] * ineffective_array.shape[1]):
-        row_df[workday_col_list[i]] = np.reshape(ineffective_array, [1, ineffective_array.shape[0] * ineffective_array.shape[1]])[0][i]
+    
+    for i in range(ineffective_array.shape[0]):
+        for j in range(ineffective_array.shape[1]):
+            index = i * ineffective_array.shape[0] + j
+            row_df[workday_col_list[i] + '->' + workday_col_list[j]] = np.reshape(ineffective_array, [1, ineffective_array.shape[0] * ineffective_array.shape[1]])[0][index]
 
     offday_learner = HawkesSumGaussians(num_of_gaussian, max_iter=50)
     offday_learner.fit(offday_point_list)
     ineffective_array = np.array(offday_learner.get_kernel_norms())
     
-    for i in range(ineffective_array.shape[0] * ineffective_array.shape[1]):
-        row_df[offday_col_list[i]] = np.reshape(ineffective_array, [1, ineffective_array.shape[0] * ineffective_array.shape[1]])[0][i]
-    
+    for i in range(ineffective_array.shape[0]):
+        for j in range(ineffective_array.shape[1]):
+            index = i * ineffective_array.shape[0] + j
+            row_df[offday_col_list[i] + '->' + offday_col_list[j]] = np.reshape(ineffective_array, [1, ineffective_array.shape[0] * ineffective_array.shape[1]])[0][index]
+
     return row_df
     
 
@@ -312,7 +317,7 @@ def predict(data_config, groundtruth_df, top_participant_id_list, index, fitbit=
 
     # for group_label in group_label_list:
     result = pd.DataFrame(columns=group_label_list, index=[index])
-    feat_importance_result = pd.DataFrame(columns=[hawkes_kernel_df.columns], index=[index])
+    feat_importance_result = pd.DataFrame(columns=hawkes_kernel_df.columns, index=group_label_list)
     
     for group_label in group_label_list:
         print('--------------------------------------------------')
@@ -324,7 +329,7 @@ def predict(data_config, groundtruth_df, top_participant_id_list, index, fitbit=
         
         clf = GridSearchCV(RandomForestClassifier(), param_grid, cv=5, scoring='f1_micro')
         clf.fit(X, y)
-        clf.best_estimator_.feature_importances_
+        feat_importance_result.loc[group_label, :] = clf.best_estimator_.feature_importances_
     
         print("Best parameters set found on development set:")
         print()
@@ -337,6 +342,7 @@ def predict(data_config, groundtruth_df, top_participant_id_list, index, fitbit=
         result[group_label] = clf.best_score_
 
     fitbit_result = pd.DataFrame(columns=group_label_list, index=[index])
+    fitbit_feat_importance_result = pd.DataFrame(columns=fitbit_cols, index=group_label_list)
     if fitbit:
         for group_label in group_label_list:
             print('--------------------------------------------------')
@@ -347,7 +353,9 @@ def predict(data_config, groundtruth_df, top_participant_id_list, index, fitbit=
             y = np.array(data_df[group_label])
             clf = GridSearchCV(RandomForestClassifier(), param_grid, cv=5, scoring='f1_micro')
             clf.fit(X, y)
-        
+
+            fitbit_feat_importance_result.loc[group_label, :] = clf.best_estimator_.feature_importances_
+
             print("Best parameters set found on development set:")
             print()
             print(clf.best_params_)
@@ -358,7 +366,7 @@ def predict(data_config, groundtruth_df, top_participant_id_list, index, fitbit=
             print('--------------------------------------------------')
             fitbit_result[group_label] = clf.best_score_
     
-    return result, fitbit_result
+    return result, fitbit_result, feat_importance_result, fitbit_feat_importance_result
 
 
 def main(tiles_data_path, config_path, experiment):
@@ -416,10 +424,13 @@ def main(tiles_data_path, config_path, experiment):
     prefix = data_config.fitbit_sensor_dict['clustering_path'].split('_impute_')[0]
     prefix = prefix.split('clustering/fitbit/')[1]
     save_path = prefix + '_num_of_gaussian_' + str(num_of_gaussian) + '_transitional.csv'
+    save_path_feat = prefix + '_num_of_gaussian_' + str(num_of_gaussian) + '_transitional_feat_imp.csv'
     
     '''
     ticc_num_cluster_6_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 2
-    arima_ticc_num_cluster_6_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 1
+    arima_15_ticc_num_cluster_3_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 1
+    arima_15_ticc_num_cluster_4_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 1
+    arima_15_ticc_num_cluster_5_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 1
     ticc_num_cluster_6_window_10_penalty_10.0_sparsity_0.1_cluster_days_7: 5
     ticc_num_cluster_4_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 3
     ticc_num_cluster_4_window_10_penalty_10.0_sparsity_0.1_cluster_days_7: 3
@@ -430,23 +441,32 @@ def main(tiles_data_path, config_path, experiment):
     # for i in range(3, 8, 2):
     for i in range(3, 6):
         final_result_per_day_setting_df, final_fitbit_result_per_day_setting_df = pd.DataFrame(), pd.DataFrame()
+        final_feat_importance_result, final_fitbit_feat_importance_result = pd.DataFrame(), pd.DataFrame()
         
         for j in range(5):
             # save_hawkes_kernel(data_config, top_participant_id_list, save_model_path, num_of_days=i)
             # result_df = predict_demographic(groundtruth_df, save_model_path, top_participant_id_list, j)
-            result_df, fitbit_result_df = predict(data_config, groundtruth_df, top_participant_id_list, j,
-                                                  fitbit=fitbit_enable, num_of_days=i, num_of_gaussian=num_of_gaussian, remove_col_index=1)
+            result_df, fitbit_result_df, feat_importance_result, fitbit_feat_importance_result = predict(data_config, groundtruth_df, top_participant_id_list, j,
+                                                                                                         fitbit=fitbit_enable, num_of_days=i, num_of_gaussian=num_of_gaussian, remove_col_index=1)
             final_result_per_day_setting_df = final_result_per_day_setting_df.append(result_df)
             final_fitbit_result_per_day_setting_df = final_fitbit_result_per_day_setting_df.append(fitbit_result_df)
-
+            
+            if i == 5:
+                final_feat_importance_result = feat_importance_result if len(final_feat_importance_result) == 0 else final_feat_importance_result + feat_importance_result
+                final_fitbit_feat_importance_result = fitbit_feat_importance_result if len(final_fitbit_feat_importance_result) == 0 else final_fitbit_feat_importance_result + fitbit_feat_importance_result
+        
         tmp_df = pd.DataFrame(np.mean(np.array(final_result_per_day_setting_df), axis=0).reshape([1, -1]), index=[i], columns=final_result_per_day_setting_df.columns)
         final_result_df = final_result_df.append(tmp_df)
         final_result_df.to_csv(os.path.join(os.curdir, 'result', save_path))
+        final_feat_importance_result = final_feat_importance_result / 5
+        final_feat_importance_result.to_csv(os.path.join(os.curdir, 'result', save_path_feat))
         
         if fitbit_enable is True:
             tmp_df = pd.DataFrame(np.mean(np.array(final_fitbit_result_per_day_setting_df), axis=0).reshape([1, -1]), index=[i], columns=final_fitbit_result_per_day_setting_df.columns)
             fitbit_final_result_df = fitbit_final_result_df.append(tmp_df)
             fitbit_final_result_df.to_csv(os.path.join(os.curdir, 'result', 'fitbit_result.csv'))
+            final_fitbit_feat_importance_result = final_fitbit_feat_importance_result / 5
+            final_fitbit_feat_importance_result.to_csv(os.path.join(os.curdir, 'result', 'fitbit_feat_result.csv'))
             
     print(final_result_df)
 

@@ -52,7 +52,8 @@ class Preprocess(object):
         ###########################################################
         # Get start and end time of a chunk
         ###########################################################
-        start_time_array, end_time_array = fitbit_sliced_data_start_end_array(ppg_df, threshold=timedelta(seconds=60*15))
+        start_time_array, end_time_array = fitbit_sliced_data_start_end_array(ppg_df,
+                                                                              threshold=timedelta(seconds=60*self.data_config.fitbit_sensor_dict['imputation_threshold']))
 
         preprocess_data_all_df = pd.DataFrame()
         

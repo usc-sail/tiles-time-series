@@ -151,10 +151,7 @@ def fitbit_process_sliced_data(ppg_data_df, step_data_df, participant=None, data
                                 impute_array[nan_index[0][i], nan_index[1][i]] = knn_imputed_array[nan_index[0][i], nan_index[1][i]]
                             else:
                                 model = ARIMA(np.array(impute_array)[start_index:nan_index[0][i], nan_index[1][i]], order=(3, 1, 0))
-                                try:
-                                    model_fit = model.fit(disp=0)
-                                except Exception:
-                                    print()
+                                model_fit = model.fit(disp=0)
                                 impute_array[nan_index[0][i], nan_index[1][i]] = model_fit.forecast()[0]
             else:
                 impute_array = model.fit_transform(np.array(preprocess_data_df))

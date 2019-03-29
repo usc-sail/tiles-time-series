@@ -146,6 +146,7 @@ class Config(object):
         self.fitbit_sensor_dict['overlap'] = int(self.getSetting('fitbit', 'overlap'))
         self.fitbit_sensor_dict['feature'] = self.getSetting('fitbit', 'feature')
         self.fitbit_sensor_dict['imputation'] = self.getSetting('fitbit', 'imputation')
+        self.fitbit_sensor_dict['imputation_threshold'] = int(self.getSetting('fitbit', 'imputation_threshold'))
         self.fitbit_sensor_dict['preprocess_cols'] = self.getSetting('fitbit', 'preprocess_cols')
         self.fitbit_sensor_dict['segmentation_method'] = self.getSetting('fitbit', 'segmentation_method')
         self.fitbit_sensor_dict['segmentation_lamb'] = float(self.getSetting('fitbit', 'segmentation_lamb'))

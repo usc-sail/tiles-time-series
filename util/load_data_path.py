@@ -36,7 +36,7 @@ def load_preprocess_path(data_config, process_data_path, data_name='preprocess')
     create_folder(tmp_path)
     
     if data_config.fitbit_sensor_dict['imputation'] != None:
-        preprocess_str = 'impute_' + data_config.fitbit_sensor_dict['imputation']
+        preprocess_str = 'impute_' + data_config.fitbit_sensor_dict['imputation'] + '_' + str(data_config.fitbit_sensor_dict['imputation_threshold'])
     else:
         preprocess_str = data_config.fitbit_sensor_dict['feature']
     preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['preprocess_setting']
@@ -109,7 +109,7 @@ def load_plot_path(data_config, process_data_path, data_name='plot'):
     create_folder(tmp_path)
     
     if data_config.fitbit_sensor_dict['imputation'] != None:
-        preprocess_str = 'impute_' + data_config.fitbit_sensor_dict['imputation']
+        preprocess_str = 'impute_' + data_config.fitbit_sensor_dict['imputation'] + '_' + str(data_config.fitbit_sensor_dict['imputation_threshold'])
     else:
         preprocess_str = data_config.fitbit_sensor_dict['feature']
     preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['preprocess_setting']
@@ -183,7 +183,7 @@ def load_filter_path(data_config, process_data_path, data_name='filter_data'):
     create_folder(tmp_path)
     
     if data_config.fitbit_sensor_dict['imputation'] != None:
-        preprocess_str = 'impute_' + data_config.fitbit_sensor_dict['imputation']
+        preprocess_str = 'impute_' + data_config.fitbit_sensor_dict['imputation'] + '_' + str(data_config.fitbit_sensor_dict['imputation_threshold'])
     else:
         preprocess_str = data_config.fitbit_sensor_dict['feature']
     preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['preprocess_setting']
@@ -259,7 +259,7 @@ def load_segmentation_path(data_config, process_data_path, data_name='segmentati
         return
     
     if data_config.fitbit_sensor_dict['imputation'] != None:
-        preprocess_str = preprocess_str + '_impute_' + data_config.fitbit_sensor_dict['imputation']
+        preprocess_str = preprocess_str + '_impute_' + data_config.fitbit_sensor_dict['imputation'] + '_' + str(data_config.fitbit_sensor_dict['imputation_threshold'])
     else:
         preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['feature']
     preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['preprocess_setting']
@@ -313,7 +313,7 @@ def load_clustering_path(data_config, process_data_path, data_name='clustering',
         preprocess_str = preprocess_str + '_ggs_' + str(data_config.fitbit_sensor_dict['segmentation_lamb'])
         
     if data_config.fitbit_sensor_dict['imputation'] != None:
-        preprocess_str = preprocess_str + '_impute_' + data_config.fitbit_sensor_dict['imputation']
+        preprocess_str = preprocess_str + '_impute_' + data_config.fitbit_sensor_dict['imputation'] + '_' + str(data_config.fitbit_sensor_dict['imputation_threshold'])
     else:
         preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['feature']
     preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['preprocess_setting']
