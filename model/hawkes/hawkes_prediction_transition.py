@@ -50,11 +50,15 @@ fitbit_cols = ['Cardio_minutes_mean', 'Cardio_minutes_std', 'Cardio_minutes_min'
                'SleepMinutesInBed_mean', 'SleepMinutesInBed_std', 'SleepMinutesInBed_min', 'SleepMinutesInBed_max', 'SleepMinutesInBed_median',
                'SleepEfficiency_mean', 'SleepEfficiency_std', 'SleepEfficiency_min', 'SleepEfficiency_max', 'SleepEfficiency_median']
 
+'''
 group_label_list = ['shift', 'position', 'fatigue', 'Inflexbility', 'Flexbility', 'Sex',
                     'LifeSatisfaction', 'General_Health', 'Emotional_Wellbeing', 'Engage', 'Perceivedstress',
                     'pos_af_igtb', 'neg_af_igtb', 'stai_igtb',
                     'neu_igtb', 'con_igtb', 'ext_igtb', 'agr_igtb', 'ope_igtb']
-
+'''
+group_label_list = ['shift', 'position', 'fatigue', 'Sex',
+                    'pos_af_igtb', 'neg_af_igtb', 'stai_igtb',
+                    'neu_igtb', 'con_igtb', 'ext_igtb', 'agr_igtb', 'ope_igtb']
 
 def get_hawkes_kernel(data_config, participant_id, num_of_days, remove_col_index=2, num_of_gaussian=10):
     
@@ -126,10 +130,10 @@ def get_hawkes_kernel(data_config, participant_id, num_of_days, remove_col_index
                 # from collections import Counter
                 # data = Counter(elem[0] for elem in change_list)
                 if len(workday_point_list) < num_of_days:
-                    workday_point_list.append(day_point_list)
+                    workday_point_list.append([point / 60 for point in day_point_list])
             else:
                 if len(offday_point_list) < num_of_days:
-                    offday_point_list.append(day_point_list)
+                    offday_point_list.append([point / 60 for point in day_point_list])
 
     workday_col_list, offday_col_list = [], []
 
@@ -140,7 +144,7 @@ def get_hawkes_kernel(data_config, participant_id, num_of_days, remove_col_index
                 offday_col_list.append('offday:' + str(i) + ',' + str(j))
     
     # Learn causality
-    workday_learner = HawkesSumGaussians(num_of_gaussian, max_iter=50)
+    workday_learner = HawkesSumGaussians(num_of_gaussian, max_iter=100)
     workday_learner.fit(workday_point_list)
     ineffective_array = np.array(workday_learner.get_kernel_norms())
     
@@ -149,7 +153,7 @@ def get_hawkes_kernel(data_config, participant_id, num_of_days, remove_col_index
             index = i * ineffective_array.shape[0] + j
             row_df[workday_col_list[i] + '->' + workday_col_list[j]] = np.reshape(ineffective_array, [1, ineffective_array.shape[0] * ineffective_array.shape[1]])[0][index]
 
-    offday_learner = HawkesSumGaussians(num_of_gaussian, max_iter=50)
+    offday_learner = HawkesSumGaussians(num_of_gaussian, max_iter=100)
     offday_learner.fit(offday_point_list)
     ineffective_array = np.array(offday_learner.get_kernel_norms())
     
@@ -472,6 +476,33 @@ def main(tiles_data_path, config_path, experiment):
 
 
 if __name__ == '__main__':
+    '''
+    from tick.plot import plot_hawkes_kernels
+    from tick.hawkes import (SimuHawkes, SimuHawkesMulti, HawkesKernelExp,
+                             HawkesKernelTimeFunc, HawkesKernelPowerLaw,
+                             HawkesKernel0, HawkesSumGaussians)
+    
+    end_time = 1000
+    n_nodes = 2
+    n_realizations = 10
+    n_gaussians = 5
+    
+    timestamps_list = []
+    
+    kernel_timefunction = HawkesKernelTimeFunc(t_values=np.array([0., .7, 2.5, 3., 4.]),
+                                               y_values=np.array([.3, .03, .03, .2, 0.]))
+    kernels = [[HawkesKernelExp(.2, 2.),
+                HawkesKernelPowerLaw(.2, .5, 1.3)],
+               [HawkesKernel0(), kernel_timefunction]]
+    
+    hawkes = SimuHawkes(baseline=[.5, .2], kernels=kernels, end_time=end_time,
+                        verbose=False, seed=1039)
+    
+    multi = SimuHawkesMulti(hawkes, n_simulations=n_realizations)
+    
+    multi.simulate()
+    '''
+    
     # Read args
     args = parser.parse_args()
     

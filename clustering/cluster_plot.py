@@ -24,14 +24,14 @@ date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
 date_only_date_time_format = '%Y-%m-%d'
 
 
-def main(tiles_data_path, cluster_config_path, experiement):
+def main(tiles_data_path, cluster_config_path, experiment):
     ###########################################################
     # 1. Create Config, load data paths
     ###########################################################
     process_data_path = os.path.abspath(os.path.join(os.pardir, 'data'))
     
     data_config = config.Config()
-    data_config.readConfigFile(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file')), experiement)
+    data_config.readConfigFile(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file')), experiment)
     
     load_data_path.load_all_available_path(data_config, process_data_path)
 
@@ -55,7 +55,7 @@ def main(tiles_data_path, cluster_config_path, experiement):
     top_participant_id_list = list(top_participant_id_df.index)
     top_participant_id_list.sort()
     
-    for idx, participant_id in enumerate(top_participant_id_list[120:]):
+    for idx, participant_id in enumerate(top_participant_id_list):
         
         print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
         ###########################################################
@@ -110,11 +110,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--tiles_path", required=False, help="Path to the root folder containing TILES data")
     parser.add_argument("--config", required=False, help="Path to a config file specifying how to perform the clustering")
-    parser.add_argument("--experiement", required=False, help="Experiement name")
+    parser.add_argument("--experiment", required=False, help="Experiement name")
     args = parser.parse_args()
     
     tiles_data_path = '../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
     config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file')) if args.config is None else args.config
-    experiement = 'baseline' if args.config is None else args.config
+    experiment = 'baseline' if args.experiment is None else args.experiment
 
-    main(tiles_data_path, config_path, experiement)
+    main(tiles_data_path, config_path, experiment)

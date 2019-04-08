@@ -319,3 +319,47 @@ def return_top_k_participant(path, tiles_data_path, k=None, data_config=None):
     return top_participant_id_df
 
 
+def return_top_k_participant_from_stream(path, tiles_data_path, k=None, data_config=None, data_stream='audio'):
+    """
+    Return all participants that with data
+
+    Params:
+    tiles_data_path - tiles data folder
+    k - number of participants
+    data_stream - data stream type, fitbit, audio
+
+    Returns:
+    fitbit_len_df - top participant df with fitbit data
+    """
+    # If we have the data, read it
+    if os.path.exists(path) is True:
+        top_participant_id_df = pd.read_csv(path, index_col=0, compression='gzip')
+        if k is not None: top_participant_id_df = top_participant_id_df[:k]
+    else:
+        # Get all participant id
+        participant_id_list = return_participant(tiles_data_path)
+        participant_id_list.sort()
+        
+        # Iterate to get top k participant
+        data_len_list = []
+        for idx, participant_id in enumerate(participant_id_list):
+            print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(participant_id_list)))
+            
+            data_df = load_sensor_data.read_preprocessed_audio(data_config.audio_sensor_dict['preprocess_path'], participant_id)
+            
+            if data_df is not None:
+                data_len_list.append(np.nansum(np.array(data_df)))
+            else:
+                data_len_list.append(0)
+        
+        top_participant_list = [participant_id_list[i] for i in np.argsort(data_len_list)[::-1]]
+        data_len_sort = np.sort(data_len_list)[::-1]
+        
+        top_participant_id_df = pd.DataFrame(data_len_sort, index=top_participant_list)
+        
+        top_participant_id_df.to_csv(path, compression='gzip')
+        
+        if k is not None:
+            top_participant_id_df = top_participant_id_df[:k]
+        
+    return top_participant_id_df

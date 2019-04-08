@@ -502,11 +502,11 @@ class Plot(object):
                 # Plot om_signal
                 ax.plot(data_window_time_array, np.array(data_window_df)[:, 0], label='om heart rate', color='purple')
                 ax.plot(data_window_time_array, np.array(data_window_df)[:, 1], label='om step count', color='brown')
-                ax.legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True)
+                ax.legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True, fontsize=14)
             elif stream == 'audio':
                 # Plot audio
                 ax.plot(data_window_time_array, np.array(data_window_df.foreground), label='foreground', color='blue')
-                ax.legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True)
+                ax.legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True, fontsize=14)
             elif stream == 'owl_in_one':
                 # Plot owl_in_one
                 unit_in_time = np.where(np.array(data_window_df) > 0)[1]
@@ -534,7 +534,7 @@ class Plot(object):
                     unit_type = data_window_df.columns[unit_in_time[unit_change_time + 1]]
 
                 legend_elements = [Patch(facecolor=color_dict[loc], label=loc, alpha=0.3) for loc in list(color_dict.keys())]
-                ax[2].legend(handles=legend_elements, bbox_to_anchor=(1, 1), fancybox=True, shadow=True)
+                ax[2].legend(handles=legend_elements, bbox_to_anchor=(1, 1), fancybox=True, shadow=True, fontsize=14)
             elif stream == 'sleep':
                 for index, row in data_window_df.iterrows():
                     self.plot_sleep_span(ax, row.Sleep1BeginTimestamp, row.Sleep1EndTimestamp, start_str, end_str)
@@ -548,7 +548,7 @@ class Plot(object):
                 data_window_array[np.where(data_window_array[:, 1] < 0)[0], :] = -25
                 ax.plot(data_window_time_array, data_window_array[:, 0], label='heart rate')
                 ax.plot(data_window_time_array, data_window_array[:, 1], label='step count')
-                ax.legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True)
+                ax.legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True, fontsize=14)
 
     def plot_owl_in_one_span(self, ax, room_type, begin_str, end_str, day_str, day_after_str):
         """ Plot owl_in_one span
