@@ -10,6 +10,19 @@ date_only_date_time_format = '%Y-%m-%d'
 from datetime import timedelta
 
 
+def read_raw_audio(path, participant_id):
+    # Read data and participant id first
+    # raw_audio_file_abs_path = os.path.join(path, '4_extracted_features', 'jelly_audio_feats_fixed', participant_id + '.csv.gz')
+    raw_audio_file_abs_path = os.path.join(path, '4_extracted_features', 'jelly_audio_feats_fixed', '06b33ec4-706d-462f-a681-05491be38eb3.csv.gz')
+
+    raw_audio_df = pd.read_csv(raw_audio_file_abs_path, index_col=0)
+
+    raw_audio_df = raw_audio_df.drop_duplicates(keep='first')
+    raw_audio_df = raw_audio_df.sort_index()
+
+    return raw_audio_df
+
+
 def read_omsignal(path, participant_id):
     # Read data and participant id first
     omsignal_file_abs_path = os.path.join(path, participant_id + '_omsignal.csv.gz')
