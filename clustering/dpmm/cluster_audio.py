@@ -14,6 +14,9 @@ import pymc3 as pm
 import random
 from collections import Counter
 import dpgmm_gibbs
+from vdpgmm import VDPGMM
+from sklearn import preprocessing
+from sklearn import datasets
 
 ###########################################################
 # Change to your own library path
@@ -39,6 +42,10 @@ def cluster_audio(data_df, data_config, participant_id, iter=100, cluster_name='
 	elif data_config.audio_sensor_dict['cluster_method'] == 'gibbs':
 		cluster_id = dpgmm_gibbs.DPMM(np.array(data_df), alpha=float(data_config.audio_sensor_dict['cluster_alpha']), iter=iter, K=50)
 	elif data_config.audio_sensor_dict['cluster_method'] == 'vdpgmm':
+		model = VDPGMM(T=50, alpha=float(data_config.audio_sensor_dict['cluster_alpha']), max_iter=1000)
+		model.fit(np.array(data_df))
+		cluster_id = model.predict(np.array(data_df))
+	else:
 		dpgmm = mixture.BayesianGaussianMixture(n_components=50, covariance_type='full').fit(np.array(data_df))
 		cluster_id = dpgmm.predict(np.array(data_df))
 
@@ -145,7 +152,7 @@ def main(tiles_data_path, config_path, experiment):
 
 
 if __name__ == '__main__':
-
+	
 	# Read args
 	args = parser.parse_args()
 

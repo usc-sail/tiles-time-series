@@ -127,26 +127,24 @@ class Gaussian:
         return norm_const * result
 
 
-"""
-Dirichlet process mixture model (for N observations y_1, ..., y_N)
-    1) generate a distribution G ~ DP(G_0, α)
-    2) generate parameters θ_1, ..., θ_N ~ G
-    [1+2) <=> (with B_1, ..., B_N a measurable partition of the set for which 
-        G_0 is a finite measure, G(B_i) = θ_i:)
-       generate G(B_1), ..., G(B_N) ~ Dirichlet(αG_0(B_1), ..., αG_0(B_N)]
-    3) generate each datapoint y_i ~ F(θ_i)
-Now, an alternative is:
-    1) generate a vector β ~ Stick(1, α) (<=> GEM(1, α))
-    2) generate cluster assignments c_i ~ Categorical(β) (gives K clusters)
-    3) generate parameters Φ_1, ...,Φ_K ~ G_0
-    4) generate each datapoint y_i ~ F(Φ_{c_i})
-    for instance F is a Gaussian and Φ_c = (mean_c, var_c)
-Another one is:
-    1) generate cluster assignments c_1, ..., c_N ~ CRP(N, α) (K clusters)
-    2) generate parameters Φ_1, ...,Φ_K ~ G_0
-    3) generate each datapoint y_i ~ F(Φ_{c_i})
-So we have P(y | Φ_{1:K}, β_{1:K}) = \sum_{j=1}^K β_j Norm(y | μ_j, S_j)
-"""
+#Dirichlet process mixture model (for N observations y_1, ..., y_N)
+#    1) generate a distribution G ~ DP(G_0, alpha)
+#    2) generate parameters theta_1, ..., theta_N ~ G
+#    [1+2) <=> (with B_1, ..., B_N a measurable partition of the set for which
+#        G_0 is a finite measure, G(B_i) = theta_i:)
+#       generate G(B_1), ..., G(B_N) ~ Dirichlet(alphaG_0(B_1), ..., alphaG_0(B_N)]
+#    3) generate each datapoint y_i ~ F(theta_i)
+# Now, an alternative is:
+#    1) generate a vector beta ~ Stick(1, alpha) (<=> GEM(1, alpha))
+#    2) generate cluster assignments c_i ~ Categorical(beta) (gives K clusters)
+#    3) generate parameters sigma_1, ...,sigma_K ~ G_0
+#    4) generate each datapoint y_i ~ F(sigma_{c_i})
+#    for instance F is a Gaussian and sigma_c = (mean_c, var_c)
+# Another one is:
+#    1) generate cluster assignments c_1, ..., c_N ~ CRP(N, alpha) (K clusters)
+#    2) generate parameters sigma_1, ...,sigma_K ~ G_0
+#    3) generate each datapoint y_i ~ F(sigma_{c_i})
+# So we have P(y | sigma_{1:K}, beta_{1:K}) = \sum_{j=1}^K beta_j Norm(y | mean_j, S_j)
 
 
 class DPMM:
@@ -208,14 +206,11 @@ class DPMM:
                     # compute P_k(X[i]) = P(X[i] | X[-i] = k)
                     marginal_likelihood_Xi = param.pdf(X[i])
                     # set N_{k,-i} = dim({X[-i] = k})
-                    # compute P(z[i] = k | z[-i], Data) = N_{k,-i}/(α+N-1)
                     mixing_Xi = param.n_points / (self.alpha + self.n_points - 1)
                     tmp.append(marginal_likelihood_Xi * mixing_Xi)
                 
-                # compute P*(X[i]) = P(X[i]|λ)
                 base_distrib = Gaussian(X=np.zeros((0, X.shape[1])))
                 prior_predictive = base_distrib.pdf(X[i])
-                # compute P(z[i] = * | z[-i], Data) = α/(α+N-1)
                 prob_new_cluster = self.alpha / (self.alpha + self.n_points - 1)
                 tmp.append(prior_predictive * prob_new_cluster)
                 
