@@ -6,6 +6,7 @@ from __future__ import print_function
 import os
 import pandas as pd
 import numpy as np
+from datetime import timedelta
 
 # date_time format
 date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
@@ -30,7 +31,7 @@ class Filter(object):
         
         self.processed_data_dict_array = {}
     
-    def filter_data(self, data_df=None, audio_df=None, raw_audio=None, fitbit_summary_df=None, mgt_df=None, omsignal_df=None, owl_in_one_df=None, realizd_df=None):
+    def filter_data(self, data_df=None, audio_df=None, raw_audio_df=None, fitbit_summary_df=None, mgt_df=None, omsignal_df=None, owl_in_one_df=None, realizd_df=None):
         """
         Filter data based on the config file being initiated
         """
@@ -77,17 +78,83 @@ class Filter(object):
             ###########################################################
             # If there is no realizd data or not enough data, return
             ###########################################################
-            if audio_df is None:
+            if raw_audio_df is None:
                 return
             if owl_in_one_df is None:
                 return
 
             ###########################################################
-            # Save the realizd data and fitbit data for now
+            # Find valid owl-in-one data
             ###########################################################
-            owl_in_one_df.to_csv(os.path.join(self.data_config.owl_in_one_sensor_dict['filter_path'], participant_id + '.csv.gz'), compression='gzip')
-            data_df.to_csv(os.path.join(self.data_config.fitbit_sensor_dict['filter_path'], participant_id + '.csv.gz'), compression='gzip')
-            audio_df.to_csv(os.path.join(self.data_config.audio_sensor_dict['filter_path'], participant_id + '.csv.gz'), compression='gzip')
+            time_diff = list((pd.to_datetime(list(owl_in_one_df.index[1:])) - pd.to_datetime(list(owl_in_one_df.index[:-1]))).total_seconds())
+            
+            change_point_start_list = [0]
+            change_point_end_list = list(np.where(np.array(time_diff) > 3600 * 2)[0])
+            
+            if len(change_point_end_list) < 5:
+                return
+            
+            [change_point_start_list.append(change_point_end+1) for change_point_end in change_point_end_list]
+            change_point_end_list.append(len(owl_in_one_df.index)-1)
+            
+            time_start_end_list = []
+            for i, change_point_end in enumerate(change_point_end_list):
+                if 420 < change_point_end - change_point_start_list[i] < 840:
+                    time_start_end_list.append([list(owl_in_one_df.index)[change_point_start_list[i]], list(owl_in_one_df.index)[change_point_end]])
+
+            ###########################################################
+            # Find valid om_signal data
+            ###########################################################
+            if omsignal_df is not None:
+                time_diff = list((pd.to_datetime(list(omsignal_df.index[1:])) - pd.to_datetime(list(omsignal_df.index[:-1]))).total_seconds())
+    
+                change_point_start_list = [0]
+                change_point_end_list = list(np.where(np.array(time_diff) > 3600 * 2)[0])
+    
+                if len(change_point_end_list) < 10:
+                    return
+                
+                [change_point_start_list.append(change_point_end + 1) for change_point_end in change_point_end_list]
+                change_point_end_list.append(len(owl_in_one_df.index) - 1)
+    
+                for i, change_point_end in enumerate(change_point_end_list):
+                    if 420 < change_point_end - change_point_start_list[i] < 840:
+                        
+                        is_saved = False
+                        
+                        for time_start_end in time_start_end_list:
+                            start_time, end_time = time_start_end[0], time_start_end[1]
+                            if np.abs((pd.to_datetime(start_time) - pd.to_datetime(list(omsignal_df.index)[change_point_start_list[i]])).total_seconds()) < 3600 * 6:
+                                is_saved = True
+                        
+                        if is_saved is False:
+                            time_start_end_list.append([list(omsignal_df.index)[change_point_start_list[i]], list(omsignal_df.index)[change_point_end]])
+        
+            if len(time_start_end_list) < 5:
+                return
+            
+            ###########################################################
+            # Filter raw audio data
+            ###########################################################
+            for time_start_end in time_start_end_list:
+                start_time = (pd.to_datetime(time_start_end[0]) - timedelta(hours=1)).strftime(date_time_format)[:-3]
+                end_time = (pd.to_datetime(time_start_end[1]) + timedelta(hours=1)).strftime(date_time_format)[:-3]
+                tmp_raw_audio_df = raw_audio_df[start_time:end_time]
+                tmp_owl_in_one_df = owl_in_one_df[start_time:end_time]
+                
+                if len(tmp_raw_audio_df) > 100 * 50:
+                    tmp_raw_audio_df = tmp_raw_audio_df.loc[tmp_raw_audio_df['F0final_sma'] > 30]
+                    
+                    if os.path.exists(os.path.join(self.data_config.audio_sensor_dict['filter_path'], participant_id)) is False:
+                        os.mkdir(os.path.join(self.data_config.audio_sensor_dict['filter_path'], participant_id))
+                    if os.path.exists(os.path.join(self.data_config.owl_in_one_sensor_dict['filter_path'], participant_id)) is False:
+                        os.mkdir(os.path.join(self.data_config.owl_in_one_sensor_dict['filter_path'], participant_id))
+                    
+                    tmp_raw_audio_df.to_csv(os.path.join(self.data_config.audio_sensor_dict['filter_path'],
+                                                         participant_id, list(tmp_raw_audio_df.index)[0] + '.csv.gz'), compression='gzip')
+                    if len(tmp_owl_in_one_df) > 0:
+                        tmp_owl_in_one_df.to_csv(os.path.join(self.data_config.owl_in_one_sensor_dict['filter_path'],
+                                                              participant_id, list(tmp_owl_in_one_df.index)[0] + '.csv.gz'), compression='gzip')
 
         elif self.data_config.filter_method == 'awake_period':
     

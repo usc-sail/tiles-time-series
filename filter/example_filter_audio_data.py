@@ -59,13 +59,15 @@ def main(tiles_data_path, config_path, experiment):
 		# Read other sensor data, the aim is to detect whether people workes during a day
 		owl_in_one_df = load_sensor_data.read_preprocessed_owl_in_one(data_config.owl_in_one_sensor_dict['preprocess_path'], participant_id)
 		raw_audio_df = load_sensor_data.read_raw_audio(tiles_data_path, participant_id)
-
+		omsignal_data_df = load_sensor_data.read_preprocessed_omsignal(data_config.omsignal_sensor_dict['preprocess_path'], participant_id)
+		
 		# If we don't have fitbit data, no need to process it
 		if raw_audio_df is None:
 			print('%s has no audio data' % participant_id)
 			continue
 
-		filter_class.filter_data(raw_audio=raw_audio_df, mgt_df=participant_mgt, owl_in_one_df=owl_in_one_df)
+		filter_class.filter_data(raw_audio_df=raw_audio_df, mgt_df=participant_mgt,
+								 owl_in_one_df=owl_in_one_df, omsignal_df=omsignal_data_df)
 
 		del filter_class
 
