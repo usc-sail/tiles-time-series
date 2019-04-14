@@ -320,8 +320,20 @@ def load_clustering_path(data_config, process_data_path, data_name='clustering',
     preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['preprocess_cols']
     tmp_path = os.path.join(tmp_path, preprocess_str)
     create_folder(tmp_path)
-    
     data_config.fitbit_sensor_dict['clustering_path'] = tmp_path
+
+    # Raw audio clustering
+    tmp_path = os.path.join(process_data_path, 'clustering')
+    create_folder(tmp_path)
+    tmp_path = os.path.join(tmp_path, 'audio')
+    create_folder(tmp_path)
+    tmp_path = os.path.join(tmp_path, data_config.audio_sensor_dict['cluster_data'])
+    create_folder(tmp_path)
+    cluster_str = 'alpha_' + data_config.audio_sensor_dict['cluster_alpha'] + '_method_' + data_config.audio_sensor_dict['cluster_method']
+    tmp_path = os.path.join(tmp_path, cluster_str)
+    create_folder(tmp_path)
+
+    data_config.audio_sensor_dict['clustering_path'] = tmp_path
 
 
 def load_all_available_path(data_config, process_data_path, filter_data=False,

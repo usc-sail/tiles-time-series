@@ -185,6 +185,9 @@ class Config(object):
         self.audio_sensor_dict['feature'] = self.getSetting('audio', 'feature')
         self.audio_sensor_dict['preprocess_setting'] = self.getSetting('audio', 'preprocess_setting')
         self.audio_sensor_dict['offset'] = self.getSetting('audio', 'offset')
+        self.audio_sensor_dict['cluster_alpha'] = self.getSetting('audio', 'cluster_alpha')
+        self.audio_sensor_dict['cluster_method'] = self.getSetting('audio', 'cluster_method')
+        self.audio_sensor_dict['cluster_data'] = self.getSetting('audio', 'cluster_data')
 
         ###########################################################
         # Read feature engineering parameters
