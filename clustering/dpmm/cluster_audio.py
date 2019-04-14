@@ -49,6 +49,7 @@ def cluster_audio(data_df, data_config, participant_id, iter=100, cluster_name='
 		dpgmm = mixture.BayesianGaussianMixture(n_components=50, covariance_type='full').fit(np.array(data_df))
 		cluster_id = dpgmm.predict(np.array(data_df))
 
+	print(Counter(cluster_id))
 	data_df.loc[:, 'cluster'] = cluster_id
 	if os.path.exists(os.path.join(data_cluster_path, participant_id)) is False:
 		os.mkdir(os.path.join(data_cluster_path, participant_id))
@@ -87,6 +88,9 @@ def main(tiles_data_path, config_path, experiment):
 		uid = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].index)[0]
 
 		# Read other sensor data, the aim is to detect whether people workes during a day
+		if os.path.exists(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id)) is False:
+			continue
+
 		if len(os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id))) < 5:
 			continue
 		file_list = [file for file in os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id)) if 'utterance' not in file]
@@ -152,7 +156,6 @@ def main(tiles_data_path, config_path, experiment):
 
 
 if __name__ == '__main__':
-	
 	# Read args
 	args = parser.parse_args()
 
