@@ -18,6 +18,22 @@ from vdpgmm import VDPGMM
 from sklearn import preprocessing
 from sklearn import datasets
 
+
+import unittest
+import shutil
+import tempfile
+
+# import pandas as pd
+# import pymc3 as pm
+# from pymc3 import summary
+# from sklearn.mixture import BayesianGaussianMixture as skBayesianGaussianMixture
+from sklearn.model_selection import train_test_split
+
+from pmlearn.exceptions import NotFittedError
+from pmlearn.mixture import DirichletProcessMixture
+from pybgmm.prior import NIW
+from pybgmm.igmm import PCRPMM
+
 ###########################################################
 # Change to your own library path
 ###########################################################
@@ -36,15 +52,41 @@ def cluster_audio(data_df, data_config, participant_id, iter=100, cluster_name='
 	data_cluster_path = data_config.audio_sensor_dict['clustering_path']
 
 	if data_config.audio_sensor_dict['cluster_method'] == 'collapsed_gibbs':
-		dpgmm = dpmm.DPMM(n_components=30, alpha=float(data_config.audio_sensor_dict['cluster_alpha']))
+		dpgmm = dpmm.DPMM(n_components=50, alpha=float(data_config.audio_sensor_dict['cluster_alpha']))
 		dpgmm.fit_collapsed_Gibbs(np.array(data_df))
 		cluster_id = dpgmm.predict(np.array(data_df))
 	elif data_config.audio_sensor_dict['cluster_method'] == 'gibbs':
 		cluster_id = dpgmm_gibbs.DPMM(np.array(data_df), alpha=float(data_config.audio_sensor_dict['cluster_alpha']), iter=iter, K=50)
 	elif data_config.audio_sensor_dict['cluster_method'] == 'vdpgmm':
-		model = VDPGMM(T=50, alpha=float(data_config.audio_sensor_dict['cluster_alpha']), max_iter=1000)
+		model = VDPGMM(T=100, alpha=float(data_config.audio_sensor_dict['cluster_alpha']), max_iter=1000)
 		model.fit(np.array(data_df))
 		cluster_id = model.predict(np.array(data_df))
+	elif data_config.audio_sensor_dict['cluster_method'] == 'pcrpmm':
+		# Model parameters
+		alpha = float(data_config.audio_sensor_dict['cluster_alpha'])
+		K = 30  # initial number of components
+		n_iter = 300
+		
+		D = np.array(data_df).shape[1]
+		
+		# Generate data
+		mu_scale = 4.0
+		covar_scale = 0.7
+		
+		# Intialize prior
+		m_0 = np.zeros(D)
+		k_0 = covar_scale ** 2 / mu_scale ** 2
+		v_0 = D + 3
+		S_0 = covar_scale ** 2 * v_0 * np.eye(D)
+		prior = NIW(m_0, k_0, v_0, S_0)
+		
+		## Setup PCRPMM
+		pcrpmm = PCRPMM(np.array(data_df), prior, alpha, save_path=None, assignments="rand", K=K)
+		# pcrpmm = PCRPMM(X, prior, alpha, save_path=save_path, assignments="one-by-one", K=K)
+		
+		## Perform collapsed Gibbs sampling
+		record_dict = pcrpmm.collapsed_gibbs_sampler(n_iter, n_power=1.01, num_saved=1)
+		cluster_id = pcrpmm.components.assignments
 	else:
 		dpgmm = mixture.BayesianGaussianMixture(n_components=50, covariance_type='full').fit(np.array(data_df))
 		cluster_id = dpgmm.predict(np.array(data_df))
@@ -156,6 +198,35 @@ def main(tiles_data_path, config_path, experiment):
 
 
 if __name__ == '__main__':
+	
+	'''
+	iris = datasets.load_iris()
+	
+	# Define as theano shared variables so the value can be changed later on
+	X = tt._shared(iris.data)
+	y = tt._shared(iris.target)
+	
+	n_dims = iris.data.shape[1]
+	n_classes = len(set(iris.target))
+	n_features = iris.data.shape[0]
+	
+	with pm.Model() as model:
+		# Priors
+		alpha = np.ones(n_classes)
+		pi = pm.Dirichlet('pi', alpha, shape=n_classes)
+		mu = pm.Normal('mu', 0, 100, shape=(n_classes, n_dims))
+		sigma = pm.HalfNormal('sigma', 100, shape=(n_classes, n_dims))
+		
+		# Assign class to data points
+		z = pm.Categorical('z', pi, shape=n_features, observed=y)
+		
+		# The components are independent and normal-distributed
+		a = pm.Normal('a', mu[z], sigma[z], observed=X)
+	
+	with model:
+		trace = pm.sample(5000)
+	'''
+	
 	# Read args
 	args = parser.parse_args()
 

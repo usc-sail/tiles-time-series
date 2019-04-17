@@ -10,7 +10,7 @@ import numpy as np
 from random import shuffle
 
 
-from tick.hawkes import (HawkesSumGaussians)
+from tick.hawkes import (HawkesSumGaussians, SimuHawkesSumExpKernels)
 
 from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
@@ -28,6 +28,7 @@ from TICC_solver import TICC
 import config
 import load_sensor_data, load_data_path, load_data_basic
 import parser
+from scipy.special import erf
 
 # igtb values
 igtb_label_list = ['neu_igtb', 'con_igtb', 'ext_igtb', 'agr_igtb', 'ope_igtb',
@@ -60,6 +61,105 @@ group_label_list = ['shift', 'position', 'fatigue', 'Sex',
                     'pos_af_igtb', 'neg_af_igtb', 'stai_igtb',
                     'neu_igtb', 'con_igtb', 'ext_igtb', 'agr_igtb', 'ope_igtb']
 
+'''
+def Kernel_Integration(dt, para):
+
+    # % dt = t_current - t_hist(:);
+    distance = repmat(dt(:), [1, length(para.landmark(:))]) - ...
+    repmat(para.landmark(:)', [length(dt), 1]);
+    landmark = repmat(para.landmark(:)', [length(dt), 1]);
+    
+    switch
+    para.kernel
+    case
+    'exp'
+    G = 1 - exp(-para.w * (distance - landmark));
+    G(G < 0) = 0;
+    
+    case
+    'gauss'
+    G = 0.5 * (erf(distance. / (sqrt(2) * para.w))...
+               + erf(landmark. / (sqrt(2) * para.w)));
+'''
+
+
+def Kernel_Integration(dT_array, landmark, w, kernel='gauss'):
+    dT_array_repmat = np.tile(dT_array, [1, len(landmark)])
+    landmark_repmat = np.tile(np.array(landmark), [len(dT_array), 1])
+    
+    distance = dT_array_repmat - landmark_repmat
+    
+    if kernel == 'gauss':
+        erf_distance = erf(np.divide(distance, np.sqrt(2) * w))
+        erf_landmark = erf(np.divide(landmark_repmat, np.sqrt(2) * w))
+        
+        G = 0.5 * (erf_distance + erf_landmark)
+    else:
+        G = 1 - np.exp(np.multiply(-w, distance))
+        G[np.where(G < 0)] = 0
+    
+    return G
+
+
+def get_infective_matrix(D_max, adjencent_A, landmark, w, dt=1):
+    
+    A = np.zeros([D_max, D_max])
+    M = 300
+    T_max = 1680 # 60 * 28
+
+    for u in range(D_max):
+        for v in range(D_max):
+            dT_array = np.reshape(T_max, [1, 1])
+            basis_int = Kernel_Integration(dT_array, landmark, w)
+            
+            A_tmp = np.array(adjencent_A[v, u, :]).reshape([1, len(adjencent_A[v, u, :])])
+            basis_int = np.array(basis_int)
+            basis_int = basis_int.reshape([basis_int.shape[1], 1])
+
+            A[u, v] = np.matmul(A_tmp, basis_int)
+    
+    return A
+            
+def init_param(num_of_days, D_max, dist_list, point_dict):
+    est = {(i, j): [] for i in range(0, D_max) for j in range(0, D_max)}
+    
+    sigma = np.zeros([D_max, D_max])
+    Tmax_array = np.zeros([D_max, D_max])
+    
+    try:
+        # Append time difference array
+        for n in range(num_of_days):
+            for i in range(1, len(dist_list[n])):
+                ti = dist_list[n][i][2]
+                di = point_dict[(dist_list[n][i][0], dist_list[n][i][1])]
+                
+                for j in range(i - 1):
+                    tj = dist_list[n][j][2]
+                    dj = point_dict[(dist_list[n][j][0], dist_list[n][j][1])]
+                    est[di, dj].append(ti - tj)
+    except:
+        print('Error')
+    
+    # Compute sigma and Tmax
+    for di in range(D_max):
+        for dj in range(D_max):
+            est_std = 4 * np.power(np.nanstd(est[di, dj]), 5)
+            sigma[di][dj] = np.power(est_std / (3 * len(est[di, dj])), 0.2)
+            Tmax_array[di, dj] = np.nanmean(est[di, dj])
+    
+    Tmax = np.nanmin(Tmax_array[:]) / 2
+    sigma = np.array(sigma[:])
+    sigma = sigma[sigma != 0]
+    
+    w = np.nanmin(sigma) / 2
+    # landmark = int(np.ceil(Tmax / w))
+    landmark = [w * i for i in range(int(np.ceil(Tmax / w)))]
+    # if landmark < 1:
+    #     landmark = 4
+        
+    return landmark, w
+    
+
 def get_hawkes_kernel(data_config, participant_id, num_of_days, remove_col_index=2, num_of_gaussian=10):
     
     print('hawkes: participant: %s' % (participant_id))
@@ -77,7 +177,16 @@ def get_hawkes_kernel(data_config, participant_id, num_of_days, remove_col_index
     # Read filtered data
     filter_data_list = participant_data_dict['filter_data_list']
     workday_point_list, offday_point_list = [], []
+    workday_point_dist_list, offday_point_dist_list = [], []
     shuffle(clustering_data_list)
+
+    index = 0
+    point_dict = {}
+    for i in range(data_config.fitbit_sensor_dict['num_cluster']):
+        for j in range(data_config.fitbit_sensor_dict['num_cluster']):
+            if i != j and i != remove_col_index and j != remove_col_index:
+                point_dict[(i, j)] = index
+                index += 1
     
     # Iterate clustering data
     for clustering_data_dict in clustering_data_list:
@@ -106,15 +215,10 @@ def get_hawkes_kernel(data_config, participant_id, num_of_days, remove_col_index
             
             # Initiate list for counter
             day_point_list = []
-            point_dict = {}
-            
-            index = 0
             for i in range(data_config.fitbit_sensor_dict['num_cluster']):
                 for j in range(data_config.fitbit_sensor_dict['num_cluster']):
                     if i != j and i != remove_col_index and j != remove_col_index:
                         day_point_list.append(np.zeros(1))
-                        point_dict[(i, j)] = index
-                        index += 1
                         
             for change_tuple in change_list:
                 day_point_list[point_dict[(change_tuple[0], change_tuple[1])]] = np.append(day_point_list[point_dict[(change_tuple[0], change_tuple[1])]], change_tuple[2])
@@ -130,10 +234,12 @@ def get_hawkes_kernel(data_config, participant_id, num_of_days, remove_col_index
                 # from collections import Counter
                 # data = Counter(elem[0] for elem in change_list)
                 if len(workday_point_list) < num_of_days:
-                    workday_point_list.append([point / 60 for point in day_point_list])
+                    workday_point_list.append([point for point in day_point_list])
+                    workday_point_dist_list.append(change_list)
             else:
                 if len(offday_point_list) < num_of_days:
-                    offday_point_list.append([point / 60 for point in day_point_list])
+                    offday_point_list.append([point for point in day_point_list])
+                    offday_point_dist_list.append(change_list)
 
     workday_col_list, offday_col_list = [], []
 
@@ -142,21 +248,29 @@ def get_hawkes_kernel(data_config, participant_id, num_of_days, remove_col_index
             if i != j and i != remove_col_index and j != remove_col_index:
                 workday_col_list.append('workday:' + str(i) + ',' + str(j))
                 offday_col_list.append('offday:' + str(i) + ',' + str(j))
+
+    landmark, w = init_param(num_of_days, len(offday_col_list), workday_point_dist_list, point_dict)
     
     # Learn causality
-    workday_learner = HawkesSumGaussians(num_of_gaussian, max_iter=100)
+    workday_learner = HawkesSumGaussians(1000, n_gaussians=len(landmark), max_iter=100)
     workday_learner.fit(workday_point_list)
-    ineffective_array = np.array(workday_learner.get_kernel_norms())
-    
+    # ineffective_array = np.array(workday_learner.get_kernel_norms())
+
+    ineffective_array = get_infective_matrix(len(workday_col_list), workday_learner.amplitudes, landmark, w, dt=1)
+
     for i in range(ineffective_array.shape[0]):
         for j in range(ineffective_array.shape[1]):
             index = i * ineffective_array.shape[0] + j
             row_df[workday_col_list[i] + '->' + workday_col_list[j]] = np.reshape(ineffective_array, [1, ineffective_array.shape[0] * ineffective_array.shape[1]])[0][index]
 
-    offday_learner = HawkesSumGaussians(num_of_gaussian, max_iter=100)
+    landmark, w = init_param(num_of_days, len(offday_col_list), offday_point_dist_list, point_dict)
+
+    offday_learner = HawkesSumGaussians(1000, n_gaussians=len(landmark), max_iter=100)
     offday_learner.fit(offday_point_list)
-    ineffective_array = np.array(offday_learner.get_kernel_norms())
+    # ineffective_array = np.array(offday_learner.get_kernel_norms())
     
+    ineffective_array = get_infective_matrix(len(offday_col_list), offday_learner.amplitudes, landmark, w, dt=1)
+
     for i in range(ineffective_array.shape[0]):
         for j in range(ineffective_array.shape[1]):
             index = i * ineffective_array.shape[0] + j
@@ -331,7 +445,7 @@ def predict(data_config, groundtruth_df, top_participant_id_list, index, fitbit=
         X = np.array(hawkes_kernel_df)
         y = np.array(data_df[group_label])
         
-        clf = GridSearchCV(RandomForestClassifier(), param_grid, cv=5, scoring='f1_micro')
+        clf = GridSearchCV(RandomForestClassifier(), param_grid, cv=5, scoring='f1_macro')
         clf.fit(X, y)
         feat_importance_result.loc[group_label, :] = clf.best_estimator_.feature_importances_
     
@@ -355,7 +469,7 @@ def predict(data_config, groundtruth_df, top_participant_id_list, index, fitbit=
             # ML data
             X = np.array(data_df[fitbit_cols])
             y = np.array(data_df[group_label])
-            clf = GridSearchCV(RandomForestClassifier(), param_grid, cv=5, scoring='f1_micro')
+            clf = GridSearchCV(RandomForestClassifier(), param_grid, cv=5, scoring='f1_macro')
             clf.fit(X, y)
 
             fitbit_feat_importance_result.loc[group_label, :] = clf.best_estimator_.feature_importances_
@@ -424,7 +538,7 @@ def main(tiles_data_path, config_path, experiment):
     # Save data and path
     final_result_df, fitbit_final_result_df = pd.DataFrame(), pd.DataFrame()
 
-    num_of_gaussian, fitbit_enable = 4, False
+    num_of_gaussian, fitbit_enable = 100, False
     prefix = data_config.fitbit_sensor_dict['clustering_path'].split('_impute_')[0]
     prefix = prefix.split('clustering/fitbit/')[1]
     save_path = prefix + '_num_of_gaussian_' + str(num_of_gaussian) + '_transitional.csv'
