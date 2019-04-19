@@ -29,8 +29,8 @@ import tempfile
 # from sklearn.mixture import BayesianGaussianMixture as skBayesianGaussianMixture
 from sklearn.model_selection import train_test_split
 
-from pmlearn.exceptions import NotFittedError
-from pmlearn.mixture import DirichletProcessMixture
+# from pmlearn.exceptions import NotFittedError
+# from pmlearn.mixture import DirichletProcessMixture
 from pybgmm.prior import NIW
 from pybgmm.igmm import PCRPMM
 
@@ -64,14 +64,14 @@ def cluster_audio(data_df, data_config, participant_id, iter=100, cluster_name='
 	elif data_config.audio_sensor_dict['cluster_method'] == 'pcrpmm':
 		# Model parameters
 		alpha = float(data_config.audio_sensor_dict['cluster_alpha'])
-		K = 30  # initial number of components
+		K = 100  # initial number of components
 		n_iter = 300
 		
 		D = np.array(data_df).shape[1]
 		
 		# Generate data
-		mu_scale = 4.0
-		covar_scale = 0.7
+		mu_scale = 1
+		covar_scale = 1
 		
 		# Intialize prior
 		m_0 = np.zeros(D)
