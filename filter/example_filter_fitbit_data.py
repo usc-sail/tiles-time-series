@@ -88,6 +88,6 @@ if __name__ == '__main__':
     # If arg not specified, use default value
     tiles_data_path = '../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
     config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file')) if args.config is None else args.config
-    experiment = 'baseline' if args.experiment is None else args.experiment
+    experiment = 'ticc' if args.experiment is None else args.experiment
     
     main(tiles_data_path, config_path, experiment)

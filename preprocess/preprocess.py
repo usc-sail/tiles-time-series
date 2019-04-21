@@ -57,6 +57,11 @@ class Preprocess(object):
 
         preprocess_data_all_df = pd.DataFrame()
         
+        check_saved = True
+        
+        if os.path.exists(os.path.join(self.data_config.fitbit_sensor_dict['preprocess_path'], self.participant_id + '.csv.gz')) is True and check_saved:
+            return
+        
         ###########################################################
         # Slice the data
         ###########################################################

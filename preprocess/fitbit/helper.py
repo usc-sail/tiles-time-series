@@ -11,6 +11,7 @@ from fancyimpute import (
     KNN
 )
 
+from pmdarima.arima import auto_arima
 from statsmodels.tsa.arima_model import ARIMA
 
 # date_time format
@@ -122,7 +123,7 @@ def fitbit_process_sliced_data(ppg_data_df, step_data_df, participant=None, data
             model = IterativeImputer()
 
         if len(preprocess_data_df.dropna()) / len(preprocess_data_df) > 0.75:
-            if data_config.fitbit_sensor_dict['imputation'] == 'arima':
+            if data_config.fitbit_sensor_dict['imputation'] == 'arima' or data_config.fitbit_sensor_dict['imputation'] == 'auto_arima':
                 nan_index = np.where((np.array(preprocess_data_df) >= -1) == False)
                 impute_array = np.array(preprocess_data_df)
                 if len(np.where(nan_index[0] < 50)[0]) > 25:
@@ -150,9 +151,19 @@ def fitbit_process_sliced_data(ppg_data_df, step_data_df, participant=None, data
                             if len(np.unique(np.array(impute_array)[start_index:nan_index[0][i], nan_index[1][i]])) < 25:
                                 impute_array[nan_index[0][i], nan_index[1][i]] = knn_imputed_array[nan_index[0][i], nan_index[1][i]]
                             else:
-                                model = ARIMA(np.array(impute_array)[start_index:nan_index[0][i], nan_index[1][i]], order=(3, 1, 0))
-                                model_fit = model.fit(disp=0)
-                                impute_array[nan_index[0][i], nan_index[1][i]] = model_fit.forecast()[0]
+                                if data_config.fitbit_sensor_dict['imputation'] == 'arima':
+                                    model = ARIMA(np.array(impute_array)[start_index:nan_index[0][i], nan_index[1][i]], order=(3, 1, 0))
+                                    model_fit = model.fit(disp=0)
+                                    impute_array[nan_index[0][i], nan_index[1][i]] = model_fit.forecast()[0]
+                                else:
+                                    model = auto_arima(np.array(impute_array)[start_index:nan_index[0][i], nan_index[1][i]],
+                                                       start_p=1, start_q=1, start_P=1, start_Q=1,
+                                                       max_p=5, max_q=5, max_P=5, max_Q=5, seasonal=True,
+                                                       stepwise=True, suppress_warnings=True, D=10, max_D=10,
+                                                       error_action='ignore')
+
+                                    preds = model.predict(n_periods=1, return_conf_int=False)
+                                    impute_array[nan_index[0][i], nan_index[1][i]] = preds
             else:
                 impute_array = model.fit_transform(np.array(preprocess_data_df))
             

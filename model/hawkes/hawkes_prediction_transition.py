@@ -119,7 +119,7 @@ def get_infective_matrix(D_max, adjencent_A, landmark, w, dt=1):
             A[u, v] = np.matmul(A_tmp, basis_int)
     
     return A
-            
+    
 def init_param(num_of_days, D_max, dist_list, point_dict):
     est = {(i, j): [] for i in range(0, D_max) for j in range(0, D_max)}
     
@@ -279,7 +279,7 @@ def get_hawkes_kernel(data_config, participant_id, num_of_days, remove_col_index
     return row_df
     
 
-def predict(data_config, groundtruth_df, top_participant_id_list, index, fitbit=False,
+def predict(data_config, groundtruth_df, top_participant_id_list, index, fitbit=False, fusion=False,
             num_of_days=5, num_of_gaussian=10, remove_col_index=2):
     
     # Initiate data df
@@ -334,7 +334,7 @@ def predict(data_config, groundtruth_df, top_participant_id_list, index, fitbit=
         ###########################################################
         hawkes_kernel_df = hawkes_kernel_df.append(row_df)
         
-        if fitbit:
+        if fitbit or fusion:
             # Summary features
             row_df['Cardio_caloriesOut_mean'] = np.nanmean(fitbit_summary_df.Cardio_caloriesOut)
             row_df['Cardio_caloriesOut_std'] = np.nanstd(fitbit_summary_df.Cardio_caloriesOut)
@@ -437,27 +437,28 @@ def predict(data_config, groundtruth_df, top_participant_id_list, index, fitbit=
     result = pd.DataFrame(columns=group_label_list, index=[index])
     feat_importance_result = pd.DataFrame(columns=hawkes_kernel_df.columns, index=group_label_list)
     
-    for group_label in group_label_list:
-        print('--------------------------------------------------')
-        print('predict %s' % group_label)
+    if not fitbit and not fusion:
+        for group_label in group_label_list:
+            print('--------------------------------------------------')
+            print('predict %s' % group_label)
+            
+            # ML data
+            X = np.array(hawkes_kernel_df)
+            y = np.array(data_df[group_label])
+            
+            clf = GridSearchCV(RandomForestClassifier(), param_grid, cv=5, scoring='f1_macro')
+            clf.fit(X, y)
+            feat_importance_result.loc[group_label, :] = clf.best_estimator_.feature_importances_
         
-        # ML data
-        X = np.array(hawkes_kernel_df)
-        y = np.array(data_df[group_label])
-        
-        clf = GridSearchCV(RandomForestClassifier(), param_grid, cv=5, scoring='f1_macro')
-        clf.fit(X, y)
-        feat_importance_result.loc[group_label, :] = clf.best_estimator_.feature_importances_
-    
-        print("Best parameters set found on development set:")
-        print()
-        print(clf.best_params_)
-        print(clf.best_score_)
-        print()
-        print("Grid scores on development set:")
-        print()
-        print('--------------------------------------------------')
-        result[group_label] = clf.best_score_
+            print("Best parameters set found on development set:")
+            print()
+            print(clf.best_params_)
+            print(clf.best_score_)
+            print()
+            print("Grid scores on development set:")
+            print()
+            print('--------------------------------------------------')
+            result[group_label] = clf.best_score_
 
     fitbit_result = pd.DataFrame(columns=group_label_list, index=[index])
     fitbit_feat_importance_result = pd.DataFrame(columns=fitbit_cols, index=group_label_list)
@@ -483,8 +484,33 @@ def predict(data_config, groundtruth_df, top_participant_id_list, index, fitbit=
             print()
             print('--------------------------------------------------')
             fitbit_result[group_label] = clf.best_score_
+
+    fusion_result = pd.DataFrame(columns=group_label_list, index=[index])
+    fusion_feat_importance_result = pd.DataFrame(columns=fitbit_cols+list(hawkes_kernel_df.columns), index=group_label_list)
+    if fusion:
+        for group_label in group_label_list:
+            print('--------------------------------------------------')
+            print('predict %s' % group_label)
+
+            # ML data
+            X = np.array(data_df[fitbit_cols+list(hawkes_kernel_df.columns)])
+            y = np.array(data_df[group_label])
+            clf = GridSearchCV(RandomForestClassifier(), param_grid, cv=5, scoring='f1_macro')
+            clf.fit(X, y)
+
+            fusion_feat_importance_result.loc[group_label, :] = clf.best_estimator_.feature_importances_
+
+            print("Best parameters set found on development set:")
+            print()
+            print(clf.best_params_)
+            print(clf.best_score_)
+            print()
+            print("Grid scores on development set:")
+            print()
+            print('--------------------------------------------------')
+            fusion_result[group_label] = clf.best_score_
     
-    return result, fitbit_result, feat_importance_result, fitbit_feat_importance_result
+    return result, fitbit_result, fusion_result, feat_importance_result, fitbit_feat_importance_result, fusion_feat_importance_result
 
 
 def main(tiles_data_path, config_path, experiment):
@@ -536,9 +562,9 @@ def main(tiles_data_path, config_path, experiment):
         groundtruth_df.loc[index, 'Perceivedstress'] = float(groundtruth_df.loc[index, 'Perceivedstress']) if groundtruth_df.loc[index, 'Perceivedstress'] != ' ' else np.nan
 
     # Save data and path
-    final_result_df, fitbit_final_result_df = pd.DataFrame(), pd.DataFrame()
+    final_result_df, fitbit_final_result_df, fusion_final_result_df = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-    num_of_gaussian, fitbit_enable = 100, False
+    num_of_gaussian, fitbit_enable, fusion_enabled = 100, False, False
     prefix = data_config.fitbit_sensor_dict['clustering_path'].split('_impute_')[0]
     prefix = prefix.split('clustering/fitbit/')[1]
     save_path = prefix + '_num_of_gaussian_' + str(num_of_gaussian) + '_transitional.csv'
@@ -546,6 +572,9 @@ def main(tiles_data_path, config_path, experiment):
     
     '''
     ticc_num_cluster_6_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 2
+    auto_arima_15_ticc_num_cluster_3_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 1
+    auto_arima_15_ticc_num_cluster_4_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 1
+    auto_arima_15_ticc_num_cluster_5_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 1
     arima_15_ticc_num_cluster_3_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 1
     arima_15_ticc_num_cluster_4_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 1
     arima_15_ticc_num_cluster_5_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 1
@@ -557,27 +586,34 @@ def main(tiles_data_path, config_path, experiment):
     '''
 
     # for i in range(3, 8, 2):
-    for i in range(3, 6):
-        final_result_per_day_setting_df, final_fitbit_result_per_day_setting_df = pd.DataFrame(), pd.DataFrame()
-        final_feat_importance_result, final_fitbit_feat_importance_result = pd.DataFrame(), pd.DataFrame()
+    for i in range(5, 6):
+        final_result_per_day_setting_df, final_fitbit_result_per_day_setting_df, final_fusion_result_per_day_setting_df = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+        final_feat_importance_result, final_fitbit_feat_importance_result, final_fusion_feat_importance_result = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
         
         for j in range(5):
             # save_hawkes_kernel(data_config, top_participant_id_list, save_model_path, num_of_days=i)
             # result_df = predict_demographic(groundtruth_df, save_model_path, top_participant_id_list, j)
-            result_df, fitbit_result_df, feat_importance_result, fitbit_feat_importance_result = predict(data_config, groundtruth_df, top_participant_id_list, j,
-                                                                                                         fitbit=fitbit_enable, num_of_days=i, num_of_gaussian=num_of_gaussian, remove_col_index=1)
+            result_df, fitbit_result_df, fusion_result_df, \
+            feat_importance_result, \
+            fitbit_feat_importance_result, \
+            fusion_feat_importance_result = predict(data_config, groundtruth_df, top_participant_id_list, j,
+                                                    fusion=fusion_enabled, fitbit=fitbit_enable,
+                                                    num_of_days=i, num_of_gaussian=num_of_gaussian, remove_col_index=1)
             final_result_per_day_setting_df = final_result_per_day_setting_df.append(result_df)
             final_fitbit_result_per_day_setting_df = final_fitbit_result_per_day_setting_df.append(fitbit_result_df)
+            final_fusion_result_per_day_setting_df = final_fusion_result_per_day_setting_df.append(fusion_result_df)
             
             if i == 5:
                 final_feat_importance_result = feat_importance_result if len(final_feat_importance_result) == 0 else final_feat_importance_result + feat_importance_result
+                final_fusion_feat_importance_result = fusion_feat_importance_result if len(final_fusion_feat_importance_result) == 0 else final_fusion_feat_importance_result + fusion_feat_importance_result
                 final_fitbit_feat_importance_result = fitbit_feat_importance_result if len(final_fitbit_feat_importance_result) == 0 else final_fitbit_feat_importance_result + fitbit_feat_importance_result
         
-        tmp_df = pd.DataFrame(np.mean(np.array(final_result_per_day_setting_df), axis=0).reshape([1, -1]), index=[i], columns=final_result_per_day_setting_df.columns)
-        final_result_df = final_result_df.append(tmp_df)
-        final_result_df.to_csv(os.path.join(os.curdir, 'result', save_path))
-        final_feat_importance_result = final_feat_importance_result / 5
-        final_feat_importance_result.to_csv(os.path.join(os.curdir, 'result', save_path_feat))
+        if not fitbit_enable and not fusion_enabled:
+            tmp_df = pd.DataFrame(np.mean(np.array(final_result_per_day_setting_df), axis=0).reshape([1, -1]), index=[i], columns=final_result_per_day_setting_df.columns)
+            final_result_df = final_result_df.append(tmp_df)
+            final_result_df.to_csv(os.path.join(os.curdir, 'result', save_path))
+            final_feat_importance_result = final_feat_importance_result / 5
+            final_feat_importance_result.to_csv(os.path.join(os.curdir, 'result', save_path_feat))
         
         if fitbit_enable is True:
             tmp_df = pd.DataFrame(np.mean(np.array(final_fitbit_result_per_day_setting_df), axis=0).reshape([1, -1]), index=[i], columns=final_fitbit_result_per_day_setting_df.columns)
@@ -586,36 +622,17 @@ def main(tiles_data_path, config_path, experiment):
             final_fitbit_feat_importance_result = final_fitbit_feat_importance_result / 5
             final_fitbit_feat_importance_result.to_csv(os.path.join(os.curdir, 'result', 'fitbit_feat_result.csv'))
             
+        if fusion_enabled is True:
+            tmp_df = pd.DataFrame(np.mean(np.array(final_fusion_result_per_day_setting_df), axis=0).reshape([1, -1]), index=[i], columns=final_fusion_result_per_day_setting_df.columns)
+            fusion_final_result_df = fusion_final_result_df.append(tmp_df)
+            fusion_final_result_df.to_csv(os.path.join(os.curdir, 'result', 'fusion_' + save_path_feat))
+            final_fusion_feat_importance_result = final_fusion_feat_importance_result / 5
+            final_fusion_feat_importance_result.to_csv(os.path.join(os.curdir, 'result', 'fusion_feat_'+save_path_feat))
+            
     print(final_result_df)
 
 
 if __name__ == '__main__':
-    '''
-    from tick.plot import plot_hawkes_kernels
-    from tick.hawkes import (SimuHawkes, SimuHawkesMulti, HawkesKernelExp,
-                             HawkesKernelTimeFunc, HawkesKernelPowerLaw,
-                             HawkesKernel0, HawkesSumGaussians)
-    
-    end_time = 1000
-    n_nodes = 2
-    n_realizations = 10
-    n_gaussians = 5
-    
-    timestamps_list = []
-    
-    kernel_timefunction = HawkesKernelTimeFunc(t_values=np.array([0., .7, 2.5, 3., 4.]),
-                                               y_values=np.array([.3, .03, .03, .2, 0.]))
-    kernels = [[HawkesKernelExp(.2, 2.),
-                HawkesKernelPowerLaw(.2, .5, 1.3)],
-               [HawkesKernel0(), kernel_timefunction]]
-    
-    hawkes = SimuHawkes(baseline=[.5, .2], kernels=kernels, end_time=end_time,
-                        verbose=False, seed=1039)
-    
-    multi = SimuHawkesMulti(hawkes, n_simulations=n_realizations)
-    
-    multi.simulate()
-    '''
     
     # Read args
     args = parser.parse_args()
