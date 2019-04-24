@@ -36,10 +36,6 @@ igtb_label_list = ['neu_igtb', 'con_igtb', 'ext_igtb', 'agr_igtb', 'ope_igtb',
                    'LifeSatisfaction', 'General_Health', 'Emotional_Wellbeing', 'Engage', 'Perceivedstress',
                    'itp_igtb', 'irb_igtb', 'iod_id_igtb', 'iod_od_igtb', 'ocb_igtb']
 
-# fitbit columns
-# 'Peak_caloriesOut_mean', 'Peak_caloriesOut_std', 'Peak_caloriesOut_min', 'Peak_caloriesOut_max', 'Peak_caloriesOut_median',
-# 'Fat_Burn_caloriesOut_mean', 'Fat_Burn_caloriesOut_std', 'Fat_Burn_caloriesOut_min', 'Fat_Burn_caloriesOut_max', 'Fat_Burn_caloriesOut_median',
-# 'Cardio_caloriesOut_mean', 'Cardio_caloriesOut_std', 'Cardio_caloriesOut_min', 'Cardio_caloriesOut_max', 'Cardio_caloriesOut_median',
 
 fitbit_cols = ['Cardio_minutes_mean', 'Cardio_minutes_std', 'Cardio_minutes_min', 'Cardio_minutes_max',
                'Cardio_minutes_median',
@@ -525,87 +521,6 @@ def main(tiles_data_path, config_path, experiment):
         groundtruth_df.loc[index, 'Engage'] = float(groundtruth_df.loc[index, 'Engage']) if groundtruth_df.loc[index, 'Engage'] != ' ' else np.nan
         groundtruth_df.loc[index, 'Perceivedstress'] = float(groundtruth_df.loc[index, 'Perceivedstress']) if groundtruth_df.loc[index, 'Perceivedstress'] != ' ' else np.nan
     
-    
-    high_con_workday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'high_con_workday.csv'), index_col=0)
-    high_con_offday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'high_con_offday.csv'), index_col=0)
-    low_con_workday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'low_con_workday.csv'), index_col=0)
-    low_con_offday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'low_con_offday.csv'), index_col=0)
-    
-    '''
-    high_con_workday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'high_pos_workday.csv'), index_col=0)
-    high_con_offday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'high_pos_offday.csv'), index_col=0)
-    low_con_workday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'low_pos_workday.csv'), index_col=0)
-    low_con_offday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'low_pos_offday.csv'), index_col=0)
-    '''
-    
-    
-    fig, ax = plt.subplots(1, 4, figsize=(18, 5))
-    cbar_ax = fig.add_axes([.93, .325, .02, .55])
-
-    sns.heatmap(high_con_workday_df, cmap="jet", linewidths=.5, ax=ax[0], cbar_ax=cbar_ax, cbar_kws={'format': '%.2f'},
-                vmin=-0.0, vmax=1, xticklabels=list(high_con_workday_df.index), yticklabels=list(high_con_workday_df.index))
-    sns.heatmap(high_con_offday_df, cmap="jet", linewidths=.5, ax=ax[2], cbar=False, cbar_ax=None,
-                vmin=-0.0, vmax=1, xticklabels=list(high_con_offday_df.index), yticklabels=False)
-    
-    sns.heatmap(low_con_workday_df, cmap="jet", linewidths=.5, ax=ax[1], cbar=False, cbar_ax=None,
-                vmin=-0.0, vmax=1, xticklabels=list(high_con_offday_df.index), yticklabels=False)
-    sns.heatmap(low_con_offday_df, cmap="jet", linewidths=.5, ax=ax[3], cbar=False, cbar_ax=None,
-                vmin=-0.0, vmax=1, xticklabels=list(high_con_offday_df.index), yticklabels=False)
-
-    ax[0].tick_params(axis=u'both', which=u'both', length=0)
-    ax[1].tick_params(axis=u'both', which=u'both', length=0)
-    ax[2].tick_params(axis=u'both', which=u'both', length=0)
-    ax[3].tick_params(axis=u'both', which=u'both', length=0)
-    
-    ax[0].set_yticklabels(ax[0].get_yticklabels(), rotation=0, fontsize=14, fontweight="bold")
-    ax[0].set_xticklabels(ax[0].get_xticklabels(), rotation=90, fontsize=14, fontweight="bold")
-    ax[1].set_xticklabels(ax[1].get_xticklabels(), rotation=90, fontsize=14, fontweight="bold")
-    ax[2].set_xticklabels(ax[2].get_xticklabels(), rotation=90, fontsize=14, fontweight="bold")
-    ax[3].set_xticklabels(ax[3].get_xticklabels(), rotation=90, fontsize=14, fontweight="bold")
-
-    # ax[0].set_title('High Conscientiousness', fontweight="bold", fontsize=13, y=1.2)
-    # ax[1].set_title('Low Conscientiousness', fontweight="bold", fontsize=13, y=1.2)
-    
-    '''
-    ax[0].set_title('High Conscientiousness \n Workdays', fontweight="bold", fontsize=16, y=1.2)
-    ax[1].set_title('Low Conscientiousness: \n Workdays', fontweight="bold", fontsize=16, y=1.2)
-    ax[2].set_title('High Conscientiousness: \n Off-days', fontweight="bold", fontsize=16, y=1.2)
-    ax[3].set_title('Low Conscientiousness: \n Off-days', fontweight="bold", fontsize=16, y=1.2)
-    '''
-    '''
-    ax[0].set_title('High Positive Affect \n Workdays', fontweight="bold", fontsize=16, y=1.2)
-    ax[1].set_title('Low Positive Affect: \n Workdays', fontweight="bold", fontsize=16, y=1.2)
-    ax[2].set_title('High Positive Affect: \n Off-days', fontweight="bold", fontsize=16, y=1.2)
-    ax[3].set_title('Low Positive Affect: \n Off-days', fontweight="bold", fontsize=16, y=1.2)
-    '''
-
-    ax[0].set_title('High Conscientiousness \n Workdays', fontweight="bold", fontsize=14, y=1.2)
-    ax[1].set_title('Low Conscientiousness \n Workdays', fontweight="bold", fontsize=14, y=1.2)
-    ax[2].set_title('High Conscientiousness \n Off-days', fontweight="bold", fontsize=14, y=1.2)
-    ax[3].set_title('Low Conscientiousness \n Off-days', fontweight="bold", fontsize=14, y=1.2)
-    
-    '''
-    ax[0].set_title('High Level of Neuroticism \n Workdays', fontweight="bold", fontsize=15, y=1.2)
-    ax[1].set_title('Low Level of Neuroticism \n Workdays', fontweight="bold", fontsize=15, y=1.2)
-    ax[2].set_title('High Level of Neuroticism \n Off-days', fontweight="bold", fontsize=15, y=1.2)
-    ax[3].set_title('Low Level of Neuroticism \n Off-days', fontweight="bold", fontsize=15, y=1.2)
-    '''
-    
-    ax[0].set_yticklabels(ax[0].get_yticklabels(), rotation=0)
-    
-    # fig.text(0.2, 1.2, 'Workday', dict(size=16))
-    # ax[2].set_yticklabels(ax[0].get_yticklabels(), rotation=0)
-    # ax[3].set_yticklabels(ax[0].get_yticklabels(), rotation=0)
-    
-    plt.gcf().subplots_adjust(bottom=0.3)
-    # plt.yticks(rotation=180)
-    # plt.tight_layout()
-    plt.show()
-    # fig.savefig(os.path.join(os.curdir, 'result', 'workday_job.png'), dpi=300)
-    fig.savefig(os.path.join(os.curdir, 'result', 'con_job.png'), dpi=300)
-    # fig.savefig(os.path.join(os.curdir, 'result', 'affect_job.png'), dpi=300)
-    
-    
     '''
     ticc_num_cluster_6_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 2
     arima_15_ticc_num_cluster_3_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 1
@@ -617,16 +532,55 @@ def main(tiles_data_path, config_path, experiment):
     ticc_num_cluster_5_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 3
     ticc_num_cluster_5_window_10_penalty_10.0_sparsity_0.1_cluster_days_7: 3
     '''
-    
-    # for i in range(3, 8, 2):
     for i in range(5, 6):
-        final_result_per_day_setting_df, final_fitbit_result_per_day_setting_df = pd.DataFrame(), pd.DataFrame()
-        final_feat_importance_result, final_fitbit_feat_importance_result = pd.DataFrame(), pd.DataFrame()
-    
-        predict(data_config, groundtruth_df, top_participant_id_list,
-                num_of_days=i, remove_col_index=1)
-            
-            
+        predict(data_config, groundtruth_df, top_participant_id_list, num_of_days=i, remove_col_index=1)
+
+    high_con_workday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'high_con_workday.csv'), index_col=0)
+    high_con_offday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'high_con_offday.csv'), index_col=0)
+    low_con_workday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'low_con_workday.csv'), index_col=0)
+    low_con_offday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'low_con_offday.csv'), index_col=0)
+
+    fig, ax = plt.subplots(1, 4, figsize=(18, 5))
+    cbar_ax = fig.add_axes([.93, .325, .02, .55])
+
+    sns.heatmap(high_con_workday_df, cmap="jet", linewidths=.5, ax=ax[0], cbar_ax=cbar_ax, cbar_kws={'format': '%.2f'},
+                vmin=-0.0, vmax=1, xticklabels=list(high_con_workday_df.index),
+                yticklabels=list(high_con_workday_df.index))
+    sns.heatmap(high_con_offday_df, cmap="jet", linewidths=.5, ax=ax[2], cbar=False, cbar_ax=None,
+                vmin=-0.0, vmax=1, xticklabels=list(high_con_offday_df.index), yticklabels=False)
+
+    sns.heatmap(low_con_workday_df, cmap="jet", linewidths=.5, ax=ax[1], cbar=False, cbar_ax=None,
+                vmin=-0.0, vmax=1, xticklabels=list(high_con_offday_df.index), yticklabels=False)
+    sns.heatmap(low_con_offday_df, cmap="jet", linewidths=.5, ax=ax[3], cbar=False, cbar_ax=None,
+                vmin=-0.0, vmax=1, xticklabels=list(high_con_offday_df.index), yticklabels=False)
+
+    ax[0].tick_params(axis=u'both', which=u'both', length=0)
+    ax[1].tick_params(axis=u'both', which=u'both', length=0)
+    ax[2].tick_params(axis=u'both', which=u'both', length=0)
+    ax[3].tick_params(axis=u'both', which=u'both', length=0)
+
+    ax[0].set_yticklabels(ax[0].get_yticklabels(), rotation=0, fontsize=14, fontweight="bold")
+    ax[0].set_xticklabels(ax[0].get_xticklabels(), rotation=90, fontsize=14, fontweight="bold")
+    ax[1].set_xticklabels(ax[1].get_xticklabels(), rotation=90, fontsize=14, fontweight="bold")
+    ax[2].set_xticklabels(ax[2].get_xticklabels(), rotation=90, fontsize=14, fontweight="bold")
+    ax[3].set_xticklabels(ax[3].get_xticklabels(), rotation=90, fontsize=14, fontweight="bold")
+
+    ax[0].set_title('High Conscientiousness \n Workdays', fontweight="bold", fontsize=14, y=1.2)
+    ax[1].set_title('Low Conscientiousness \n Workdays', fontweight="bold", fontsize=14, y=1.2)
+    ax[2].set_title('High Conscientiousness \n Off-days', fontweight="bold", fontsize=14, y=1.2)
+    ax[3].set_title('Low Conscientiousness \n Off-days', fontweight="bold", fontsize=14, y=1.2)
+
+    ax[0].set_yticklabels(ax[0].get_yticklabels(), rotation=0)
+
+    plt.gcf().subplots_adjust(bottom=0.3)
+    # plt.yticks(rotation=180)
+    # plt.tight_layout()
+    plt.show()
+    # fig.savefig(os.path.join(os.curdir, 'result', 'workday_job.png'), dpi=300)
+    fig.savefig(os.path.join(os.curdir, 'result', 'con_job.png'), dpi=300)
+    # fig.savefig(os.path.join(os.curdir, 'result', 'affect_job.png'), dpi=300)
+
+
 if __name__ == '__main__':
     # Read args
     args = parser.parse_args()
