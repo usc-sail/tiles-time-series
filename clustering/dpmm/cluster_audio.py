@@ -9,28 +9,10 @@ import sys
 import pandas as pd
 import numpy as np
 import dpmm
-from theano import tensor as tt
-import pymc3 as pm
-import random
 from collections import Counter
 import dpgmm_gibbs
 from vdpgmm import VDPGMM
-from sklearn import preprocessing
-from sklearn import datasets
 
-
-import unittest
-import shutil
-import tempfile
-
-# import pandas as pd
-# import pymc3 as pm
-# from pymc3 import summary
-# from sklearn.mixture import BayesianGaussianMixture as skBayesianGaussianMixture
-from sklearn.model_selection import train_test_split
-
-# from pmlearn.exceptions import NotFittedError
-# from pmlearn.mixture import DirichletProcessMixture
 from pybgmm.prior import NIW
 from pybgmm.igmm import PCRPMM
 
@@ -122,7 +104,7 @@ def main(tiles_data_path, config_path, experiment):
 	top_participant_id_list = list(top_participant_id_df.index)
 	top_participant_id_list.sort()
 
-	for idx, participant_id in enumerate(top_participant_id_list):
+	for idx, participant_id in enumerate(top_participant_id_list[125:]):
 
 		print('read_filter_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
 
@@ -199,40 +181,12 @@ def main(tiles_data_path, config_path, experiment):
 
 if __name__ == '__main__':
 	
-	'''
-	iris = datasets.load_iris()
-	
-	# Define as theano shared variables so the value can be changed later on
-	X = tt._shared(iris.data)
-	y = tt._shared(iris.target)
-	
-	n_dims = iris.data.shape[1]
-	n_classes = len(set(iris.target))
-	n_features = iris.data.shape[0]
-	
-	with pm.Model() as model:
-		# Priors
-		alpha = np.ones(n_classes)
-		pi = pm.Dirichlet('pi', alpha, shape=n_classes)
-		mu = pm.Normal('mu', 0, 100, shape=(n_classes, n_dims))
-		sigma = pm.HalfNormal('sigma', 100, shape=(n_classes, n_dims))
-		
-		# Assign class to data points
-		z = pm.Categorical('z', pi, shape=n_features, observed=y)
-		
-		# The components are independent and normal-distributed
-		a = pm.Normal('a', mu[z], sigma[z], observed=X)
-	
-	with model:
-		trace = pm.sample(5000)
-	'''
-	
 	# Read args
 	args = parser.parse_args()
 
 	# If arg not specified, use default value
 	tiles_data_path = '../../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
 	config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'config_file')) if args.config is None else args.config
-	experiment = 'ticc' if args.experiment is None else args.experiment
+	experiment = 'dpmm' if args.experiment is None else args.experiment
 
 	main(tiles_data_path, config_path, experiment)

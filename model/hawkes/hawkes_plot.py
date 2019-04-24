@@ -90,7 +90,7 @@ def get_infective_matrix(D_max, adjencent_A, landmark, w, dt=1):
             basis_int = Kernel_Integration(dT_array, landmark, w)
             
             # A_tmp = np.array(adjencent_A[v, u, :]).reshape([1, len(adjencent_A[v, u, :])])
-            A_tmp = np.array(adjencent_A[v, u, :]).reshape([1, len(adjencent_A[u, v, :])])
+            A_tmp = np.array(adjencent_A[v, u, :]).reshape([1, len(adjencent_A[v, u, :])])
             basis_int = np.array(basis_int)
             basis_int = basis_int.reshape([basis_int.shape[1], 1])
             
@@ -370,7 +370,7 @@ def predict(data_config, groundtruth_df, top_participant_id_list, num_of_days=5,
                     [low_con_workday_cluster_sum_list.append(point_list) for point_list in workday_cluster_sum_list]
                     [low_con_offday_cluster_sum_list.append(point_list) for point_list in offday_cluster_sum_list]
                     
-            elif 'neu_igtb' in group_label:
+            elif 'pos_af_igtb' in group_label:
                 score = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id][group_label].values[0]
                 pos_af_igtb = score >= median_dict[group_label]
 
@@ -525,18 +525,18 @@ def main(tiles_data_path, config_path, experiment):
         groundtruth_df.loc[index, 'Engage'] = float(groundtruth_df.loc[index, 'Engage']) if groundtruth_df.loc[index, 'Engage'] != ' ' else np.nan
         groundtruth_df.loc[index, 'Perceivedstress'] = float(groundtruth_df.loc[index, 'Perceivedstress']) if groundtruth_df.loc[index, 'Perceivedstress'] != ' ' else np.nan
     
-    '''
+    
     high_con_workday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'high_con_workday.csv'), index_col=0)
     high_con_offday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'high_con_offday.csv'), index_col=0)
     low_con_workday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'low_con_workday.csv'), index_col=0)
     low_con_offday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'low_con_offday.csv'), index_col=0)
-    '''
     
+    '''
     high_con_workday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'high_pos_workday.csv'), index_col=0)
     high_con_offday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'high_pos_offday.csv'), index_col=0)
     low_con_workday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'low_pos_workday.csv'), index_col=0)
     low_con_offday_df = pd.read_csv(os.path.join(os.curdir, 'result', 'low_pos_offday.csv'), index_col=0)
-    
+    '''
     
     
     fig, ax = plt.subplots(1, 4, figsize=(18, 5))
@@ -579,11 +579,17 @@ def main(tiles_data_path, config_path, experiment):
     ax[3].set_title('Low Positive Affect: \n Off-days', fontweight="bold", fontsize=16, y=1.2)
     '''
 
+    ax[0].set_title('High Conscientiousness \n Workdays', fontweight="bold", fontsize=14, y=1.2)
+    ax[1].set_title('Low Conscientiousness \n Workdays', fontweight="bold", fontsize=14, y=1.2)
+    ax[2].set_title('High Conscientiousness \n Off-days', fontweight="bold", fontsize=14, y=1.2)
+    ax[3].set_title('Low Conscientiousness \n Off-days', fontweight="bold", fontsize=14, y=1.2)
     
-    ax[0].set_title('High Neuroticism Affect \n Workdays', fontweight="bold", fontsize=16, y=1.2)
-    ax[1].set_title('Low Neuroticism Affect: \n Workdays', fontweight="bold", fontsize=16, y=1.2)
-    ax[2].set_title('High Neuroticism Affect: \n Off-days', fontweight="bold", fontsize=16, y=1.2)
-    ax[3].set_title('Low Neuroticism Affect: \n Off-days', fontweight="bold", fontsize=16, y=1.2)
+    '''
+    ax[0].set_title('High Level of Neuroticism \n Workdays', fontweight="bold", fontsize=15, y=1.2)
+    ax[1].set_title('Low Level of Neuroticism \n Workdays', fontweight="bold", fontsize=15, y=1.2)
+    ax[2].set_title('High Level of Neuroticism \n Off-days', fontweight="bold", fontsize=15, y=1.2)
+    ax[3].set_title('Low Level of Neuroticism \n Off-days', fontweight="bold", fontsize=15, y=1.2)
+    '''
     
     ax[0].set_yticklabels(ax[0].get_yticklabels(), rotation=0)
     
@@ -596,8 +602,8 @@ def main(tiles_data_path, config_path, experiment):
     # plt.tight_layout()
     plt.show()
     # fig.savefig(os.path.join(os.curdir, 'result', 'workday_job.png'), dpi=300)
-    # fig.savefig(os.path.join(os.curdir, 'result', 'con_job.png'), dpi=300)
-    fig.savefig(os.path.join(os.curdir, 'result', 'affect_job.png'), dpi=300)
+    fig.savefig(os.path.join(os.curdir, 'result', 'con_job.png'), dpi=300)
+    # fig.savefig(os.path.join(os.curdir, 'result', 'affect_job.png'), dpi=300)
     
     
     '''
