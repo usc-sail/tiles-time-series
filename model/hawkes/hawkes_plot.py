@@ -573,13 +573,9 @@ def main(tiles_data_path, config_path, experiment):
     ax[0].set_yticklabels(ax[0].get_yticklabels(), rotation=0)
 
     plt.gcf().subplots_adjust(bottom=0.3)
-    # plt.yticks(rotation=180)
-    # plt.tight_layout()
     plt.show()
-    # fig.savefig(os.path.join(os.curdir, 'result', 'workday_job.png'), dpi=300)
-    fig.savefig(os.path.join(os.curdir, 'result', 'con_job.png'), dpi=300)
-    # fig.savefig(os.path.join(os.curdir, 'result', 'affect_job.png'), dpi=300)
-
+    fig.savefig(os.path.join(os.curdir, 'result', 'con.png'), dpi=300)
+    
 
 if __name__ == '__main__':
     # Read args
