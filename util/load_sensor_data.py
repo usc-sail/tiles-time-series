@@ -356,7 +356,7 @@ def load_filter_data(path, participant_id, filter_logic=None, threshold_dict=Non
     if len(filter_dict_df) > 0:
         for index, row_filter_dict_series in filter_dict_df.iterrows():
             
-            # If we only select reasonable recordings
+            # If we only select reasonable recordings, like for a day, [20, 28]
             cond_recording_duration1, cond_recording_duration2, cond_valid_data = False, False, False
             if threshold_dict is not None:
                 cond_recording_duration1 = (pd.to_datetime(row_filter_dict_series.end) - pd.to_datetime(row_filter_dict_series.start)).total_seconds() < threshold_dict['min'] * 3600
