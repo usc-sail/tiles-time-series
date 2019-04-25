@@ -8,13 +8,8 @@ import os
 import sys
 import pandas as pd
 import numpy as np
-import dpmm
-from collections import Counter
-import dpgmm_gibbs
-from vdpgmm import VDPGMM
 
-from pybgmm.prior import NIW
-from pybgmm.igmm import PCRPMM
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 ###########################################################
 # Change to your own library path
@@ -25,59 +20,27 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.
 import config
 import load_sensor_data, load_data_path, load_data_basic, parser
 
-SEED = 5132290 # from random.org
+SEED = 5132290  # from random.org
 
 np.random.seed(SEED)
 
 
-def cluster_audio(data_df, data_config, participant_id, iter=100, cluster_name='utterance_cluster'):
+def lda_audio(data_df, cluster_df, data_config, participant_id, save_file_name='lda'):
+
 	data_cluster_path = data_config.audio_sensor_dict['clustering_path']
 
-	if data_config.audio_sensor_dict['cluster_method'] == 'collapsed_gibbs':
-		dpgmm = dpmm.DPMM(n_components=50, alpha=float(data_config.audio_sensor_dict['cluster_alpha']))
-		dpgmm.fit_collapsed_Gibbs(np.array(data_df))
-		cluster_id = dpgmm.predict(np.array(data_df))
-	elif data_config.audio_sensor_dict['cluster_method'] == 'gibbs':
-		cluster_id = dpgmm_gibbs.DPMM(np.array(data_df), alpha=float(data_config.audio_sensor_dict['cluster_alpha']), iter=iter, K=50)
-	elif data_config.audio_sensor_dict['cluster_method'] == 'vdpgmm':
-		model = VDPGMM(T=20, alpha=float(data_config.audio_sensor_dict['cluster_alpha']), max_iter=1000)
-		model.fit(np.array(data_df))
-		cluster_id = model.predict(np.array(data_df))
-	elif data_config.audio_sensor_dict['cluster_method'] == 'pcrpmm':
-		# Model parameters
-		alpha = float(data_config.audio_sensor_dict['cluster_alpha'])
-		K = 100  # initial number of components
-		n_iter = 300
-		
-		D = np.array(data_df).shape[1]
-		
-		# Generate data
-		mu_scale = 1
-		covar_scale = 1
-		
-		# Intialize prior
-		m_0 = np.zeros(D)
-		k_0 = covar_scale ** 2 / mu_scale ** 2
-		v_0 = D + 3
-		S_0 = covar_scale ** 2 * v_0 * np.eye(D)
-		prior = NIW(m_0, k_0, v_0, S_0)
-		
-		## Setup PCRPMM
-		pcrpmm = PCRPMM(np.array(data_df), prior, alpha, save_path=None, assignments="rand", K=K)
-		# pcrpmm = PCRPMM(X, prior, alpha, save_path=save_path, assignments="one-by-one", K=K)
-		
-		## Perform collapsed Gibbs sampling
-		record_dict = pcrpmm.collapsed_gibbs_sampler(n_iter, n_power=1.01, num_saved=1)
-		cluster_id = pcrpmm.components.assignments
+	X = np.array(data_df)
+	y = np.array(cluster_df['cluster'])
+	if len(np.unique(y)) < 5:
+		lda_array = LinearDiscriminantAnalysis(n_components=None).fit(X, y).transform(X)
 	else:
-		dpgmm = mixture.BayesianGaussianMixture(n_components=50, covariance_type='full').fit(np.array(data_df))
-		cluster_id = dpgmm.predict(np.array(data_df))
+		lda_array = LinearDiscriminantAnalysis(n_components=5).fit(X, y).transform(X)
 
-	print(Counter(cluster_id))
-	data_df.loc[:, 'cluster'] = cluster_id
+	lda_df = pd.DataFrame(lda_array, index=list(cluster_df.index))
 	if os.path.exists(os.path.join(data_cluster_path, participant_id)) is False:
 		os.mkdir(os.path.join(data_cluster_path, participant_id))
-	data_df.to_csv(os.path.join(data_cluster_path, participant_id, cluster_name + '.csv.gz'), compression='gzip')
+	# lda_df.to_csv(os.path.join(data_cluster_path, participant_id, 'lda_' + str(lda_components) + save_file_name + '.csv.gz'), compression='gzip')
+	lda_df.to_csv(os.path.join(data_cluster_path, participant_id, save_file_name + '.csv.gz'), compression='gzip')
 
 
 def main(tiles_data_path, config_path, experiment):
@@ -89,15 +52,10 @@ def main(tiles_data_path, config_path, experiment):
 
 	# Load all data path according to config file
 	load_data_path.load_all_available_path(data_config, process_data_path,
-										   preprocess_data_identifier='preprocess',
-										   segmentation_data_identifier='segmentation',
-										   filter_data_identifier='filter_data',
-										   clustering_data_identifier='clustering')
-
-	# Read ground truth data
-	igtb_df = load_data_basic.read_AllBasic(tiles_data_path)
-	igtb_df = igtb_df.drop_duplicates(keep='first')
-	mgt_df = load_data_basic.read_MGT(tiles_data_path)
+	                                       preprocess_data_identifier='preprocess',
+	                                       segmentation_data_identifier='segmentation',
+	                                       filter_data_identifier='filter_data',
+	                                       clustering_data_identifier='clustering')
 
 	# Get participant id list, k=None, save all participant data
 	top_participant_id_df = load_data_basic.return_top_k_participant(os.path.join(process_data_path, 'participant_id.csv.gz'), tiles_data_path, data_config=data_config)
@@ -107,9 +65,6 @@ def main(tiles_data_path, config_path, experiment):
 	for idx, participant_id in enumerate(top_participant_id_list[:]):
 
 		print('read_filter_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
-
-		# Read id
-		uid = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].index)[0]
 
 		# Read other sensor data, the aim is to detect whether people workes during a day
 		if os.path.exists(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id)) is False:
@@ -171,16 +126,25 @@ def main(tiles_data_path, config_path, experiment):
 		# process audio feature for cluster
 		if data_config.audio_sensor_dict['cluster_data'] == 'raw_audio':
 			raw_audio_df_norm = (raw_audio_df - raw_audio_df.mean()) / raw_audio_df.std()
-			cluster_audio(raw_audio_df_norm, data_config, participant_id, iter=100, cluster_name='raw_audio_cluster')
+
 		# if cluster utterance
 		elif data_config.audio_sensor_dict['cluster_data'] == 'utterance':
 			utterance_norm_df = utterance_df.drop(columns=['start', 'end', 'duration'])
 			utterance_norm_df = (utterance_norm_df - utterance_norm_df.mean()) / utterance_norm_df.std()
-			cluster_audio(utterance_norm_df, data_config, participant_id, iter=100, cluster_name='utterance_cluster')
+
+			if data_config.audio_sensor_dict['cluster_data'] == 'raw_audio':
+				cluster_name = 'raw_audio_cluster'
+			else:
+				cluster_name = 'utterance_cluster'
+
+			if os.path.exists(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id, cluster_name + '.csv.gz')) is True:
+
+				cluster_df = pd.read_csv(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id, cluster_name + '.csv.gz'), index_col=0)
+
+				lda_audio(utterance_norm_df, cluster_df, data_config, participant_id, save_file_name='lda')
 
 
 if __name__ == '__main__':
-	
 	# Read args
 	args = parser.parse_args()
 
@@ -190,3 +154,4 @@ if __name__ == '__main__':
 	experiment = 'dpmm' if args.experiment is None else args.experiment
 
 	main(tiles_data_path, config_path, experiment)
+
