@@ -251,11 +251,9 @@ def get_hawkes_kernel(data_config, participant_id, num_of_days, remove_col_index
 
     landmark, w = init_param(num_of_days, len(offday_col_list), workday_point_dist_list, point_dict)
     
-    # Learn causality
+    # Learn causality on workdays
     workday_learner = HawkesSumGaussians(1000, n_gaussians=len(landmark), max_iter=100)
     workday_learner.fit(workday_point_list)
-    # ineffective_array = np.array(workday_learner.get_kernel_norms())
-
     ineffective_array = get_infective_matrix(len(workday_col_list), workday_learner.amplitudes, landmark, w, dt=1)
 
     for i in range(ineffective_array.shape[0]):
@@ -265,10 +263,9 @@ def get_hawkes_kernel(data_config, participant_id, num_of_days, remove_col_index
 
     landmark, w = init_param(num_of_days, len(offday_col_list), offday_point_dist_list, point_dict)
 
+    # Learn causality on offdays
     offday_learner = HawkesSumGaussians(1000, n_gaussians=len(landmark), max_iter=100)
     offday_learner.fit(offday_point_list)
-    # ineffective_array = np.array(offday_learner.get_kernel_norms())
-    
     ineffective_array = get_infective_matrix(len(offday_col_list), offday_learner.amplitudes, landmark, w, dt=1)
 
     for i in range(ineffective_array.shape[0]):
@@ -287,14 +284,14 @@ def predict(data_config, groundtruth_df, top_participant_id_list, index, fitbit=
     
     groundtruth_df[igtb_label_list] = groundtruth_df[igtb_label_list].fillna(groundtruth_df[igtb_label_list].mean())
 
-    mean_dict = {'pos_af_igtb': np.nanmedian(groundtruth_df['pos_af_igtb']), 'neg_af_igtb': np.nanmedian(groundtruth_df['neg_af_igtb']),
-                 'stai_igtb': np.nanmedian(groundtruth_df['stai_igtb']), 'psqi_igtb': np.nanmedian(groundtruth_df['psqi_igtb']),
-                 'neu_igtb': np.nanmedian(groundtruth_df['neu_igtb']), 'con_igtb': np.nanmedian(groundtruth_df['con_igtb']),
-                 'ext_igtb': np.nanmedian(groundtruth_df['ext_igtb']), 'agr_igtb': np.nanmedian(groundtruth_df['agr_igtb']), 'ope_igtb': np.nanmedian(groundtruth_df['ope_igtb']),
-                 'Inflexbility': np.nanmedian(groundtruth_df['Inflexbility']), 'Flexbility': np.nanmedian(groundtruth_df['Flexbility']),
-                 'LifeSatisfaction': np.nanmedian(groundtruth_df['LifeSatisfaction']), 'General_Health': np.nanmedian(groundtruth_df['General_Health']),
-                 'Emotional_Wellbeing': np.nanmedian(groundtruth_df['Emotional_Wellbeing']), 'Engage': np.nanmedian(groundtruth_df['Engage']),
-                 'Perceivedstress': np.nanmedian(groundtruth_df['Perceivedstress'])}
+    median_dict = {'pos_af_igtb': np.nanmedian(groundtruth_df['pos_af_igtb']), 'neg_af_igtb': np.nanmedian(groundtruth_df['neg_af_igtb']),
+                   'stai_igtb': np.nanmedian(groundtruth_df['stai_igtb']), 'psqi_igtb': np.nanmedian(groundtruth_df['psqi_igtb']),
+                   'neu_igtb': np.nanmedian(groundtruth_df['neu_igtb']), 'con_igtb': np.nanmedian(groundtruth_df['con_igtb']),
+                   'ext_igtb': np.nanmedian(groundtruth_df['ext_igtb']), 'agr_igtb': np.nanmedian(groundtruth_df['agr_igtb']), 'ope_igtb': np.nanmedian(groundtruth_df['ope_igtb']),
+                   'Inflexbility': np.nanmedian(groundtruth_df['Inflexbility']), 'Flexbility': np.nanmedian(groundtruth_df['Flexbility']),
+                   'LifeSatisfaction': np.nanmedian(groundtruth_df['LifeSatisfaction']), 'General_Health': np.nanmedian(groundtruth_df['General_Health']),
+                   'Emotional_Wellbeing': np.nanmedian(groundtruth_df['Emotional_Wellbeing']), 'Engage': np.nanmedian(groundtruth_df['Engage']),
+                   'Perceivedstress': np.nanmedian(groundtruth_df['Perceivedstress'])}
 
     for idx, participant_id in enumerate(top_participant_id_list):
     
@@ -407,20 +404,10 @@ def predict(data_config, groundtruth_df, top_participant_id_list, index, fitbit=
                 row_df[group_label] = 1 if cond1 or cond2 else 2
             elif group_label == 'shift':
                 row_df[group_label] = 1 if cond4 else 2
-            elif group_label == 'Sex':
-                row_df[group_label] = 1 if cond5 else 2
-            elif 'igtb' in group_label or 'Flexbility' in group_label or 'Inflexbility' in group_label \
-                    or 'LifeSatisfaction' in group_label or 'General_Health' in group_label \
-                    or 'Emotional_Wellbeing' in group_label or 'Engage' in group_label or 'Perceivedstress' in group_label:
+            elif 'igtb' in group_label:
                 score = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id][group_label].values[0]
-                cond_igtb = score >= mean_dict[group_label]
+                cond_igtb = score >= median_dict[group_label]
                 row_df[group_label] = 1 if cond_igtb else 2
-            elif group_label == 'fatigue':
-                score = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id][group_label].values[0]
-                if score == ' ' or score == 'nan' or score == np.nan:
-                    row_df[group_label] = 1
-                else:
-                    row_df[group_label] = 1 if float(score) > 60 else 2
             else:
                 row_df[group_label] = groundtruth_df.loc[groundtruth_df['ParticipantID'] == participant_id][group_label].values[0]
     
@@ -584,8 +571,6 @@ def main(tiles_data_path, config_path, experiment):
     ticc_num_cluster_5_window_10_penalty_10.0_sparsity_0.1_cluster_days_5: 3
     ticc_num_cluster_5_window_10_penalty_10.0_sparsity_0.1_cluster_days_7: 3
     '''
-
-    # for i in range(3, 8, 2):
     for i in range(5, 6):
         final_result_per_day_setting_df, final_fitbit_result_per_day_setting_df, final_fusion_result_per_day_setting_df = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
         final_feat_importance_result, final_fitbit_feat_importance_result, final_fusion_feat_importance_result = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
