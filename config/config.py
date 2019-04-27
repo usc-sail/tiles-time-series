@@ -188,6 +188,9 @@ class Config(object):
         self.audio_sensor_dict['cluster_alpha'] = self.getSetting('audio', 'cluster_alpha')
         self.audio_sensor_dict['cluster_method'] = self.getSetting('audio', 'cluster_method')
         self.audio_sensor_dict['cluster_data'] = self.getSetting('audio', 'cluster_data')
+        self.audio_sensor_dict['lda_num'] = self.getSetting('audio', 'lda_num')
+        self.audio_sensor_dict['audio_feature'] = self.getSetting('audio', 'audio_feature')
+        self.audio_sensor_dict['pause_threshold'] = self.getSetting('audio', 'pause_threshold')
 
         ###########################################################
         # Read feature engineering parameters

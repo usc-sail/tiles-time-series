@@ -43,27 +43,23 @@ def read_shift_start_end_time(owl_in_one_df):
     :param owl_in_one_df: owl-in-one pandas frame
     :return: start and end time of shift
     """
-    last_time, start_time = pd.to_datetime(owl_in_one_df.index[0]), pd.to_datetime(owl_in_one_df.index[0])
+    owl_in_one_df = owl_in_one_df.sort_index()
+    
+    index_datetime = pd.to_datetime(owl_in_one_df.index)
+    offset_array =list((index_datetime[1:] - index_datetime[:-1]).total_seconds())
+    
+    change_point = np.where(np.array(offset_array) > 3600 * 6)[0]
+    
+    change_point_start_end = np.zeros([len(change_point) + 1, 2])
+    change_point_start_end[1:, 0] = np.array(change_point) + 1
+    change_point_start_end[:-1, 1] = np.array(change_point)
+    change_point_start_end[-1, 1] = len(list(owl_in_one_df.index)) - 1
     shift_start_end_time_list = []
     
-    # We want to get the shift start and end time
-    for index in owl_in_one_df.index:
-        # Read current time
-        cur_time = pd.to_datetime(index)
-        
-        # If last time minus curr time is less than 6 hours, then it is one shift
-        time_offset = (cur_time - last_time).total_seconds()
-        
-        if time_offset > 3600 * 8:
-            shift_start_end_time_list.append({'start': start_time.strftime(date_time_format)[:-3],
-                                              'end': last_time.strftime(date_time_format)[:-3]})
-            start_time = cur_time
-        
-        # Save current time as last time
-        last_time = cur_time
+    for change_point_row in change_point_start_end:
+        shift_start_end_time_list.append({'start': list(owl_in_one_df.index)[int(change_point_row[0])],
+                                          'end': list(owl_in_one_df.index)[int(change_point_row[1])]})
     
-    shift_start_end_time_list.append({'start': start_time.strftime(date_time_format)[:-3],
-                                      'end': last_time.strftime(date_time_format)[:-3]})
     return shift_start_end_time_list
 
 
@@ -79,7 +75,7 @@ def init_shift_df(shift_start_end_time, cols, offset=1):
     time_offset_in_min = int(((end_time - start_time).total_seconds() / 60) / offset)
     
     # In case somebody not wearing the phone
-    if 30 / offset < time_offset_in_min < 720 / offset:
+    if 30 / offset < time_offset_in_min < 900 / offset:
         # Construct index
         index = [(start_time + timedelta(minutes=i * offset)).strftime(date_time_format)[:-3] for i in
                  range(time_offset_in_min)]
@@ -209,16 +205,16 @@ def process_owl_in_one_data(owl_in_one_df, offset=60):
                 data_tmp_df = shift_df[start_time:end_time]
         
                 if len(data_tmp_df) > interval:
-                    tmp = pd.DataFrame(np.zeros([1, len(data_tmp_df.columns)]), index=[end_time_index], columns=data_tmp_df.columns)
+                    tmp = pd.DataFrame(np.zeros([1, len(data_tmp_df.columns)]), index=[index], columns=data_tmp_df.columns)
                     tmp_series = data_tmp_df.max().sort_values(ascending=False)
             
                     if tmp_series.max() == 0:
-                        tmp.loc[end_time_index, 'unknown'] = 1
+                        tmp.loc[index, 'unknown'] = 1
                     else:
-                        tmp.loc[end_time_index, tmp_series.index[0]] = 1
+                        tmp.loc[index, tmp_series.index[0]] = 1
                 
                         if tmp_series[0] - tmp_series[1] < 0:
-                            tmp.loc[end_time_index, tmp_series.index[1]] = 1
+                            tmp.loc[index, tmp_series.index[1]] = 1
             
                     shift_final_df = shift_final_df.append(tmp)
     

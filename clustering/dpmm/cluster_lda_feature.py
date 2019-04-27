@@ -38,14 +38,14 @@ def cluster_lda_feature(data_df, data_config, participant_id, iter=100, cluster_
 		return
 
 	if data_config.audio_sensor_dict['cluster_method'] == 'collapsed_gibbs':
-		dpgmm = dpmm.DPMM(n_components=50, alpha=float(data_config.audio_sensor_dict['cluster_alpha']))
+		dpgmm = dpmm.DPMM(n_components=20, alpha=float(data_config.audio_sensor_dict['cluster_alpha']))
 		dpgmm.fit_collapsed_Gibbs(np.array(data_df))
 		cluster_id = dpgmm.predict(np.array(data_df))
 	elif data_config.audio_sensor_dict['cluster_method'] == 'gibbs':
 		cluster_id = dpgmm_gibbs.DPMM(np.array(data_df), alpha=float(data_config.audio_sensor_dict['cluster_alpha']),
-		                              iter=iter, K=50)
+		                              iter=iter, K=20)
 	elif data_config.audio_sensor_dict['cluster_method'] == 'vdpgmm':
-		model = VDPGMM(T=100, alpha=float(data_config.audio_sensor_dict['cluster_alpha']), max_iter=1000)
+		model = VDPGMM(T=20, alpha=float(data_config.audio_sensor_dict['cluster_alpha']), max_iter=1000)
 		model.fit(np.array(data_df))
 		cluster_id = model.predict(np.array(data_df))
 	elif data_config.audio_sensor_dict['cluster_method'] == 'pcrpmm':
@@ -82,7 +82,7 @@ def cluster_lda_feature(data_df, data_config, participant_id, iter=100, cluster_
 	data_df.loc[:, 'cluster'] = cluster_id
 	if os.path.exists(os.path.join(data_cluster_path, participant_id)) is False:
 		os.mkdir(os.path.join(data_cluster_path, participant_id))
-	data_df.to_csv(os.path.join(data_cluster_path, participant_id, 'lda_' + cluster_name + '.csv.gz'), compression='gzip')
+	data_df.to_csv(os.path.join(data_cluster_path, participant_id, 'lda_' + str(data_config.audio_sensor_dict['lda_num']) + '_' + cluster_name + '.csv.gz'), compression='gzip')
 
 
 def main(tiles_data_path, config_path, experiment):
@@ -103,6 +103,8 @@ def main(tiles_data_path, config_path, experiment):
 	top_participant_id_df = load_data_basic.return_top_k_participant(os.path.join(process_data_path, 'participant_id.csv.gz'), tiles_data_path, data_config=data_config)
 	top_participant_id_list = list(top_participant_id_df.index)
 	top_participant_id_list.sort()
+	
+	lda_components = data_config.audio_sensor_dict['lda_num']
 
 	for idx, participant_id in enumerate(top_participant_id_list[:]):
 
@@ -112,7 +114,7 @@ def main(tiles_data_path, config_path, experiment):
 		if os.path.exists(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id)) is False:
 			continue
 
-		if len(os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id))) < 5:
+		if len(os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id))) < 3:
 			continue
 
 		raw_audio_df, utterance_df = pd.DataFrame(), pd.DataFrame()
@@ -124,16 +126,17 @@ def main(tiles_data_path, config_path, experiment):
 		# if cluster utterance
 		elif data_config.audio_sensor_dict['cluster_data'] == 'utterance':
 
-			if data_config.audio_sensor_dict['cluster_data'] == 'raw_audio':
-				cluster_name = 'raw_audio_cluster'
-			else:
-				cluster_name = 'utterance_cluster'
-
-			if os.path.exists(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id, cluster_name + '.csv.gz')) is True:
-
-				if os.path.exists(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id, 'lda.csv.gz')) is True:
-					lda_df = pd.read_csv(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id, 'lda.csv.gz'), index_col=0)
-					cluster_lda_feature(lda_df, data_config, participant_id, iter=100, cluster_name='utterance_cluster', always_save=True)
+			cluster_name = 'utterance_cluster'
+			if os.path.exists(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id, 'lda_' + str(lda_components) + '.csv.gz')) is True:
+				lda_df = pd.read_csv(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id, 'lda_' + str(lda_components) + '.csv.gz'), index_col=0)
+				cluster_lda_feature(lda_df, data_config, participant_id, iter=100, cluster_name=cluster_name, always_save=True)
+	
+		elif data_config.audio_sensor_dict['cluster_data'] == 'minute':
+			
+			cluster_name = 'minute_cluster'
+			if os.path.exists(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id, 'lda_' + str(lda_components) + '.csv.gz')) is True:
+				lda_df = pd.read_csv(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id, 'lda_' + str(lda_components) + '.csv.gz'), index_col=0)
+				cluster_lda_feature(lda_df, data_config, participant_id, iter=100, cluster_name=cluster_name, always_save=True)
 
 
 if __name__ == '__main__':

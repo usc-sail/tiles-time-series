@@ -25,22 +25,26 @@ SEED = 5132290  # from random.org
 np.random.seed(SEED)
 
 
-def lda_audio(data_df, cluster_df, data_config, participant_id, save_file_name='lda'):
+def lda_audio(data_df, cluster_df, data_config, participant_id, lda_components='auto'):
 
 	data_cluster_path = data_config.audio_sensor_dict['clustering_path']
 
 	X = np.array(data_df)
 	y = np.array(cluster_df['cluster'])
-	if len(np.unique(y)) < 5:
-		lda_array = LinearDiscriminantAnalysis(n_components=None).fit(X, y).transform(X)
+	
+	if lda_components == 'auto':
+		if len(np.unique(y)) < data_df.shape[1]:
+			lda_array = LinearDiscriminantAnalysis(n_components=None).fit(X, y).transform(X)
+		else:
+			lda_array = LinearDiscriminantAnalysis(n_components=data_df.shape[1]).fit(X, y).transform(X)
 	else:
-		lda_array = LinearDiscriminantAnalysis(n_components=5).fit(X, y).transform(X)
+		lda_array = LinearDiscriminantAnalysis(n_components=int(lda_components)).fit(X, y).transform(X)
 
 	lda_df = pd.DataFrame(lda_array, index=list(cluster_df.index))
 	if os.path.exists(os.path.join(data_cluster_path, participant_id)) is False:
 		os.mkdir(os.path.join(data_cluster_path, participant_id))
-	# lda_df.to_csv(os.path.join(data_cluster_path, participant_id, 'lda_' + str(lda_components) + save_file_name + '.csv.gz'), compression='gzip')
-	lda_df.to_csv(os.path.join(data_cluster_path, participant_id, save_file_name + '.csv.gz'), compression='gzip')
+	lda_df.to_csv(os.path.join(data_cluster_path, participant_id, 'lda_' + str(lda_components) + '.csv.gz'), compression='gzip')
+	# lda_df.to_csv(os.path.join(data_cluster_path, participant_id, save_file_name + '.csv.gz'), compression='gzip')
 
 
 def main(tiles_data_path, config_path, experiment):
@@ -70,78 +74,61 @@ def main(tiles_data_path, config_path, experiment):
 		if os.path.exists(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id)) is False:
 			continue
 
-		if len(os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id))) < 5:
+		if len(os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id))) < 3:
 			continue
-		file_list = [file for file in os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id)) if 'utterance' not in file]
-
-		raw_audio_df, utterance_df = pd.DataFrame(), pd.DataFrame()
-
+		
+		if data_config.audio_sensor_dict['cluster_data'] == 'raw_audio':
+			file_list = [file for file in os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id)) if
+						 'utterance' not in file and 'minute' not in file]
+		else:
+			file_list = [file for file in os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id)) if
+						 data_config.audio_sensor_dict['cluster_data'] in file]
+		
+		raw_audio_df, utterance_df, minute_df = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+		
 		for file in file_list:
 			tmp_raw_audio_df = pd.read_csv(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id, file), index_col=0)
-			tmp_raw_audio_df = tmp_raw_audio_df.drop(columns=['F0_sma'])
-
+			if len(tmp_raw_audio_df) < 3:
+				continue
+			
 			# if cluster raw_audio
 			if data_config.audio_sensor_dict['cluster_data'] == 'raw_audio':
+				tmp_raw_audio_df = tmp_raw_audio_df.drop(columns=['F0_sma'])
 				raw_audio_df = raw_audio_df.append(tmp_raw_audio_df)
 			# if cluster utterance
 			elif data_config.audio_sensor_dict['cluster_data'] == 'utterance':
-				if os.path.exists(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id, 'utterance_' + file)) is True:
-					day_utterance_df = pd.read_csv(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id, 'utterance_' + file), index_col=0)
+				if os.path.exists(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id, file)) is True:
+					day_utterance_df = pd.read_csv(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id, file), index_col=0)
 					utterance_df = utterance_df.append(day_utterance_df)
-					continue
-
-				time_diff = pd.to_datetime(list(tmp_raw_audio_df.index)[1:]) - pd.to_datetime(list(tmp_raw_audio_df.index)[:-1])
-				time_diff = list(time_diff.total_seconds())
-
-				change_point_start_list = [0]
-				change_point_end_list = list(np.where(np.array(time_diff) > 1)[0])
-
-				[change_point_start_list.append(change_point_end + 1) for change_point_end in change_point_end_list]
-				change_point_end_list.append(len(tmp_raw_audio_df.index) - 1)
-
-				time_start_end_list = []
-				for i, change_point_end in enumerate(change_point_end_list):
-					if 10 < change_point_end - change_point_start_list[i] < 10 * 100:
-						time_start_end_list.append([list(tmp_raw_audio_df.index)[change_point_start_list[i]], list(tmp_raw_audio_df.index)[change_point_end]])
-
-				day_utterance_df = pd.DataFrame()
-				for time_start_end in time_start_end_list:
-					start_time = (pd.to_datetime(time_start_end[0])).strftime(load_data_basic.date_time_format)[:-3]
-					end_time = (pd.to_datetime(time_start_end[1])).strftime(load_data_basic.date_time_format)[:-3]
-					tmp_utterance_raw_df = tmp_raw_audio_df[start_time:end_time]
-					tmp_utterance_df = pd.DataFrame(index=[list(tmp_utterance_raw_df.index)[0]])
-
-					tmp_utterance_df['start'] = start_time
-					tmp_utterance_df['end'] = end_time
-					tmp_utterance_df['duration'] = (pd.to_datetime(end_time) - pd.to_datetime(start_time)).total_seconds()
-					for col in list(tmp_utterance_raw_df.columns):
-						tmp_utterance_df[col + '_mean'] = np.mean(np.array(tmp_utterance_raw_df[col]))
-						tmp_utterance_df[col + '_std'] = np.std(np.array(tmp_utterance_raw_df[col]))
-
-					day_utterance_df = day_utterance_df.append(tmp_utterance_df)
-
-				day_utterance_df.to_csv(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id, 'utterance_' + file), compression='gzip')
-				utterance_df = utterance_df.append(day_utterance_df)
-
+			
+			elif data_config.audio_sensor_dict['cluster_data'] == 'minute':
+				if os.path.exists(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id, file)) is True:
+					day_minute_df = pd.read_csv(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id, file), index_col=0)
+					minute_df = minute_df.append(day_minute_df)
+		
 		# process audio feature for cluster
 		if data_config.audio_sensor_dict['cluster_data'] == 'raw_audio':
 			raw_audio_df_norm = (raw_audio_df - raw_audio_df.mean()) / raw_audio_df.std()
 
 		# if cluster utterance
 		elif data_config.audio_sensor_dict['cluster_data'] == 'utterance':
-			utterance_norm_df = utterance_df.drop(columns=['start', 'end', 'duration'])
+			utterance_norm_df = utterance_df.copy()
 			utterance_norm_df = (utterance_norm_df - utterance_norm_df.mean()) / utterance_norm_df.std()
-
-			if data_config.audio_sensor_dict['cluster_data'] == 'raw_audio':
-				cluster_name = 'raw_audio_cluster'
-			else:
-				cluster_name = 'utterance_cluster'
+			cluster_name = 'utterance_cluster'
 
 			if os.path.exists(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id, cluster_name + '.csv.gz')) is True:
-
 				cluster_df = pd.read_csv(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id, cluster_name + '.csv.gz'), index_col=0)
-
-				lda_audio(utterance_norm_df, cluster_df, data_config, participant_id, save_file_name='lda')
+				lda_audio(utterance_norm_df, cluster_df, data_config, participant_id, lda_components=data_config.audio_sensor_dict['lda_num'])
+				
+		# if cluster utterance
+		elif data_config.audio_sensor_dict['cluster_data'] == 'minute':
+			minute_norm_df = minute_df.copy()
+			minute_norm_df = (minute_norm_df - minute_norm_df.mean()) / minute_norm_df.std()
+			cluster_name = 'minute_cluster'
+		
+			if os.path.exists(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id, cluster_name + '.csv.gz')) is True:
+				cluster_df = pd.read_csv(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id, cluster_name + '.csv.gz'), index_col=0)
+				lda_audio(minute_norm_df, cluster_df, data_config, participant_id, lda_components=data_config.audio_sensor_dict['lda_num'])
 
 
 if __name__ == '__main__':

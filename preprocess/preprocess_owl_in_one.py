@@ -27,17 +27,18 @@ def main(tiles_data_path, config_path, experiment):
     data_config.readConfigFile(config_path, experiment)
 
     # Load preprocess folder
-    load_data_path.load_preprocess_path(data_config, process_data_path, data_name='preprocess_data')
+    load_data_path.load_preprocess_path(data_config, process_data_path, data_name='preprocess')
 
     ###########################################################
     # 1. Read all participant
     ###########################################################
     participant_id_list = load_data_basic.return_participant(tiles_data_path)
+    participant_id_list.sort()
     
     ###########################################################
     # 2. Iterate over participant
     ###########################################################
-    for idx, participant_id in enumerate(participant_id_list[200:]):
+    for idx, participant_id in enumerate(participant_id_list[:]):
         print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(participant_id_list)))
 
         ###########################################################
@@ -67,6 +68,6 @@ if __name__ == "__main__":
     
     tiles_data_path = '../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
     config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file')) if args.config is None else args.config
-    experiment = 'baseline' if args.config is None else args.config
+    experiment = 'dpmm' if args.config is None else args.config
     
     main(tiles_data_path, config_path, experiment)

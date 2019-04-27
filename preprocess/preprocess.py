@@ -121,9 +121,11 @@ class Preprocess(object):
         # Get start and end time of a shift
         ###########################################################
         if len(data_df) > 300:
+            
+            # if os.path.exists(os.path.join(self.data_config.owl_in_one_sensor_dict['preprocess_path'], self.participant_id + '.csv.gz')) is False:
             self.preprocess_data_all_df = process_owl_in_one_data(data_df, offset=self.data_config.owl_in_one_sensor_dict['offset'])
             self.preprocess_data_all_df.to_csv(os.path.join(self.data_config.owl_in_one_sensor_dict['preprocess_path'], self.participant_id + '.csv.gz'), compression='gzip')
-            
+        
     def preprocess_audio(self, data_df):
         """
         Process audio data

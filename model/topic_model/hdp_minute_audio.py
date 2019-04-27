@@ -157,6 +157,43 @@ def main(tiles_data_path, config_path, experiment):
 		
 		print()
 		
+		'''
+		for time_start_end in time_start_end_list:
+
+			start_time = (pd.to_datetime(time_start_end[0]).replace(minute=0, second=0, microsecond=0)).strftime(load_data_basic.date_time_format)[:-3]
+			end_time = ((pd.to_datetime(time_start_end[1]) + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)).strftime(load_data_basic.date_time_format)[:-3]
+			
+			time_offest = int((pd.to_datetime(end_time) - pd.to_datetime(start_time)).total_seconds() / (60 * 10))
+
+			for offset in range(time_offest):
+				tmp_start = (pd.to_datetime(start_time) + timedelta(minutes=10 * offset)).strftime(load_data_basic.date_time_format)[:-3]
+				tmp_end = (pd.to_datetime(start_time) + timedelta(minutes=10 * offset + 20)).strftime(load_data_basic.date_time_format)[:-3]
+
+				tmp_data_df = data_df[tmp_start:tmp_end]
+				
+				if len(tmp_data_df) > 3:
+					sent = word_dictionary.doc2bow([str(word) for word in list(tmp_data_df.cluster)])
+					topics = hdp[sent]
+
+					row_df = pd.DataFrame(index=[tmp_start])
+					for topic in topics:
+						row_df[str(topic[0])] = topic[1]
+
+					sum = 0
+					for col in list(tmp_owl_in_one_df.columns):
+						row_df[col] = np.sum(np.array(tmp_owl_in_one_df[col])) / len(tmp_owl_in_one_df)
+						sum += np.sum(np.array(tmp_owl_in_one_df[col])) / len(tmp_owl_in_one_df)
+
+					if sum > 0.1:
+						topic_df = topic_df.append(row_df)
+
+		'''
+		'''
+		hdp = HdpModel(common_corpus, common_dictionary)
+
+		unseen_document = [(1, 3.), (2, 4)]
+		doc_hdp = hdp[unseen_document]
+		'''
 
 if __name__ == '__main__':
 
