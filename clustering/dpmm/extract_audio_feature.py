@@ -243,7 +243,7 @@ def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 		if len(os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id))) < 3:
 			continue
 			
-		file_list = [file for file in os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id)) if 'utterance' not in file and 'minute' not in file]
+		file_list = [file for file in os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id)) if 'utterance' not in file and 'minute' not in file and 'snippet' not in file]
 
 		for file in file_list:
 			tmp_raw_audio_df = pd.read_csv(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id, file), index_col=0)
@@ -259,6 +259,7 @@ def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 				file_name = audio_feature + '_snippet_' + file
 				if os.path.exists(os.path.join(filter_path, participant_id, audio_feature + '_snippet_' + file)) is True:
 					file_exist = True
+
 			if file_exist == True:
 				continue
 			
