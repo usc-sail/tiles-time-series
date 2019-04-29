@@ -129,6 +129,10 @@ def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 	else:
 		feature_list = all_feature_list
 		
+	filter_path = data_config.audio_sensor_dict['filter_path']
+	audio_feature = data_config.audio_sensor_dict['audio_feature']
+	pause_threshold = str(data_config.audio_sensor_dict['pause_threshold'])
+		
 	for idx, participant_id in enumerate(top_participant_id_list[:]):
 
 		print('read_filter_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
@@ -147,6 +151,9 @@ def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 		for file in file_list:
 			tmp_raw_audio_df = pd.read_csv(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id, file), index_col=0)
 			if len(tmp_raw_audio_df) < 3:
+				continue
+			
+			if os.path.exists(os.path.join(filter_path, participant_id, 'pause_threshold_' + pause_threshold + '_' + audio_feature + '_utterance_' + file)) is True:
 				continue
 			
 			tmp_raw_audio_df = tmp_raw_audio_df.drop(columns=['F0_sma'])
