@@ -133,20 +133,17 @@ def extract_audio_feature(data_config, data_df, feature_list):
 
 		tmp_data_df = pd.DataFrame(index=[start_time])
 
-		if data_config.audio_sensor_dict['audio_feature'] == 'with_duration':
-			tmp_data_df['duration'] = (pd.to_datetime(end_time) - pd.to_datetime(start_time)).total_seconds()
-
 		tmp_raw_data_df = data_df[start_time:end_time]
 		tmp_raw_data_df = tmp_raw_data_df[feature_list]
 
-		if data_config.audio_sensor_dict['audio_feature'] == 'with_duration':
+		if 'with_duration' in data_config.audio_sensor_dict['audio_feature']:
 			if data_config.audio_sensor_dict['cluster_data'] == 'utterance':
 				segments = [len(list(x[1])) for x in itertools.groupby(list(tmp_raw_data_df['F0final_sma']), lambda x: x == 0) if not x[0]]
 			elif data_config.audio_sensor_dict['cluster_data'] == 'snippet':
 				time_diff = pd.to_datetime(list(tmp_raw_data_df.index)[1:]) - pd.to_datetime(list(tmp_raw_data_df.index)[:-1])
 				time_diff = list(time_diff.total_seconds())
 				change_point_start_list = [0]
-				change_point_end_list = list(np.where(np.array(time_diff) > float(data_config.audio_sensor_dict['pause_threshold']))[0])
+				change_point_end_list = list(np.where(np.array(time_diff) > 0.2)[0])
 				[change_point_start_list.append(change_point_end + 1) for change_point_end in change_point_end_list]
 				change_point_end_list.append(len(tmp_raw_data_df.index) - 1)
 
@@ -157,7 +154,7 @@ def extract_audio_feature(data_config, data_df, feature_list):
 			tmp_data_df['mean_segment'] = np.mean(segments)
 
 			# Each snippet is 20s seconds
-			tmp_data_df['foreground_ration'] = len(tmp_raw_data_df) / 100 * 20
+			tmp_data_df['foreground_ratio'] = len(tmp_raw_data_df) / (100 * 20)
 
 		if len(tmp_raw_data_df.loc[tmp_raw_data_df['F0final_sma'] > 0]) == 0:
 			continue
@@ -166,13 +163,12 @@ def extract_audio_feature(data_config, data_df, feature_list):
 		if len(tmp_raw_data_df.loc[tmp_raw_data_df['shimmerLocal_sma'] > 0]) == 0:
 			continue
 
-
 		for col in list(tmp_raw_data_df.columns):
 			if 'jitterLocal_sma' in col or 'shimmerLocal_sma' in col or 'F0final_sma' in col:
 				tmp_data_df[col + '_mean'] = np.nanmean(np.array(tmp_raw_data_df.loc[tmp_raw_data_df[col] > 0][col]))
 				tmp_data_df[col + '_std'] = np.nanstd(np.array(tmp_raw_data_df.loc[tmp_raw_data_df[col] > 0][col]))
 
-				if data_config.audio_sensor_dict['audio_feature'] != 'with_duration':
+				if 'with_duration' not in data_config.audio_sensor_dict['audio_feature']:
 					tmp_data_df[col + '_quantile_10'] = np.nanquantile(np.array(tmp_raw_data_df.loc[tmp_raw_data_df[col] > 0][col]), 0.1)
 					tmp_data_df[col + '_quantile_90'] = np.nanquantile(np.array(tmp_raw_data_df.loc[tmp_raw_data_df[col] > 0][col]), 0.9)
 
@@ -180,14 +176,14 @@ def extract_audio_feature(data_config, data_df, feature_list):
 				tmp_data_df[col + '_mean'] = np.nanmean(np.array(tmp_raw_data_df.loc[tmp_raw_data_df[col] > -75][col]))
 				tmp_data_df[col + '_std'] = np.nanstd(np.array(tmp_raw_data_df.loc[tmp_raw_data_df[col] > -75][col]))
 
-				if data_config.audio_sensor_dict['audio_feature'] != 'with_duration':
+				if 'with_duration' not in data_config.audio_sensor_dict['audio_feature']:
 					tmp_data_df[col + '_quantile_10'] = np.nanquantile(np.array(tmp_raw_data_df.loc[tmp_raw_data_df[col] > -75][col]), 0.1)
 					tmp_data_df[col + '_quantile_90'] = np.nanquantile(np.array(tmp_raw_data_df.loc[tmp_raw_data_df[col] > -75][col]), 0.9)
 			# elif 'pcm_fftMag_spectralCentroid_sma' in col or 'pcm_fftMag_spectralEntropy_sma' in col
 			else:
 				tmp_data_df[col + '_mean'] = np.nanmean(np.array(tmp_raw_data_df[col]))
 				tmp_data_df[col + '_std'] = np.nanstd(np.array(tmp_raw_data_df[col]))
-				if data_config.audio_sensor_dict['audio_feature'] != 'with_duration':
+				if 'with_duration' not in data_config.audio_sensor_dict['audio_feature']:
 					tmp_data_df[col + '_quantile_10'] = np.nanquantile(np.array(tmp_raw_data_df[col]), 0.1)
 					tmp_data_df[col + '_quantile_90'] = np.nanquantile(np.array(tmp_raw_data_df[col]), 0.9)
 
@@ -215,19 +211,19 @@ def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 	top_participant_id_list = list(top_participant_id_df.index)
 	top_participant_id_list.sort()
 	
-	if data_config.audio_sensor_dict['audio_feature'] == 'all':
+	if 'all' in data_config.audio_sensor_dict['audio_feature']:
 		feature_list = all_feature_list
-	elif data_config.audio_sensor_dict['audio_feature'] == 'prosodic':
+	elif 'prosodic' in data_config.audio_sensor_dict['audio_feature']:
 		feature_list = prosodic_based_feature_list
-	elif data_config.audio_sensor_dict['audio_feature'] == 'light':
+	elif 'light' in data_config.audio_sensor_dict['audio_feature']:
 		feature_list = light_feature_list
-	elif data_config.audio_sensor_dict['audio_feature'] == 'spectral':
+	elif 'spectral' in data_config.audio_sensor_dict['audio_feature']:
 		feature_list = spectral_feature_list
-	elif data_config.audio_sensor_dict['audio_feature'] == 'medium':
+	elif 'medium' in data_config.audio_sensor_dict['audio_feature'] :
 		feature_list = medium_feature_list
-	elif data_config.audio_sensor_dict['audio_feature'] == 'non_energy':
+	elif 'non_energy' in data_config.audio_sensor_dict['audio_feature'] :
 		feature_list = non_energy_feature_list
-	elif data_config.audio_sensor_dict['audio_feature'] == 'with_duration':
+	elif 'with_duration' in data_config.audio_sensor_dict['audio_feature']:
 		feature_list = with_duration_feature_list
 	else:
 		feature_list = all_feature_list
