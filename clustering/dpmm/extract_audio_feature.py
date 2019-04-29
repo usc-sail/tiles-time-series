@@ -95,6 +95,13 @@ spectral_feature_list = ['pcm_fftMag_fband250-650_sma', 'pcm_fftMag_fband1000-40
 						 'pcm_fftMag_spectralHarmonicity_sma']
 
 
+with_duration_feature_list = ['F0final_sma', 'jitterLocal_sma', 'shimmerLocal_sma',
+							  'pcm_RMSenergy_sma', 'pcm_zcr_sma',
+							  'pcm_intensity_sma', 'pcm_loudness_sma', 'logHNR_sma',
+							  'audspec_lengthL1norm_sma', 'audspecRasta_lengthL1norm_sma',
+							  'pcm_fftMag_fband250-650_sma', 'pcm_fftMag_fband1000-4000_sma',]
+
+
 def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 	# Create Config
 	process_data_path = os.path.abspath(os.path.join(os.pardir, os.pardir, 'data'))
@@ -126,6 +133,8 @@ def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 		feature_list = medium_feature_list
 	elif data_config.audio_sensor_dict['audio_feature'] == 'non_energy':
 		feature_list = non_energy_feature_list
+	elif data_config.audio_sensor_dict['audio_feature'] == 'with_duration':
+		feature_list = with_duration_feature_list
 	else:
 		feature_list = all_feature_list
 		
@@ -185,7 +194,7 @@ def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 					end_time = (pd.to_datetime(time_start_end[1])).strftime(load_data_basic.date_time_format)[:-3]
 					
 					tmp_utterance_df = pd.DataFrame(index=[start_time])
-					# tmp_utterance_df['duration'] = (pd.to_datetime(end_time) - pd.to_datetime(start_time)).total_seconds()
+					tmp_utterance_df['duration'] = (pd.to_datetime(end_time) - pd.to_datetime(start_time)).total_seconds()
 					
 					tmp_utterance_raw_df = tmp_raw_audio_df[start_time:end_time]
 					tmp_utterance_raw_df = tmp_utterance_raw_df[feature_list]
@@ -193,8 +202,8 @@ def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 					full_length = len(tmp_utterance_raw_df)
 					
 					segments = [len(list(x[1])) for x in itertools.groupby(list(tmp_utterance_raw_df['F0final_sma']), lambda x: x == 0) if not x[0] ]
-					# tmp_utterance_df['num_segment'] = len(segments)
-					# tmp_utterance_df['mean_segment'] = np.mean(segments)
+					tmp_utterance_df['num_segment'] = len(segments)
+					tmp_utterance_df['mean_segment'] = np.mean(segments)
 					
 					if len(tmp_utterance_raw_df.loc[tmp_utterance_raw_df['F0final_sma'] > 0]) == 0:
 						continue
@@ -205,29 +214,32 @@ def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 					if len(tmp_utterance_raw_df.loc[tmp_utterance_raw_df['shimmerLocal_sma'] > 0]) == 0:
 						continue
 					
-					# non_zero_f0_length = len(tmp_utterance_raw_df)
-					# tmp_utterance_df['non_zero_f0_ratio'] = non_zero_f0_length / full_length
+					non_zero_f0_length = len(tmp_utterance_raw_df)
+					tmp_utterance_df['non_zero_f0_ratio'] = non_zero_f0_length / full_length
 					
 					for col in list(tmp_utterance_raw_df.columns):
 						if 'jitterLocal_sma' in col or 'shimmerLocal_sma' in col or 'F0final_sma' in col:
-							tmp_utterance_df[col + '_mean'] = np.mean(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col]>0][col]))
-							tmp_utterance_df[col + '_std'] = np.std(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col]>0][col]))
-							tmp_utterance_df[col + '_quantile_10'] = np.quantile(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col] > 0][col]), 0.1)
-							tmp_utterance_df[col + '_quantile_90'] = np.quantile(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col] > 0][col]), 0.9)
+							tmp_utterance_df[col + '_mean'] = np.nanmean(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col]>0][col]))
+							tmp_utterance_df[col + '_std'] = np.nanstd(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col]>0][col]))
+							
+							if data_config.audio_sensor_dict['audio_feature'] != 'with_duration':
+								tmp_utterance_df[col + '_quantile_10'] = np.nanquantile(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col] > 0][col]), 0.1)
+								tmp_utterance_df[col + '_quantile_90'] = np.nanquantile(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col] > 0][col]), 0.9)
 						
 						elif 'logHNR_sma' in col:
-							tmp_utterance_df[col + '_mean'] = np.mean(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col] > -75][col]))
-							tmp_utterance_df[col + '_std'] = np.std(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col] > -75][col]))
-							tmp_utterance_df[col + '_quantile_10'] = np.quantile(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col] > -75][col]), 0.1)
-							tmp_utterance_df[col + '_quantile_90'] = np.quantile(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col] > -75][col]), 0.9)
-
+							tmp_utterance_df[col + '_mean'] = np.nanmean(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col] > -75][col]))
+							tmp_utterance_df[col + '_std'] = np.nanstd(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col] > -75][col]))
+							
+							if data_config.audio_sensor_dict['audio_feature'] != 'with_duration':
+								tmp_utterance_df[col + '_quantile_10'] = np.nanquantile(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col] > -75][col]), 0.1)
+								tmp_utterance_df[col + '_quantile_90'] = np.nanquantile(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col] > -75][col]), 0.9)
 						# elif 'pcm_fftMag_spectralCentroid_sma' in col or 'pcm_fftMag_spectralEntropy_sma' in col
-						
 						else:
-							tmp_utterance_df[col + '_mean'] = np.mean(np.array(tmp_utterance_raw_df[col]))
-							tmp_utterance_df[col + '_std'] = np.std(np.array(tmp_utterance_raw_df[col]))
-							tmp_utterance_df[col + '_quantile_10'] = np.quantile(np.array(tmp_utterance_raw_df[col]), 0.1)
-							tmp_utterance_df[col + '_quantile_90'] = np.quantile(np.array(tmp_utterance_raw_df[col]), 0.9)
+							tmp_utterance_df[col + '_mean'] = np.nanmean(np.array(tmp_utterance_raw_df[col]))
+							tmp_utterance_df[col + '_std'] = np.nanstd(np.array(tmp_utterance_raw_df[col]))
+							if data_config.audio_sensor_dict['audio_feature'] != 'with_duration':
+								tmp_utterance_df[col + '_quantile_10'] = np.nanquantile(np.array(tmp_utterance_raw_df[col]), 0.1)
+								tmp_utterance_df[col + '_quantile_90'] = np.nanquantile(np.array(tmp_utterance_raw_df[col]), 0.9)
 					
 					day_utterance_df = day_utterance_df.append(tmp_utterance_df)
 

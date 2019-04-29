@@ -40,7 +40,7 @@ def main(tiles_data_path, config_path, experiment):
 	top_participant_id_list = list(top_participant_id_df.index)
 	top_participant_id_list.sort()
 
-	for idx, participant_id in enumerate(top_participant_id_list[100:]):
+	for idx, participant_id in enumerate(top_participant_id_list[180:]):
 
 		print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
 

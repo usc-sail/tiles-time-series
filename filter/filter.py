@@ -101,33 +101,7 @@ class Filter(object):
             for i, change_point_end in enumerate(change_point_end_list):
                 if 120 < change_point_end - change_point_start_list[i] < 900:
                     time_start_end_list.append([list(owl_in_one_df.index)[change_point_start_list[i]], list(owl_in_one_df.index)[change_point_end]])
-
-            ###########################################################
-            # Find valid om_signal data
-            ###########################################################
-            if omsignal_df is not None:
-                time_diff = list((pd.to_datetime(list(omsignal_df.index[1:])) - pd.to_datetime(list(omsignal_df.index[:-1]))).total_seconds())
-                
-                change_point_start_list = [0]
-                change_point_end_list = list(np.where(np.array(time_diff) > 3600 * 2)[0])
-
-                if len(change_point_end_list) > 0:
-                    [change_point_start_list.append(change_point_end + 1) for change_point_end in change_point_end_list]
-                    change_point_end_list.append(len(owl_in_one_df.index) - 1)
-        
-                    for i, change_point_end in enumerate(change_point_end_list):
-                        if 240 < change_point_end - change_point_start_list[i] < 840:
-                            
-                            is_saved = False
-                            
-                            for time_start_end in time_start_end_list:
-                                start_time, end_time = time_start_end[0], time_start_end[1]
-                                if np.abs((pd.to_datetime(start_time) - pd.to_datetime(list(omsignal_df.index)[change_point_start_list[i]])).total_seconds()) < 3600 * 6:
-                                    is_saved = True
-                            
-                            if is_saved is False:
-                                time_start_end_list.append([list(omsignal_df.index)[change_point_start_list[i]], list(omsignal_df.index)[change_point_end]])
-        
+            
             if len(time_start_end_list) < 5:
                 return
             
