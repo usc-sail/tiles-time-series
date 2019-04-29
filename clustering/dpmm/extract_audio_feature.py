@@ -259,10 +259,10 @@ def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 				file_name = audio_feature + '_snippet_' + file
 				if os.path.exists(os.path.join(filter_path, participant_id, audio_feature + '_snippet_' + file)) is True:
 					file_exist = True
-
+			'''
 			if file_exist == True:
 				continue
-			
+			'''
 			tmp_raw_audio_df = tmp_raw_audio_df.drop(columns=['F0_sma'])
 
 			day_df = extract_audio_feature(data_config, tmp_raw_audio_df, feature_list)
