@@ -340,18 +340,19 @@ def load_clustering_path(data_config, process_data_path, data_name='clustering',
         cluster_name = 'utterance_cluster'
     elif data_config.audio_sensor_dict['cluster_data'] == 'minute':
         cluster_name = 'minute_cluster'
+    elif data_config.audio_sensor_dict['cluster_data'] == 'snippet':
+        cluster_name = 'snippet_cluster'
     # process audio feature for cluster
     elif data_config.audio_sensor_dict['cluster_data'] == 'raw_audio':
         cluster_name = 'raw_audio_cluster'
     else:
-        cluster_name = 'raw_audio_cluster'
-    data_config.audio_sensor_dict['lda_clustering_path'] = 'lda_' + str(data_config.audio_sensor_dict['lda_num']) + '_' + \
-                                                           cluster_name + '.csv.gz'
+        cluster_name = 'snippet_cluster'
+    data_config.audio_sensor_dict['lda_clustering_path'] = 'lda_' + str(data_config.audio_sensor_dict['lda_num']) + '_' + cluster_name + '.csv.gz'
 
     data_config.audio_sensor_dict['lda_path'] = 'lda_' + str(data_config.audio_sensor_dict['lda_num']) + '.csv.gz'
 
     data_config.audio_sensor_dict['final_save_prefix'] = 'offset_' + str(data_config.audio_sensor_dict['cluster_offset']) + \
-                                                        '_lda_' + str(data_config.audio_sensor_dict['lda_num']) + '_' + \
+                                                         '_lda_' + str(data_config.audio_sensor_dict['lda_num']) + '_' + \
                                                          cluster_name + '_' + data_config.audio_sensor_dict['topic_method'] + '_' + \
                                                          data_config.audio_sensor_dict['topic_num']
     
