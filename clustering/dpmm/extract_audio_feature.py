@@ -194,7 +194,9 @@ def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 					end_time = (pd.to_datetime(time_start_end[1])).strftime(load_data_basic.date_time_format)[:-3]
 					
 					tmp_utterance_df = pd.DataFrame(index=[start_time])
-					tmp_utterance_df['duration'] = (pd.to_datetime(end_time) - pd.to_datetime(start_time)).total_seconds()
+
+					if data_config.audio_sensor_dict['audio_feature'] == 'with_duration':
+						tmp_utterance_df['duration'] = (pd.to_datetime(end_time) - pd.to_datetime(start_time)).total_seconds()
 					
 					tmp_utterance_raw_df = tmp_raw_audio_df[start_time:end_time]
 					tmp_utterance_raw_df = tmp_utterance_raw_df[feature_list]
@@ -202,8 +204,9 @@ def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 					full_length = len(tmp_utterance_raw_df)
 					
 					segments = [len(list(x[1])) for x in itertools.groupby(list(tmp_utterance_raw_df['F0final_sma']), lambda x: x == 0) if not x[0] ]
-					tmp_utterance_df['num_segment'] = len(segments)
-					tmp_utterance_df['mean_segment'] = np.mean(segments)
+					if data_config.audio_sensor_dict['audio_feature'] == 'with_duration':
+						tmp_utterance_df['num_segment'] = len(segments)
+						tmp_utterance_df['mean_segment'] = np.mean(segments)
 					
 					if len(tmp_utterance_raw_df.loc[tmp_utterance_raw_df['F0final_sma'] > 0]) == 0:
 						continue
@@ -215,7 +218,8 @@ def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 						continue
 					
 					non_zero_f0_length = len(tmp_utterance_raw_df)
-					tmp_utterance_df['non_zero_f0_ratio'] = non_zero_f0_length / full_length
+					if data_config.audio_sensor_dict['audio_feature'] == 'with_duration':
+						tmp_utterance_df['non_zero_f0_ratio'] = non_zero_f0_length / full_length
 					
 					for col in list(tmp_utterance_raw_df.columns):
 						if 'jitterLocal_sma' in col or 'shimmerLocal_sma' in col or 'F0final_sma' in col:
