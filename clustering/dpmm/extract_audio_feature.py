@@ -61,19 +61,29 @@ all_feature_list = ['F0final_sma', 'jitterLocal_sma', 'jitterDDP_sma',
 					'pcm_fftMag_spectralHarmonicity_sma']
 
 prosodic_based_feature_list = ['F0final_sma', 'F0env_sma', 'logHNR_sma',
-							   'audspec_lengthL1norm_sma',
-							   'audspecRasta_lengthL1norm_sma',
 							   'pcm_zcr_sma', 'pcm_RMSenergy_sma',
 							   'pcm_intensity_sma', 'pcm_loudness_sma',
 						 	   'jitterLocal_sma', 'shimmerLocal_sma']
 
 light_feature_list = ['F0final_sma', 'pcm_zcr_sma',
 					  'jitterLocal_sma', 'shimmerLocal_sma', 'logHNR_sma',
-					  'audspec_lengthL1norm_sma',
-					  'audspecRasta_lengthL1norm_sma',
-					  'pcm_fftMag_spectralCentroid_sma', 'pcm_fftMag_spectralEntropy_sma',
-					  'pcm_fftMag_spectralSkewness_sma', 'pcm_fftMag_spectralKurtosis_sma',
-					  'pcm_fftMag_spectralSlope_sma']
+					  'audspec_lengthL1norm_sma', 'audspecRasta_lengthL1norm_sma',
+					  'pcm_fftMag_fband250-650_sma', 'pcm_fftMag_fband1000-4000_sma',
+					  'pcm_fftMag_spectralCentroid_sma', 'pcm_fftMag_spectralEntropy_sma']
+
+
+medium_feature_list = ['F0final_sma', 'pcm_zcr_sma',
+					   'jitterLocal_sma', 'shimmerLocal_sma', 'logHNR_sma',
+					   'audspec_lengthL1norm_sma', 'audspecRasta_lengthL1norm_sma',
+					   'pcm_RMSenergy_sma', 'pcm_intensity_sma', 'pcm_loudness_sma',
+					   'pcm_fftMag_fband250-650_sma', 'pcm_fftMag_fband1000-4000_sma',
+					   'pcm_fftMag_spectralCentroid_sma', 'pcm_fftMag_spectralEntropy_sma']
+
+non_energy_feature_list = ['F0final_sma', 'pcm_zcr_sma',
+						   'jitterLocal_sma', 'shimmerLocal_sma',
+						   'audspec_lengthL1norm_sma', 'audspecRasta_lengthL1norm_sma',
+						   'pcm_fftMag_fband250-650_sma', 'pcm_fftMag_fband1000-4000_sma']
+
 
 spectral_feature_list = ['pcm_fftMag_fband250-650_sma', 'pcm_fftMag_fband1000-4000_sma',
 						 'pcm_fftMag_spectralRollOff25.0_sma', 'pcm_fftMag_spectralRollOff50.0_sma',
@@ -112,6 +122,10 @@ def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 		feature_list = light_feature_list
 	elif data_config.audio_sensor_dict['audio_feature'] == 'spectral':
 		feature_list = spectral_feature_list
+	elif data_config.audio_sensor_dict['audio_feature'] == 'medium':
+		feature_list = medium_feature_list
+	elif data_config.audio_sensor_dict['audio_feature'] == 'non_energy':
+		feature_list = non_energy_feature_list
 	else:
 		feature_list = all_feature_list
 		
@@ -175,18 +189,39 @@ def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 					# tmp_utterance_df['num_segment'] = len(segments)
 					# tmp_utterance_df['mean_segment'] = np.mean(segments)
 					
-					tmp_utterance_raw_df = tmp_utterance_raw_df.loc[tmp_utterance_raw_df['F0final_sma'] > 0]
-					if len(tmp_utterance_raw_df) == 0:
+					if len(tmp_utterance_raw_df.loc[tmp_utterance_raw_df['F0final_sma'] > 0]) == 0:
+						continue
+					
+					if len(tmp_utterance_raw_df.loc[tmp_utterance_raw_df['jitterLocal_sma'] > 0]) == 0:
+						continue
+					
+					if len(tmp_utterance_raw_df.loc[tmp_utterance_raw_df['shimmerLocal_sma'] > 0]) == 0:
 						continue
 					
 					# non_zero_f0_length = len(tmp_utterance_raw_df)
 					# tmp_utterance_df['non_zero_f0_ratio'] = non_zero_f0_length / full_length
 					
 					for col in list(tmp_utterance_raw_df.columns):
+						if 'jitterLocal_sma' in col or 'shimmerLocal_sma' in col or 'F0final_sma' in col:
+							tmp_utterance_df[col + '_mean'] = np.mean(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col]>0][col]))
+							tmp_utterance_df[col + '_std'] = np.std(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col]>0][col]))
+							tmp_utterance_df[col + '_quantile_10'] = np.quantile(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col] > 0][col]), 0.1)
+							tmp_utterance_df[col + '_quantile_90'] = np.quantile(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col] > 0][col]), 0.9)
 						
-						tmp_utterance_df[col + '_mean'] = np.mean(np.array(tmp_utterance_raw_df[col]))
-						tmp_utterance_df[col + '_std'] = np.std(np.array(tmp_utterance_raw_df[col]))
+						elif 'logHNR_sma' in col:
+							tmp_utterance_df[col + '_mean'] = np.mean(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col] > -75][col]))
+							tmp_utterance_df[col + '_std'] = np.std(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col] > -75][col]))
+							tmp_utterance_df[col + '_quantile_10'] = np.quantile(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col] > -75][col]), 0.1)
+							tmp_utterance_df[col + '_quantile_90'] = np.quantile(np.array(tmp_utterance_raw_df.loc[tmp_utterance_raw_df[col] > -75][col]), 0.9)
 
+						# elif 'pcm_fftMag_spectralCentroid_sma' in col or 'pcm_fftMag_spectralEntropy_sma' in col
+						
+						else:
+							tmp_utterance_df[col + '_mean'] = np.mean(np.array(tmp_utterance_raw_df[col]))
+							tmp_utterance_df[col + '_std'] = np.std(np.array(tmp_utterance_raw_df[col]))
+							tmp_utterance_df[col + '_quantile_10'] = np.quantile(np.array(tmp_utterance_raw_df[col]), 0.1)
+							tmp_utterance_df[col + '_quantile_90'] = np.quantile(np.array(tmp_utterance_raw_df[col]), 0.9)
+					
 					day_utterance_df = day_utterance_df.append(tmp_utterance_df)
 
 				day_utterance_df.to_csv(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id, 'pause_threshold_' + str(data_config.audio_sensor_dict['pause_threshold']) + '_' + data_config.audio_sensor_dict['audio_feature'] + '_utterance_' + file), compression='gzip')
@@ -230,7 +265,7 @@ def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 					
 					non_zero_f0_length = len(tmp_minute_audio_data)
 					
-					tmp_minute_data_df['non_zero_f0_ratio'] = non_zero_f0_length / full_length
+					# tmp_minute_data_df['non_zero_f0_ratio'] = non_zero_f0_length / full_length
 					
 					for col in list(tmp_minute_audio_data.columns):
 						

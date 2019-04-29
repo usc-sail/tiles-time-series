@@ -44,8 +44,7 @@ def lda_audio(data_df, cluster_df, data_config, participant_id, lda_components='
 	if os.path.exists(os.path.join(data_cluster_path, participant_id)) is False:
 		os.mkdir(os.path.join(data_cluster_path, participant_id))
 	lda_df.to_csv(os.path.join(data_cluster_path, participant_id, 'lda_' + str(lda_components) + '.csv.gz'), compression='gzip')
-	# lda_df.to_csv(os.path.join(data_cluster_path, participant_id, save_file_name + '.csv.gz'), compression='gzip')
-
+	
 
 def main(tiles_data_path, config_path, experiment):
 	# Create Config
@@ -81,8 +80,9 @@ def main(tiles_data_path, config_path, experiment):
 			file_list = [file for file in os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id)) if
 						 'utterance' not in file and 'minute' not in file]
 		else:
+			config_cond = 'pause_threshold_' + str(data_config.audio_sensor_dict['pause_threshold']) + '_' + data_config.audio_sensor_dict['audio_feature']
 			file_list = [file for file in os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id)) if
-						 data_config.audio_sensor_dict['cluster_data'] in file]
+						 data_config.audio_sensor_dict['cluster_data'] in file and config_cond in file]
 		
 		raw_audio_df, utterance_df, minute_df = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 		

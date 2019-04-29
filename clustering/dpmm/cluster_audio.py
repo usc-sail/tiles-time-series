@@ -114,7 +114,8 @@ def main(tiles_data_path, config_path, experiment):
 		if data_config.audio_sensor_dict['cluster_data'] == 'raw_audio':
 			file_list = [file for file in os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id)) if 'utterance' not in file and 'minute' not in file]
 		else:
-			file_list = [file for file in os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id)) if data_config.audio_sensor_dict['cluster_data'] in file]
+			config_cond = 'pause_threshold_' + str(data_config.audio_sensor_dict['pause_threshold']) + '_' + data_config.audio_sensor_dict['audio_feature']
+			file_list = [file for file in os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id)) if data_config.audio_sensor_dict['cluster_data'] in file and config_cond in file]
 
 		raw_audio_df, utterance_df, minute_df = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
@@ -148,6 +149,7 @@ def main(tiles_data_path, config_path, experiment):
 				continue
 			utterance_norm_df = utterance_df.copy()
 			utterance_norm_df = (utterance_norm_df - utterance_norm_df.mean()) / utterance_norm_df.std()
+			# cluster_name = 'utterance_cluster' +
 			cluster_audio(utterance_norm_df, data_config, participant_id, iter=100, cluster_name='utterance_cluster')
 		elif data_config.audio_sensor_dict['cluster_data'] == 'minute':
 			if len(minute_df) == 0:

@@ -325,7 +325,7 @@ def load_clustering_path(data_config, process_data_path, data_name='clustering',
     # Raw audio clustering
     tmp_path = os.path.join(process_data_path, 'clustering')
     create_folder(tmp_path)
-    tmp_path = os.path.join(tmp_path, 'audio')
+    tmp_path = os.path.join(tmp_path, 'audio_pause_threshold_' + str(data_config.audio_sensor_dict['pause_threshold']) + '_' + data_config.audio_sensor_dict['audio_feature'])
     create_folder(tmp_path)
     tmp_path = os.path.join(tmp_path, data_config.audio_sensor_dict['cluster_data'])
     create_folder(tmp_path)
@@ -334,6 +334,27 @@ def load_clustering_path(data_config, process_data_path, data_name='clustering',
     create_folder(tmp_path)
 
     data_config.audio_sensor_dict['clustering_path'] = tmp_path
+
+    # if cluster utterance
+    if data_config.audio_sensor_dict['cluster_data'] == 'utterance':
+        cluster_name = 'utterance_cluster'
+    elif data_config.audio_sensor_dict['cluster_data'] == 'minute':
+        cluster_name = 'minute_cluster'
+    # process audio feature for cluster
+    elif data_config.audio_sensor_dict['cluster_data'] == 'raw_audio':
+        cluster_name = 'raw_audio_cluster'
+    else:
+        cluster_name = 'raw_audio_cluster'
+    data_config.audio_sensor_dict['lda_clustering_path'] = 'lda_' + str(data_config.audio_sensor_dict['lda_num']) + '_' + \
+                                                           cluster_name + '.csv.gz'
+
+    data_config.audio_sensor_dict['lda_path'] = 'lda_' + str(data_config.audio_sensor_dict['lda_num']) + '.csv.gz'
+
+    data_config.audio_sensor_dict['final_save_prefix'] = 'offset_' + str(data_config.audio_sensor_dict['cluster_offset']) + \
+                                                        '_lda_' + str(data_config.audio_sensor_dict['lda_num']) + '_' + \
+                                                         cluster_name + '_' + data_config.audio_sensor_dict['topic_method'] + '_' + \
+                                                         data_config.audio_sensor_dict['topic_num']
+    
 
 
 def load_all_available_path(data_config, process_data_path, filter_data=False,

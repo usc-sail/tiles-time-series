@@ -49,19 +49,29 @@ def main(tiles_data_path, config_path, experiment):
 	top_participant_id_df = load_data_basic.return_top_k_participant(os.path.join(process_data_path, 'participant_id.csv.gz'), tiles_data_path, data_config=data_config)
 	top_participant_id_list = list(top_participant_id_df.index)
 	top_participant_id_list.sort()
+	
+	# if cluster utterance
+	if data_config.audio_sensor_dict['cluster_data'] == 'utterance':
+		cluster_name = 'utterance_cluster'
+	elif data_config.audio_sensor_dict['cluster_data'] == 'minute':
+		cluster_name = 'minute_cluster'
+	# process audio feature for cluster
+	elif data_config.audio_sensor_dict['cluster_data'] == 'raw_audio':
+		cluster_name = 'raw_audio_cluster'
+	else:
+		cluster_name = 'raw_audio_cluster'
+	
+	data_cluster_path = data_config.audio_sensor_dict['clustering_path']
 
 	for idx, participant_id in enumerate(top_participant_id_list):
 
 		print('read_filter_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
 		
 		lda_components = data_config.audio_sensor_dict['lda_num']
-		cluster_file = 'lda_' + str(lda_components) + '_' + data_config.audio_sensor_dict['cluster_data'] + '_cluster.csv.gz'
+		cluster_file = data_config.audio_sensor_dict['lda_clustering_path']
 		# Read other sensor data, the aim is to detect whether people workes during a day
 		if os.path.exists(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id, cluster_file)) is False:
 			continue
-
-		# file_list = [file for file in os.listdir(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id))]
-		# for file in file_list:
 
 		data_df = pd.read_csv(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id, cluster_file), index_col=0)
 		data_df = data_df.sort_index()
@@ -91,12 +101,13 @@ def main(tiles_data_path, config_path, experiment):
 		for time_start_end in time_start_end_list:
 			start_time = (pd.to_datetime(time_start_end[0]).replace(minute=0, second=0, microsecond=0)).strftime(load_data_basic.date_time_format)[:-3]
 			end_time = ((pd.to_datetime(time_start_end[1]) + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)).strftime(load_data_basic.date_time_format)[:-3]
-
-			time_offest = int((pd.to_datetime(end_time) - pd.to_datetime(start_time)).total_seconds() / (60 * 10))
+			
+			cluster_offset = data_config.audio_sensor_dict['cluster_offset']
+			time_offest = int((pd.to_datetime(end_time) - pd.to_datetime(start_time)).total_seconds() / (60 * int(cluster_offset)))
 
 			for offset in range(time_offest):
-				tmp_start = (pd.to_datetime(start_time) + timedelta(minutes=10 * offset)).strftime(load_data_basic.date_time_format)[:-3]
-				tmp_end = (pd.to_datetime(start_time) + timedelta(minutes=10 * offset + 20)).strftime(load_data_basic.date_time_format)[:-3]
+				tmp_start = (pd.to_datetime(start_time) + timedelta(minutes=int(cluster_offset) * offset)).strftime(load_data_basic.date_time_format)[:-3]
+				tmp_end = (pd.to_datetime(start_time) + timedelta(minutes=int(cluster_offset) * offset + 2 * int(cluster_offset))).strftime(load_data_basic.date_time_format)[:-3]
 
 				tmp_data_df = data_df[tmp_start:tmp_end]
 				tmp_owl_in_one_df = owl_in_one_df[tmp_start:tmp_end]
@@ -106,7 +117,7 @@ def main(tiles_data_path, config_path, experiment):
 				
 				sum = 0
 				for col in list(tmp_owl_in_one_df.columns):
-					if col == 'other_floor' or col == 'unknown':
+					if col == 'other_floor' or col == 'unknown' or col == 'floor2':
 						row_df['other'] += np.sum(np.array(tmp_owl_in_one_df[col])) / len(tmp_owl_in_one_df)
 					else:
 						row_df[col] = np.sum(np.array(tmp_owl_in_one_df[col])) / len(tmp_owl_in_one_df)
@@ -122,9 +133,17 @@ def main(tiles_data_path, config_path, experiment):
 
 		word_dictionary = Dictionary(word_list)
 		word_corpus = [word_dictionary.doc2bow(text) for text in word_list]
+		
+		if len(word_corpus) == 0:
+			continue
 
-		# hdp = HdpModel(word_corpus, word_dictionary, T=5)
-		lda = LdaModel(corpus=word_corpus, id2word=word_dictionary, num_topics=5, update_every=1, passes=1)
+		if data_config.audio_sensor_dict['topic_method'] == 'lda':
+			model = LdaModel(corpus=word_corpus, id2word=word_dictionary,
+						     num_topics=int(data_config.audio_sensor_dict['topic_num']),
+							 update_every=1, passes=1)
+		else:
+			model = HdpModel(word_corpus, word_dictionary, T=int(data_config.audio_sensor_dict['topic_num']))
+		
 		topic_final_df = pd.DataFrame()
 		
 		for index, topic_row_series in topic_df.iterrows():
@@ -133,7 +152,7 @@ def main(tiles_data_path, config_path, experiment):
 			tmp_data_df = data_df[start_time:end_time]
 			
 			sent = word_dictionary.doc2bow([str(word) for word in list(tmp_data_df.cluster)])
-			topics = lda[sent]
+			topics = model[sent]
 			
 			tmp_owl_in_one_df = owl_in_one_df[start_time:end_time]
 			row_df = pd.DataFrame(index=[start_time])
@@ -141,21 +160,35 @@ def main(tiles_data_path, config_path, experiment):
 			
 			sum = 0
 			for col in list(tmp_owl_in_one_df.columns):
-				if col == 'other_floor' or col == 'unknown':
+				if col == 'other_floor' or col == 'unknown' or col == 'floor2':
 					row_df['other'] += np.sum(np.array(tmp_owl_in_one_df[col])) / len(tmp_owl_in_one_df)
 				else:
 					row_df[col] = np.sum(np.array(tmp_owl_in_one_df[col])) / len(tmp_owl_in_one_df)
 				sum += np.sum(np.array(tmp_owl_in_one_df[col])) / len(tmp_owl_in_one_df)
 			
+			top_list = []
 			for topic in topics:
 				row_df[str(topic[0])] = topic[1]
-			
-			topic_final_df = topic_final_df.append(row_df)
+				top_list.append(topic[1])
+			topic_sum = np.nansum(top_list)
+			if topic_sum > 0.5:
+				topic_final_df = topic_final_df.append(row_df)
 		
 		topic_final_df = topic_final_df.fillna(0)
+		# topic_corr_df = topic_final_df.corr(method='spearman')
 		topic_corr_df = topic_final_df.corr()
 		
-		print()
+		save_prefix = data_config.audio_sensor_dict['final_save_prefix']
+		topic_corr_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_corr.csv.gz'), compression='gzip')
+		
+		topic_weight_df = pd.DataFrame()
+		for index, topic_tuple_list in model.show_topics(formatted=False):
+			row_df = pd.DataFrame(index=[str(index)])
+			for word_tuple in topic_tuple_list:
+				row_df[str(word_tuple[0])] = word_tuple[1]
+			topic_weight_df = topic_weight_df.append(row_df)
+		
+		topic_weight_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_topic_weight.csv.gz'), compression='gzip')
 		
 
 if __name__ == '__main__':
