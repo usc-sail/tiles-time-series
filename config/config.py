@@ -194,6 +194,7 @@ class Config(object):
         self.audio_sensor_dict['topic_num'] = self.getSetting('audio', 'topic_num')
         self.audio_sensor_dict['topic_method'] = self.getSetting('audio', 'topic_method')
         self.audio_sensor_dict['cluster_offset'] = self.getSetting('audio', 'cluster_offset')
+        self.audio_sensor_dict['overlap'] = self.getSetting('audio', 'overlap')
 
         ###########################################################
         # Read feature engineering parameters

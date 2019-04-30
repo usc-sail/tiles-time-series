@@ -62,7 +62,7 @@ def cluster_audio(data_df, data_config, participant_id, iter=100, cluster_name='
 	elif data_config.audio_sensor_dict['cluster_method'] == 'gibbs':
 		cluster_id = dpgmm_gibbs.DPMM(np.array(data_df), alpha=float(data_config.audio_sensor_dict['cluster_alpha']), iter=iter, K=50)
 	elif data_config.audio_sensor_dict['cluster_method'] == 'vdpgmm':
-		model = VDPGMM(T=20, alpha=float(data_config.audio_sensor_dict['cluster_alpha']), max_iter=1000)
+		model = VDPGMM(T=20, alpha=float(data_config.audio_sensor_dict['cluster_alpha']), max_iter=500)
 		model.fit(np.array(data_df))
 		cluster_id = model.predict(np.array(data_df))
 	elif data_config.audio_sensor_dict['cluster_method'] == 'pcrpmm':
@@ -91,7 +91,7 @@ def cluster_audio(data_df, data_config, participant_id, iter=100, cluster_name='
 		pcrpmm.collapsed_gibbs_sampler(n_iter, n_power=1.1, num_saved=1)
 		cluster_id = pcrpmm.components.assignments
 	else:
-		dpgmm = mixture.BayesianGaussianMixture(n_components=20, covariance_type='full').fit(np.array(data_df))
+		dpgmm = mixture.BayesianGaussianMixture(n_components=20, max_iter=500, covariance_type='full').fit(np.array(data_df))
 		cluster_id = dpgmm.predict(np.array(data_df))
 
 	print(Counter(cluster_id))
@@ -168,6 +168,7 @@ def main(tiles_data_path, config_path, experiment):
 
 		# Read data
 		data_df = read_feature_data_df(data_config, participant_id)
+		print('data shape: ', data_df.shape)
 		if len(data_df) == 0:
 			continue
 

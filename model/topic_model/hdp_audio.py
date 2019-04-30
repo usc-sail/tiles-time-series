@@ -50,17 +50,6 @@ def main(tiles_data_path, config_path, experiment):
 	top_participant_id_list = list(top_participant_id_df.index)
 	top_participant_id_list.sort()
 	
-	# if cluster utterance
-	if data_config.audio_sensor_dict['cluster_data'] == 'utterance':
-		cluster_name = 'utterance_cluster'
-	elif data_config.audio_sensor_dict['cluster_data'] == 'minute':
-		cluster_name = 'minute_cluster'
-	# process audio feature for cluster
-	elif data_config.audio_sensor_dict['cluster_data'] == 'raw_audio':
-		cluster_name = 'raw_audio_cluster'
-	else:
-		cluster_name = 'raw_audio_cluster'
-	
 	data_cluster_path = data_config.audio_sensor_dict['clustering_path']
 
 	for idx, participant_id in enumerate(top_participant_id_list):
@@ -76,7 +65,7 @@ def main(tiles_data_path, config_path, experiment):
 		data_df = pd.read_csv(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id, cluster_file), index_col=0)
 		data_df = data_df.sort_index()
 		
-		if len(data_df) < 720:
+		if len(data_df) < 1000:
 			continue
 
 		owl_in_one_df = pd.read_csv(os.path.join(data_config.owl_in_one_sensor_dict['preprocess_path'], participant_id + '.csv.gz'), index_col=0)
@@ -107,7 +96,11 @@ def main(tiles_data_path, config_path, experiment):
 
 			for offset in range(time_offest):
 				tmp_start = (pd.to_datetime(start_time) + timedelta(minutes=int(cluster_offset) * offset)).strftime(load_data_basic.date_time_format)[:-3]
-				tmp_end = (pd.to_datetime(start_time) + timedelta(minutes=int(cluster_offset) * offset + 2 * int(cluster_offset))).strftime(load_data_basic.date_time_format)[:-3]
+
+				if data_config.audio_sensor_dict['overlap'] == 'False':
+					tmp_end = (pd.to_datetime(start_time) + timedelta(minutes=int(cluster_offset) * offset + int(cluster_offset))).strftime(load_data_basic.date_time_format)[:-3]
+				else:
+					tmp_end = (pd.to_datetime(start_time) + timedelta(minutes=int(cluster_offset) * offset + 2 * int(cluster_offset))).strftime(load_data_basic.date_time_format)[:-3]
 
 				tmp_data_df = data_df[tmp_start:tmp_end]
 				tmp_owl_in_one_df = owl_in_one_df[tmp_start:tmp_end]
@@ -179,7 +172,10 @@ def main(tiles_data_path, config_path, experiment):
 		topic_corr_df = topic_final_df.corr()
 		
 		save_prefix = data_config.audio_sensor_dict['final_save_prefix']
-		topic_corr_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_corr.csv.gz'), compression='gzip')
+		if data_config.audio_sensor_dict['overlap'] == 'False':
+			topic_corr_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_offset_false_corr.csv.gz'), compression='gzip')
+		else:
+			topic_corr_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_corr.csv.gz'), compression='gzip')
 		
 		topic_weight_df = pd.DataFrame()
 		for index, topic_tuple_list in model.show_topics(formatted=False):
@@ -187,8 +183,11 @@ def main(tiles_data_path, config_path, experiment):
 			for word_tuple in topic_tuple_list:
 				row_df[str(word_tuple[0])] = word_tuple[1]
 			topic_weight_df = topic_weight_df.append(row_df)
-		
-		topic_weight_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_topic_weight.csv.gz'), compression='gzip')
+
+		if data_config.audio_sensor_dict['overlap'] == 'False':
+			topic_weight_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_offset_false_topic_weight.csv.gz'), compression='gzip')
+		else:
+			topic_weight_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_topic_weight.csv.gz'), compression='gzip')
 		
 
 if __name__ == '__main__':
