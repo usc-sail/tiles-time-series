@@ -87,12 +87,14 @@ def main(tiles_data_path, config_path, experiment):
 
 		if data_config.audio_sensor_dict['overlap'] == 'False':
 			corr_file_name = os.path.join(data_cluster_path, participant_id, save_prefix + '_offset_false_corr.csv.gz')
+			sent_file_name = os.path.join(data_cluster_path, participant_id, save_prefix + '_offset_false_sent.csv.gz')
 		else:
 			corr_file_name = os.path.join(data_cluster_path, participant_id, save_prefix + '_corr.csv.gz')
-
+			sent_file_name = os.path.join(data_cluster_path, participant_id, save_prefix + '_sent.csv.gz')
 
 		if os.path.exists(corr_file_name) is True:
 			topic_corr_df = pd.read_csv(corr_file_name, index_col=0)
+			sent_topics_df = pd.read_csv(sent_file_name, index_col=0)
 			# topic_corr_df = topic_corr_df.dropna(axis=0)
 
 			index_list = [str(i) for i in range(int(data_config.audio_sensor_dict['topic_num']))]

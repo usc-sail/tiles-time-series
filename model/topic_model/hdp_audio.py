@@ -149,7 +149,7 @@ def main(tiles_data_path, config_path, experiment):
 			if data_config.audio_sensor_dict['overlap'] == 'False':
 				end_time = (pd.to_datetime(start_time) + timedelta(minutes=int(cluster_offset) + int(cluster_offset))).strftime(load_data_basic.date_time_format)[:-3]
 			else:
-				end_time = (pd.to_datetime(start_time) + timedelta(2 * int(cluster_offset))).strftime(load_data_basic.date_time_format)[:-3]
+				end_time = (pd.to_datetime(start_time) + timedelta(minutes=2 * int(cluster_offset))).strftime(load_data_basic.date_time_format)[:-3]
 			# tmp_data_df = data_df[start_time:end_time]
 			
 			tmp_owl_in_one_df = owl_in_one_df[start_time:end_time]
@@ -188,15 +188,11 @@ def main(tiles_data_path, config_path, experiment):
 
 		# Fill na
 		topic_final_df = topic_final_df.fillna(0)
-		# topic_corr_df = topic_final_df.corr(method='spearman')
 		topic_corr_df = topic_final_df.corr()
-		
+		# topic_corr_df = topic_final_df.corr(method='spearman')
+
 		save_prefix = data_config.audio_sensor_dict['final_save_prefix']
-		if data_config.audio_sensor_dict['overlap'] == 'False':
-			topic_corr_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_offset_false_corr.csv.gz'), compression='gzip')
-		else:
-			topic_corr_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_corr.csv.gz'), compression='gzip')
-		
+
 		topic_weight_df = pd.DataFrame()
 		for index, topic_tuple_list in model.show_topics(formatted=False):
 			row_df = pd.DataFrame(index=[str(index)])
@@ -206,13 +202,14 @@ def main(tiles_data_path, config_path, experiment):
 
 		if data_config.audio_sensor_dict['overlap'] == 'False':
 			topic_weight_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_offset_false_topic_weight.csv.gz'), compression='gzip')
+			topic_corr_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_offset_false_corr.csv.gz'), compression='gzip')
+			sent_topics_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_offset_false_sent.csv.gz'), compression='gzip')
+			topic_final_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_offset_false_topic_and_location.csv.gz'), compression='gzip')
 		else:
 			topic_weight_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_topic_weight.csv.gz'), compression='gzip')
-		
-		if data_config.audio_sensor_dict['overlap'] == 'False':
-			sent_topics_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_offset_false_sent.csv.gz'), compression='gzip')
-		else:
+			topic_corr_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_corr.csv.gz'), compression='gzip')
 			sent_topics_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_sent.csv.gz'), compression='gzip')
+			topic_final_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_topic_and_location.csv.gz'), compression='gzip')
 
 
 if __name__ == '__main__':
