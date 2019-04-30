@@ -142,16 +142,7 @@ def main(tiles_data_path, config_path, experiment):
 		# Get main topic in each document
 		for i, row_list in enumerate(model[word_corpus]):
 			row = row_list[0] if model.per_word_topics else row_list
-			
-			row = sorted(row, key=lambda x: (x[1]), reverse=True)
-			# Get the Dominant topic, Perc Contribution and Keywords for each document
-			for j, (topic_num, prop_topic) in enumerate(row):
-				if j == 0:  # => dominant topic
-					wp = model.show_topic(topic_num)
-					topic_keywords = ", ".join([word for word, prop in wp])
-					sent_tmp_df = pd.DataFrame(np.array([int(topic_num), round(prop_topic, 4), topic_keywords]).reshape([1, 3]), index=[list(topic_df.index)[i]], columns=['topic_num', 'weight', 'key_words'])
-					sent_topics_df = sent_topics_df.append(sent_tmp_df)
-			
+
 			# Get correlation
 			start_time = list(topic_df.index)[i]
 			cluster_offset = data_config.audio_sensor_dict['cluster_offset']
@@ -172,7 +163,11 @@ def main(tiles_data_path, config_path, experiment):
 				else:
 					row_df[col] = np.sum(np.array(tmp_owl_in_one_df[col])) / len(tmp_owl_in_one_df)
 				sum += np.sum(np.array(tmp_owl_in_one_df[col])) / len(tmp_owl_in_one_df)
-			
+
+			max_location = row_df.idxmax(axis=1)[0]
+			max_weight = row_df[max_location][0]
+
+
 			top_list = []
 			for topic in row_list:
 				row_df[str(topic[0])] = topic[1]
@@ -180,7 +175,17 @@ def main(tiles_data_path, config_path, experiment):
 			topic_sum = np.nansum(top_list)
 			if topic_sum > 0.5:
 				topic_final_df = topic_final_df.append(row_df)
-		
+
+			row = sorted(row, key=lambda x: (x[1]), reverse=True)
+			# Get the Dominant topic, Perc Contribution and Keywords for each document
+			for j, (topic_num, prop_topic) in enumerate(row):
+				if j == 0:  # => dominant topic
+					wp = model.show_topic(topic_num)
+					topic_keywords = ", ".join([word for word, prop in wp])
+					sent_tmp_df = pd.DataFrame(np.array([int(topic_num), round(prop_topic, 4), topic_keywords, max_location, max_weight]).reshape([1, 5]),
+					                           index=[list(topic_df.index)[i]], columns=['topic_num', 'topic_weight', 'key_words', 'location_name', 'location_weight'])
+					sent_topics_df = sent_topics_df.append(sent_tmp_df)
+
 		# Fill na
 		topic_final_df = topic_final_df.fillna(0)
 		# topic_corr_df = topic_final_df.corr(method='spearman')
