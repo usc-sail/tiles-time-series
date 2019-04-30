@@ -132,20 +132,34 @@ def main(tiles_data_path, config_path, experiment):
 
 		if data_config.audio_sensor_dict['topic_method'] == 'lda':
 			model = LdaModel(corpus=word_corpus, id2word=word_dictionary,
-						     num_topics=int(data_config.audio_sensor_dict['topic_num']),
-							 update_every=1, passes=1)
+						     num_topics=int(data_config.audio_sensor_dict['topic_num']), update_every=1, passes=1)
 		else:
 			model = HdpModel(word_corpus, word_dictionary, T=int(data_config.audio_sensor_dict['topic_num']))
 		
 		topic_final_df = pd.DataFrame()
 		
-		for index, topic_row_series in topic_df.iterrows():
-			start_time = index
-			end_time = (pd.to_datetime(index) + timedelta(minutes=10)).strftime(load_data_basic.date_time_format)[:-3]
-			tmp_data_df = data_df[start_time:end_time]
+		sent_topics_df = pd.DataFrame()
+		# Get main topic in each document
+		for i, row_list in enumerate(model[word_corpus]):
+			row = row_list[0] if model.per_word_topics else row_list
 			
-			sent = word_dictionary.doc2bow([str(word) for word in list(tmp_data_df.cluster)])
-			topics = model[sent]
+			row = sorted(row, key=lambda x: (x[1]), reverse=True)
+			# Get the Dominant topic, Perc Contribution and Keywords for each document
+			for j, (topic_num, prop_topic) in enumerate(row):
+				if j == 0:  # => dominant topic
+					wp = model.show_topic(topic_num)
+					topic_keywords = ", ".join([word for word, prop in wp])
+					sent_tmp_df = pd.DataFrame(np.array([int(topic_num), round(prop_topic, 4), topic_keywords]).reshape([1, 3]), index=[list(topic_df.index)[i]], columns=['topic_num', 'weight', 'key_words'])
+					sent_topics_df = sent_topics_df.append(sent_tmp_df)
+			
+			# Get correlation
+			start_time = list(topic_df.index)[i]
+			cluster_offset = data_config.audio_sensor_dict['cluster_offset']
+			if data_config.audio_sensor_dict['overlap'] == 'False':
+				end_time = (pd.to_datetime(start_time) + timedelta(minutes=int(cluster_offset) + int(cluster_offset))).strftime(load_data_basic.date_time_format)[:-3]
+			else:
+				end_time = (pd.to_datetime(start_time) + timedelta(2 * int(cluster_offset))).strftime(load_data_basic.date_time_format)[:-3]
+			# tmp_data_df = data_df[start_time:end_time]
 			
 			tmp_owl_in_one_df = owl_in_one_df[start_time:end_time]
 			row_df = pd.DataFrame(index=[start_time])
@@ -160,13 +174,14 @@ def main(tiles_data_path, config_path, experiment):
 				sum += np.sum(np.array(tmp_owl_in_one_df[col])) / len(tmp_owl_in_one_df)
 			
 			top_list = []
-			for topic in topics:
+			for topic in row_list:
 				row_df[str(topic[0])] = topic[1]
 				top_list.append(topic[1])
 			topic_sum = np.nansum(top_list)
 			if topic_sum > 0.5:
 				topic_final_df = topic_final_df.append(row_df)
 		
+		# Fill na
 		topic_final_df = topic_final_df.fillna(0)
 		# topic_corr_df = topic_final_df.corr(method='spearman')
 		topic_corr_df = topic_final_df.corr()
@@ -189,6 +204,11 @@ def main(tiles_data_path, config_path, experiment):
 		else:
 			topic_weight_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_topic_weight.csv.gz'), compression='gzip')
 		
+		if data_config.audio_sensor_dict['overlap'] == 'False':
+			sent_topics_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_offset_false_sent.csv.gz'), compression='gzip')
+		else:
+			sent_topics_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_sent.csv.gz'), compression='gzip')
+
 
 if __name__ == '__main__':
 
