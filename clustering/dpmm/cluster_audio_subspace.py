@@ -57,12 +57,14 @@ def cluster_audio(data_df, data_config, iter=100):
 	cluster_df = data_df.copy()
 	
 	# ['F0final_sma', 'pcm_intensity_sma', 'pcm_loudness_sma', 'shimmerLocal_sma', 'jitterLocal_sma']
-	process_col_list = ['F0final_sma', 'pcm_loudness_sma', 'jitter',
+	process_col_list = ['F0final_sma', 'pcm_loudness_sma', 'jitter', 'duration',
 						'pcm_fftMag_spectralCentroid_sma', 'logHNR_sma', 'audspecRasta_lengthL1norm_sma']
 	for process_col in process_col_list:
 		
 		if 'jitter' in process_col:
 			col_data_df = data_df[['shimmerLocal_sma_mean', 'shimmerLocal_sma_std', 'jitterLocal_sma_mean', 'jitterLocal_sma_std']]
+		elif 'duration' in process_col and 'duration' in data_config.audio_sensor_dict['audio_feature']:
+			col_data_df = data_df[['num_segment', 'mean_segment', 'foreground_ratio']]
 		else:
 			col_data_df = data_df[[process_col + '_mean', process_col + '_std']]
 			
