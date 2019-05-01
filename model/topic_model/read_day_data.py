@@ -26,6 +26,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.
 
 import config
 import load_sensor_data, load_data_path, load_data_basic, parser
+import matplotlib.pyplot as plt
 
 
 def main(tiles_data_path, config_path, experiment):
@@ -58,14 +59,8 @@ def main(tiles_data_path, config_path, experiment):
 
 		print('read_filter_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
 
+		# Read basic information
 		participant_df = igtb_df.loc[igtb_df['ParticipantID'] == participant_id]
-
-		lda_components = data_config.audio_sensor_dict['lda_num']
-		cluster_file = 'lda_' + str(lda_components) + '_' + data_config.audio_sensor_dict['cluster_data'] + '_cluster.csv.gz'
-		# Read other sensor data, the aim is to detect whether people workes during a day
-		if os.path.exists(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id, cluster_file)) is False:
-			continue
-
 		primary_unit = participant_df.PrimaryUnit[0]
 		current_position = 'nurse' if participant_df.currentposition[0] == 1 or participant_df.currentposition[0] == 2 else 'non-nurse'
 		shift = participant_df.Shift[0]
@@ -82,52 +77,36 @@ def main(tiles_data_path, config_path, experiment):
 		participant_corr_df['primary_unit'] = primary_unit
 		participant_corr_df['supervise'] = supervise
 		participant_corr_df['ope_igtb'] = participant_df.ope_igtb[0]
-
-		save_prefix = data_config.audio_sensor_dict['final_save_prefix']
-
-		if data_config.audio_sensor_dict['overlap'] == 'False':
-			corr_file_name = os.path.join(data_cluster_path, participant_id, save_prefix + '_offset_false_corr.csv.gz')
-			sent_file_name = os.path.join(data_cluster_path, participant_id, save_prefix + '_offset_false_sent.csv.gz')
-		else:
-			corr_file_name = os.path.join(data_cluster_path, participant_id, save_prefix + '_corr.csv.gz')
-			sent_file_name = os.path.join(data_cluster_path, participant_id, save_prefix + '_sent.csv.gz')
-
-		if os.path.exists(corr_file_name) is True:
-			topic_corr_df = pd.read_csv(corr_file_name, index_col=0)
-			sent_topics_df = pd.read_csv(sent_file_name, index_col=0)
-			# topic_corr_df = topic_corr_df.dropna(axis=0)
-
+		
+		topic_method = data_config.audio_sensor_dict['topic_method']
+		topic_num = str(data_config.audio_sensor_dict['topic_num'])
+		overlap = data_config.audio_sensor_dict['overlap']
+		cluster_offset = data_config.audio_sensor_dict['cluster_offset']
+		
+		save_prefix = topic_method + '_' + topic_num + '_overlap_' + str(overlap) + '_' + str(cluster_offset)
+		
+		tp_weight_name = os.path.join(data_cluster_path, participant_id, save_prefix + '_offset_subspace_topic_weight.csv.gz')
+		tp_location_name = os.path.join(data_cluster_path, participant_id, save_prefix + '_offset_subspace_topic_and_location.csv.gz')
+		
+		if os.path.exists(tp_location_name) is True:
+			tp_location_df = pd.read_csv(tp_location_name, index_col=0)
+			
 			index_list = [str(i) for i in range(int(data_config.audio_sensor_dict['topic_num']))]
-			col_list = [col for col in topic_corr_df.columns if col not in index_list]
-			topic_corr_df = topic_corr_df.loc[index_list, col_list]
-
-			# sort_df = topic_corr_df.abs().unstack().sort_values(kind="quicksort")
-			sort_df = topic_corr_df.abs().unstack().sort_values(kind="quicksort")
-			sort_df = sort_df.dropna()
-
-			for i, index_tuple in enumerate(list(sort_df.index)[-3:][::-1]):
-				participant_corr_df['rank_' + str(i)] = str(index_tuple[0]) + '/' + str(index_tuple[1]) + ':' + str(round(topic_corr_df.loc[str(index_tuple[1]), str(index_tuple[0])], 3))
-
-			for col in col_list:
-				# participant_corr_df[col] = int(len(np.where(np.array(topic_corr_df.loc[:, col]) > 0.2)[0]))
-				# participant_corr_df[col] += int(len(np.where(np.array(topic_corr_df.loc[:, col]) < -0.2)[0]))
-				threshold = 0.20
-				cond1 = int(len(np.where(np.array(topic_corr_df.loc[:, col]) > threshold)[0])) > 0
-				cond2 = int(len(np.where(np.array(topic_corr_df.loc[:, col]) < -threshold)[0])) > 0
-				participant_corr_df[col] = 1 if cond1 or cond2 else 0
-
-			final_corr_df = final_corr_df.append(participant_corr_df)
-			'''
-			for index in index_list:
-				for col in col_list:
-					participant_corr_df[index + '/' + col] = topic_corr_df.loc[index, col]
-			'''
-	nurse_df = final_corr_df.loc[final_corr_df['current_position'] == 'nurse']
-	non_nurse_df = final_corr_df.loc[final_corr_df['current_position'] != 'nurse']
-	
-	day_nurse_df = nurse_df.loc[nurse_df['shift'] == 'Day shift']
-	night_nurse_df = nurse_df.loc[nurse_df['shift'] == 'Night shift']
-	print()
+			col_list = [col for col in tp_location_df.columns if col not in index_list and 'key' not in col]
+			location_df = tp_location_df.loc[:, col_list]
+			
+			location_norm_df = np.array(location_df) / np.array(location_df.sum(axis=1)).reshape([len(location_df), 1])
+			location_norm_df = ((np.array(location_df) - np.nanmin(location_df, axis=0))) / np.nanmax(location_df, axis=0)
+			location_norm_df = pd.DataFrame(location_norm_df, index=list(location_df.index), columns=list(location_df.columns))
+			
+			tp_location_df.loc[list(location_df.index), list(location_df.columns)] = location_norm_df
+			tp_location_corr_df = tp_location_df.drop(columns=['key_word']).corr()
+			
+			plt.pcolor(tp_location_df.drop(columns=['key_word']).transpose())
+			plt.yticks(np.arange(0.5, len(tp_location_df.drop(columns=['key_word']).transpose().index), 1), tp_location_df.drop(columns=['key_word']).transpose().index)
+			plt.xticks(np.arange(0.5, len(tp_location_df.drop(columns=['key_word']).transpose().columns), 1), tp_location_df.drop(columns=['key_word']).transpose().columns)
+			plt.show()
+			print()
 
 
 if __name__ == '__main__':
