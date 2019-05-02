@@ -58,13 +58,16 @@ def cluster_audio(data_df, data_config, iter=100):
 	
 	# ['F0final_sma', 'pcm_intensity_sma', 'pcm_loudness_sma', 'shimmerLocal_sma', 'jitterLocal_sma']
 	process_col_list = ['F0final_sma', 'pcm_loudness_sma', 'jitter', 'duration',
-						'pcm_fftMag_spectralCentroid_sma', 'logHNR_sma', 'audspecRasta_lengthL1norm_sma']
+						'spectral', 'logHNR_sma', 'audspecRasta_lengthL1norm_sma']
 	for process_col in process_col_list:
 		
 		if 'jitter' in process_col:
 			col_data_df = data_df[['shimmerLocal_sma_mean', 'shimmerLocal_sma_std', 'jitterLocal_sma_mean', 'jitterLocal_sma_std']]
 		elif 'duration' in process_col and 'duration' in data_config.audio_sensor_dict['audio_feature']:
 			col_data_df = data_df[['num_segment', 'mean_segment', 'foreground_ratio']]
+		elif 'spectral' in process_col:
+			col_data_df = data_df[['pcm_fftMag_spectralCentroid_sma_mean', 'pcm_fftMag_spectralCentroid_sma_std',
+			                       'pcm_fftMag_spectralEntropy_sma_mean', 'pcm_fftMag_spectralEntropy_sma_std']]
 		else:
 			col_data_df = data_df[[process_col + '_mean', process_col + '_std']]
 			
@@ -75,7 +78,7 @@ def cluster_audio(data_df, data_config, iter=100):
 		elif data_config.audio_sensor_dict['cluster_method'] == 'gibbs':
 			cluster_id = dpgmm_gibbs.DPMM(np.array(col_data_df), alpha=float(data_config.audio_sensor_dict['cluster_alpha']), iter=iter, K=50)
 		elif data_config.audio_sensor_dict['cluster_method'] == 'vdpgmm':
-			model = VDPGMM(T=20, alpha=float(data_config.audio_sensor_dict['cluster_alpha']), max_iter=500)
+			model = VDPGMM(T=20, alpha=float(data_config.audio_sensor_dict['cluster_alpha']), max_iter=300)
 			model.fit(np.array(col_data_df))
 			cluster_id = model.predict(np.array(col_data_df))
 		elif data_config.audio_sensor_dict['cluster_method'] == 'pcrpmm':
