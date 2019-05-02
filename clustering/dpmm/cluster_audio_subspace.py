@@ -65,11 +65,19 @@ def cluster_audio(data_df, data_config, iter=100):
 			col_data_df = data_df[['shimmerLocal_sma_mean', 'shimmerLocal_sma_std', 'jitterLocal_sma_mean', 'jitterLocal_sma_std']]
 		elif 'duration' in process_col and 'duration' in data_config.audio_sensor_dict['audio_feature']:
 			col_data_df = data_df[['mean_segment', 'foreground_ratio']]
+		elif 'duration' in process_col:
+			if 'duration' in data_config.audio_sensor_dict['audio_feature']:
+				col_data_df = data_df[['num_segment', 'mean_segment', 'foreground_ratio']]
+			else:
+				col_data_df = pd.DataFrame()
 		elif 'spectral' in process_col:
 			col_data_df = data_df[['pcm_fftMag_spectralCentroid_sma_mean', 'pcm_fftMag_spectralCentroid_sma_std',
 			                       'pcm_fftMag_spectralEntropy_sma_mean', 'pcm_fftMag_spectralEntropy_sma_std']]
 		else:
 			col_data_df = data_df[[process_col + '_mean', process_col + '_std']]
+			
+		if len(col_data_df) == 0:
+			continue
 			
 		if data_config.audio_sensor_dict['cluster_method'] == 'collapsed_gibbs':
 			dpgmm = dpmm.DPMM(n_components=20, alpha=float(data_config.audio_sensor_dict['cluster_alpha']))
