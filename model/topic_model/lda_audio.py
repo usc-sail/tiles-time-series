@@ -17,6 +17,7 @@ from collections import Counter
 from datetime import timedelta
 import pymc3 as pm
 from theano import tensor as tt
+import matplotlib.pyplot as plt
 
 from datetime import datetime
 
@@ -53,6 +54,7 @@ def main(tiles_data_path, config_path, experiment):
 	top_participant_id_list.sort()
 	
 	data_cluster_path = data_config.audio_sensor_dict['clustering_path']
+	data_tp_path = data_config.audio_sensor_dict['tp_path']
 	
 	# process cluster name
 	if data_config.audio_sensor_dict['cluster_data'] == 'utterance':
@@ -69,7 +71,8 @@ def main(tiles_data_path, config_path, experiment):
 	overlap = data_config.audio_sensor_dict['overlap']
 	
 	# 'pcm_fftMag_spectralCentroid_sma_cluster'
-	process_col_list = ['F0final_sma_cluster', 'pcm_loudness_sma_cluster', 'jitter_cluster']
+	process_col_list = ['F0final_sma_cluster', 'duration_cluster', 'pcm_loudness_sma_cluster']
+	# process_col_list = ['F0final_sma_cluster', 'duration_cluster', 'spectral_cluster']
 	
 	for idx, participant_id in enumerate(top_participant_id_list):
 		
@@ -145,7 +148,7 @@ def main(tiles_data_path, config_path, experiment):
 			else:
 				start_time = (start_time - timedelta(hours=12)).replace(hour=work_start_time, minute=0, second=0, microsecond=0).strftime(load_data_basic.date_time_format)[:-3]
 			
-			end_time = (pd.to_datetime(start_time) + timedelta(hours=12) - timedelta(minutes=int(cluster_offset))).strftime(load_data_basic.date_time_format)[:-3]
+			end_time = (pd.to_datetime(start_time) + timedelta(hours=12) - timedelta(minutes=int(overlap))).strftime(load_data_basic.date_time_format)[:-3]
 			
 			owl_in_one_day_df = owl_in_one_df[start_time:end_time]
 			if len(owl_in_one_day_df) == 0:
@@ -196,19 +199,20 @@ def main(tiles_data_path, config_path, experiment):
 			model = LdaModel(corpus=word_corpus, id2word=word_dictionary,
 						     num_topics=int(data_config.audio_sensor_dict['topic_num']), update_every=1, passes=1)
 		else:
+			# model = HdpModel(word_corpus, word_dictionary, T=int(data_config.audio_sensor_dict['topic_num']))
 			model = HdpModel(word_corpus, word_dictionary, T=int(data_config.audio_sensor_dict['topic_num']))
 		
 		# Get main topic in each document
+		topic_list = []
 		for time_index in time_index_list:
 			if len(time_word_dict[time_index]) > 0:
 				model_list = model[word_dictionary.doc2bow(time_word_dict[time_index])]
 				# row = model_list[0] if model.per_word_topics else model_list
 				row = model_list
-				top_list = []
 				for topic in model_list:
 					if topic[1] > 0:
 						location_df.loc[time_index, str(topic[0])] = topic[1]
-						top_list.append(topic[1])
+						topic_list.append(str(topic[0]))
 				
 				row = sorted(row, key=lambda x: (x[1]), reverse=True)
 				# Get the Dominant topic, Perc Contribution and Keywords for each document
@@ -217,9 +221,28 @@ def main(tiles_data_path, config_path, experiment):
 						wp = model.show_topic(topic_num)
 						topic_keywords = ", ".join([word for word, prop in wp])
 						location_df.loc[time_index, 'key_word'] = topic_keywords
-		
+
+		# Topic
+		topic_list = list(set(topic_list))
 		# Fill na
 		location_df = location_df.fillna(0)
+
+		'''
+			from sklearn.cluster import AffinityPropagation
+			clustering_topics = AffinityPropagation().fit(np.array(location_df.loc[:, topic_list])).predict(np.array(location_df.loc[:, topic_list]))
+			location_df.loc[:, 'topic_cluster'] = clustering_topics
+	
+			from scipy.spatial.distance import cdist
+	
+			dist = cdist(np.array(location_df.loc[:, topic_list]), np.array(location_df.loc[:, topic_list]), metric='euclidean')
+			K = np.exp(dist)
+	
+			fig, ax = plt.subplots(figsize=(20, 20))
+			cax = ax.matshow(K, interpolation='nearest')
+			ax.grid(True)
+			fig.colorbar(cax, ticks=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, .75, .8, .85, .90, .95, 1])
+			plt.show()
+		'''
 		topic_weight_df = pd.DataFrame()
 		for index, topic_tuple_list in model.show_topics(formatted=False):
 			row_df = pd.DataFrame(index=[str(index)])
@@ -230,8 +253,12 @@ def main(tiles_data_path, config_path, experiment):
 		topic_method = data_config.audio_sensor_dict['topic_method']
 		topic_num = str(data_config.audio_sensor_dict['topic_num'])
 		save_prefix = topic_method + '_' + topic_num + '_overlap_' + str(overlap) + '_' + str(cluster_offset)
-		topic_weight_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_offset_subspace_topic_weight.csv.gz'), compression='gzip')
-		location_df.to_csv(os.path.join(data_cluster_path, participant_id, save_prefix + '_offset_subspace_topic_and_location.csv.gz'), compression='gzip')
+
+		if os.path.exists(os.path.join(data_tp_path, participant_id)) is False:
+			os.mkdir(os.path.join(data_tp_path, participant_id))
+
+		topic_weight_df.to_csv(os.path.join(data_tp_path, participant_id, save_prefix + '_offset_subspace_topic_weight.csv.gz'), compression='gzip')
+		location_df.to_csv(os.path.join(data_tp_path, participant_id, save_prefix + '_offset_subspace_topic_and_location.csv.gz'), compression='gzip')
 		
 
 if __name__ == '__main__':

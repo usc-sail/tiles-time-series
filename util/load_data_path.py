@@ -326,17 +326,25 @@ def load_clustering_path(data_config, process_data_path, data_name='clustering',
 	tmp_path = os.path.join(process_data_path, 'clustering')
 	create_folder(tmp_path)
 	if data_config.audio_sensor_dict['cluster_data'] == 'snippet':
+		tp_path = os.path.join(tmp_path, 'tp_audio_' + data_config.audio_sensor_dict['audio_feature'])
 		tmp_path = os.path.join(tmp_path, 'audio_' + data_config.audio_sensor_dict['audio_feature'])
 	else:
+		tp_path =  os.path.join(tmp_path, 'tp_audio_pause_threshold_' + str(data_config.audio_sensor_dict['pause_threshold']) + '_' + data_config.audio_sensor_dict['audio_feature'])
 		tmp_path = os.path.join(tmp_path, 'audio_pause_threshold_' + str(data_config.audio_sensor_dict['pause_threshold']) + '_' + data_config.audio_sensor_dict['audio_feature'])
 	create_folder(tmp_path)
+	create_folder(tp_path)
 	tmp_path = os.path.join(tmp_path, data_config.audio_sensor_dict['cluster_data'])
+	tp_path = os.path.join(tp_path, data_config.audio_sensor_dict['cluster_data'])
 	create_folder(tmp_path)
+	create_folder(tp_path)
 	cluster_str = 'alpha_' + data_config.audio_sensor_dict['cluster_alpha'] + '_method_' + data_config.audio_sensor_dict['cluster_method']
 	tmp_path = os.path.join(tmp_path, cluster_str)
+	tp_path = os.path.join(tp_path, cluster_str)
 	create_folder(tmp_path)
+	create_folder(tp_path)
 
 	data_config.audio_sensor_dict['clustering_path'] = tmp_path
+	data_config.audio_sensor_dict['tp_path'] = tp_path
 
 	# process cluster name
 	if data_config.audio_sensor_dict['cluster_data'] == 'utterance':
