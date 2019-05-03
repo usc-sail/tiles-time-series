@@ -99,7 +99,7 @@ class Filter(object):
             
             time_start_end_list = []
             for i, change_point_end in enumerate(change_point_end_list):
-                if 120 < change_point_end - change_point_start_list[i] < 900:
+                if 240 < change_point_end - change_point_start_list[i] < 900:
                     time_start_end_list.append([list(owl_in_one_df.index)[change_point_start_list[i]], list(owl_in_one_df.index)[change_point_end]])
             
             if len(time_start_end_list) < 5:
@@ -116,17 +116,24 @@ class Filter(object):
                 
                 if len(tmp_raw_audio_df) > 100 * 30:
                     # tmp_raw_audio_df = tmp_raw_audio_df.loc[tmp_raw_audio_df['F0final_sma'] > 0]
-                    
-                    if os.path.exists(os.path.join(self.data_config.audio_sensor_dict['filter_path'], participant_id)) is False:
-                        os.mkdir(os.path.join(self.data_config.audio_sensor_dict['filter_path'], participant_id))
-                    if os.path.exists(os.path.join(self.data_config.owl_in_one_sensor_dict['filter_path'], participant_id)) is False:
-                        os.mkdir(os.path.join(self.data_config.owl_in_one_sensor_dict['filter_path'], participant_id))
-                    
-                    tmp_raw_audio_df.to_csv(os.path.join(self.data_config.audio_sensor_dict['filter_path'],
-                                                         participant_id, start_time + '.csv.gz'), compression='gzip')
-                    if len(tmp_owl_in_one_df) > 0:
-                        tmp_owl_in_one_df.to_csv(os.path.join(self.data_config.owl_in_one_sensor_dict['filter_path'],
-                                                              participant_id, list(tmp_owl_in_one_df.index)[0] + '.csv.gz'), compression='gzip')
+
+                    sum = 0
+                    if 'other' in list(tmp_owl_in_one_df.columns):
+                        sum += np.nansum(np.array(tmp_owl_in_one_df.other_floor))
+                    if 'unknown' in list(tmp_owl_in_one_df.columns):
+                        sum += np.nansum(np.array(tmp_owl_in_one_df.unknown))
+                        
+                    if sum / len(tmp_owl_in_one_df) < 0.5:
+                        if os.path.exists(os.path.join(self.data_config.audio_sensor_dict['filter_path'], participant_id)) is False:
+                            os.mkdir(os.path.join(self.data_config.audio_sensor_dict['filter_path'], participant_id))
+                        if os.path.exists(os.path.join(self.data_config.owl_in_one_sensor_dict['filter_path'], participant_id)) is False:
+                            os.mkdir(os.path.join(self.data_config.owl_in_one_sensor_dict['filter_path'], participant_id))
+                        
+                        tmp_raw_audio_df.to_csv(os.path.join(self.data_config.audio_sensor_dict['filter_path'],
+                                                             participant_id, start_time + '.csv.gz'), compression='gzip')
+                        if len(tmp_owl_in_one_df) > 0:
+                            tmp_owl_in_one_df.to_csv(os.path.join(self.data_config.owl_in_one_sensor_dict['filter_path'],
+                                                                  participant_id, list(tmp_owl_in_one_df.index)[0] + '.csv.gz'), compression='gzip')
 
         elif self.data_config.filter_method == 'awake_period':
     
