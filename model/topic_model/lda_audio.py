@@ -71,8 +71,8 @@ def main(tiles_data_path, config_path, experiment):
 	overlap = data_config.audio_sensor_dict['overlap']
 	
 	# 'pcm_fftMag_spectralCentroid_sma_cluster'
-	process_col_list = ['F0final_sma_cluster', 'duration_cluster', 'pcm_loudness_sma_cluster']
-	# process_col_list = ['F0final_sma_cluster', 'duration_cluster', 'spectral_cluster']
+	process_col_list = ['F0final_sma_cluster', 'spectral_cluster', 'duration_cluster']
+	# process_col_list = ['F0final_sma_cluster', 'duration_cluster', 'spectral_cluster'] pcm_loudness_sma_cluster
 	
 	for idx, participant_id in enumerate(top_participant_id_list):
 		
@@ -88,7 +88,7 @@ def main(tiles_data_path, config_path, experiment):
 		
 		# Initialize start parameters
 		cluster_offset = data_config.audio_sensor_dict['cluster_offset']
-		time_offest = (12 * 3600 - 60 * int(cluster_offset)) / (60 * int(cluster_offset))
+		time_offest = (12 * 3600 - 60 * int(overlap)) / (60 * int(cluster_offset))
 		if shift == 'Day shift':
 			work_start_time, work_end_time = 7, 19
 		else:
@@ -107,6 +107,7 @@ def main(tiles_data_path, config_path, experiment):
 		# Read audio data and owl-in-one data
 		audio_data_df = pd.read_csv(os.path.join(data_config.audio_sensor_dict['clustering_path'], participant_id, cluster_name + '_subspace.csv.gz'), index_col=0)
 		audio_data_df = audio_data_df.sort_index()
+
 		owl_in_one_df = pd.read_csv(os.path.join(data_config.owl_in_one_sensor_dict['preprocess_path'], participant_id + '.csv.gz'), index_col=0)
 		
 		# Read time difference
@@ -137,7 +138,10 @@ def main(tiles_data_path, config_path, experiment):
 		owl_in_one_col_list = list(set(owl_in_one_col_list))
 		
 		location_df = pd.DataFrame(np.zeros([len(time_index_list), len(owl_in_one_col_list)]),
-								   index=[time_index_list], columns=owl_in_one_col_list)
+								   index=time_index_list, columns=owl_in_one_col_list)
+
+		if len(audio_data_df) < 1500 or len(time_start_end_list) < 10:
+			continue
 		# Iterate
 		for time_start_end in time_start_end_list[:]:
 			
@@ -243,13 +247,23 @@ def main(tiles_data_path, config_path, experiment):
 			fig.colorbar(cax, ticks=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, .75, .8, .85, .90, .95, 1])
 			plt.show()
 		'''
+
 		topic_weight_df = pd.DataFrame()
+
+		for topic in topic_list:
+			row_df = pd.DataFrame(index=[str(topic)])
+			topic_tuple_list = model.show_topic(int(topic))
+			for word_tuple in topic_tuple_list:
+				row_df[str(word_tuple[0])] = word_tuple[1]
+			topic_weight_df = topic_weight_df.append(row_df)
+		'''
 		for index, topic_tuple_list in model.show_topics(formatted=False):
 			row_df = pd.DataFrame(index=[str(index)])
 			for word_tuple in topic_tuple_list:
 				row_df[str(word_tuple[0])] = word_tuple[1]
 			topic_weight_df = topic_weight_df.append(row_df)
-		
+		'''
+
 		topic_method = data_config.audio_sensor_dict['topic_method']
 		topic_num = str(data_config.audio_sensor_dict['topic_num'])
 		save_prefix = topic_method + '_' + topic_num + '_overlap_' + str(overlap) + '_' + str(cluster_offset)
@@ -257,6 +271,9 @@ def main(tiles_data_path, config_path, experiment):
 		if os.path.exists(os.path.join(data_tp_path, participant_id)) is False:
 			os.mkdir(os.path.join(data_tp_path, participant_id))
 
+		from gensim.test.utils import datapath
+		# temp_file = datapath("model")
+		model.save(os.path.join(data_tp_path, participant_id, save_prefix + '_offset_subspace_topic_model'))
 		topic_weight_df.to_csv(os.path.join(data_tp_path, participant_id, save_prefix + '_offset_subspace_topic_weight.csv.gz'), compression='gzip')
 		location_df.to_csv(os.path.join(data_tp_path, participant_id, save_prefix + '_offset_subspace_topic_and_location.csv.gz'), compression='gzip')
 		

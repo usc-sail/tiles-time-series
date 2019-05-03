@@ -17,6 +17,8 @@ from pybgmm.prior import NIW
 from pybgmm.igmm import PCRPMM
 from datetime import timedelta
 
+from scipy.stats import invwishart, invgamma, wishart
+
 ###########################################################
 # Change to your own library path
 ###########################################################
@@ -57,8 +59,9 @@ def cluster_audio(data_df, data_config, iter=100):
 	cluster_df = data_df.copy()
 	
 	# ['F0final_sma', 'pcm_intensity_sma', 'pcm_loudness_sma', 'shimmerLocal_sma', 'jitterLocal_sma']
-	process_col_list = ['F0final_sma', 'pcm_loudness_sma', 'jitter', 'duration',
-						'spectral', 'logHNR_sma', 'audspecRasta_lengthL1norm_sma']
+	# process_col_list = ['F0final_sma', 'pcm_loudness_sma', 'jitter', 'duration',
+	# 					'spectral', 'logHNR_sma', 'audspecRasta_lengthL1norm_sma']
+	process_col_list = ['F0final_sma', 'pcm_loudness_sma', 'duration', 'spectral']
 	for process_col in process_col_list:
 		
 		if 'jitter' in process_col:
@@ -102,10 +105,11 @@ def cluster_audio(data_df, data_config, iter=100):
 			covar_scale = 1
 	
 			# Intialize prior
-			m_0 = np.zeros(D)
+			m_0 = np.mean(np.array(col_data_df), axis=0)
 			k_0 = covar_scale ** 2 / mu_scale ** 2
 			v_0 = D + 3
 			S_0 = covar_scale ** 2 * v_0 * np.eye(D)
+
 			prior = NIW(m_0, k_0, v_0, S_0)
 	
 			## Setup PCRPMM
@@ -193,7 +197,7 @@ def main(tiles_data_path, config_path, experiment):
 
 	filter_data_path = data_config.audio_sensor_dict['filter_path']
 
-	for idx, participant_id in enumerate(top_participant_id_list[:]):
+	for idx, participant_id in enumerate(top_participant_id_list[6:]):
 
 		print('read_filter_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
 
