@@ -71,10 +71,13 @@ def main(tiles_data_path, config_path, experiment):
 	overlap = data_config.audio_sensor_dict['overlap']
 	
 	# 'pcm_fftMag_spectralCentroid_sma_cluster'
-	process_col_list = ['F0final_sma_cluster', 'spectral_cluster', 'duration_cluster']
-	# process_col_list = ['F0final_sma_cluster', 'duration_cluster', 'spectral_cluster'] pcm_loudness_sma_cluster
+	process_col_list = ['F0_sma_cluster', 'duration_cluster', # 'pcm_loudness_sma_cluster',
+						'pcm_fftMag_spectralCentroid_sma_cluster', 'pcm_fftMag_spectralEntropy_sma_cluster',
+						'audspecRasta_lengthL1norm_sma_cluster']
+	# process_col_list = ['F0final_sma_cluster', 'duration_cluster', 'spectral_cluster']
+	# pcm_loudness_sma_cluster 'audspecRasta_lengthL1norm_sma_cluster' 'audspec_lengthL1norm_sma_cluster'
 	
-	for idx, participant_id in enumerate(top_participant_id_list):
+	for idx, participant_id in enumerate(top_participant_id_list[:3]):
 		
 		if participant_id not in list(igtb_df.ParticipantID):
 			continue

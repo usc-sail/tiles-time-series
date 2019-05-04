@@ -59,11 +59,12 @@ def cluster_audio(data_df, data_config, iter=100):
 	cluster_df = data_df.copy()
 	
 	# ['F0final_sma', 'pcm_intensity_sma', 'pcm_loudness_sma', 'shimmerLocal_sma', 'jitterLocal_sma']
-	# process_col_list = ['F0final_sma', 'pcm_loudness_sma', 'jitter', 'duration',
+	# process_col_list = ['F0final_sma', 'pcm_loudness_sma', 'jitter', 'duration', 'F0_sma', 'logHNR_sma',
 	# 					'spectral', 'logHNR_sma', 'audspecRasta_lengthL1norm_sma']
-	process_col_list = ['F0final_sma', 'pcm_loudness_sma', 'duration', 'spectral']
+	process_col_list = ['F0_sma', 'duration', 'pcm_loudness_sma',
+						'pcm_fftMag_spectralCentroid_sma', 'pcm_fftMag_spectralEntropy_sma',
+						'audspecRasta_lengthL1norm_sma', 'audspec_lengthL1norm_sma']
 	for process_col in process_col_list:
-		
 		if 'jitter' in process_col:
 			col_data_df = data_df[['shimmerLocal_sma_mean', 'shimmerLocal_sma_std', 'jitterLocal_sma_mean', 'jitterLocal_sma_std']]
 		elif 'duration' in process_col and 'duration' in data_config.audio_sensor_dict['audio_feature']:
@@ -73,11 +74,13 @@ def cluster_audio(data_df, data_config, iter=100):
 				col_data_df = data_df[['num_segment', 'mean_segment', 'foreground_ratio']]
 			else:
 				col_data_df = pd.DataFrame()
+		else:
+			col_data_df = data_df[[process_col + '_mean', process_col + '_std']]
+		'''
 		elif 'spectral' in process_col:
 			col_data_df = data_df[['pcm_fftMag_spectralCentroid_sma_mean', 'pcm_fftMag_spectralCentroid_sma_std',
 			                       'pcm_fftMag_spectralEntropy_sma_mean', 'pcm_fftMag_spectralEntropy_sma_std']]
-		else:
-			col_data_df = data_df[[process_col + '_mean', process_col + '_std']]
+		'''
 			
 		if len(col_data_df) == 0:
 			continue
@@ -197,7 +200,7 @@ def main(tiles_data_path, config_path, experiment):
 
 	filter_data_path = data_config.audio_sensor_dict['filter_path']
 
-	for idx, participant_id in enumerate(top_participant_id_list[6:]):
+	for idx, participant_id in enumerate(top_participant_id_list[:]):
 
 		print('read_filter_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
 
@@ -225,7 +228,7 @@ def main(tiles_data_path, config_path, experiment):
 
 		# Cluster audio
 		data_df = (data_df - data_df.mean()) / data_df.std()
-		cluster_df = cluster_audio(data_df, data_config, iter=300)
+		cluster_df = cluster_audio(data_df, data_config, iter=200)
 		
 		data_cluster_path = data_config.audio_sensor_dict['clustering_path']
 

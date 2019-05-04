@@ -72,10 +72,10 @@ light_feature_list = ['F0final_sma', 'pcm_zcr_sma',
 					  'pcm_fftMag_spectralCentroid_sma', 'pcm_fftMag_spectralEntropy_sma']
 
 
-medium_feature_list = ['F0final_sma', 'pcm_zcr_sma',
-					   'jitterLocal_sma', 'shimmerLocal_sma', 'logHNR_sma',
+medium_feature_list = ['F0_sma', 'jitterLocal_sma', 'shimmerLocal_sma',
+					   'logHNR_sma', 'pcm_zcr_sma', 'pcm_RMSenergy_sma',
 					   'audspec_lengthL1norm_sma', 'audspecRasta_lengthL1norm_sma',
-					   'pcm_RMSenergy_sma', 'pcm_intensity_sma', 'pcm_loudness_sma',
+					   'pcm_intensity_sma', 'pcm_loudness_sma',
 					   'pcm_fftMag_fband250-650_sma', 'pcm_fftMag_fband1000-4000_sma',
 					   'pcm_fftMag_spectralCentroid_sma', 'pcm_fftMag_spectralEntropy_sma']
 
@@ -156,7 +156,9 @@ def extract_audio_feature(data_config, data_df, feature_list):
 			# Each snippet is 20s seconds
 			tmp_data_df['foreground_ratio'] = len(tmp_raw_data_df) / (100 * 20)
 
-		if len(tmp_raw_data_df.loc[tmp_raw_data_df['F0final_sma'] > 0]) == 0:
+		# if len(tmp_raw_data_df.loc[tmp_raw_data_df['F0final_sma'] > 0]) == 0:
+		#		continue
+		if len(tmp_raw_data_df.loc[tmp_raw_data_df['F0_sma'] > 0]) == 0:
 			continue
 		if len(tmp_raw_data_df.loc[tmp_raw_data_df['jitterLocal_sma'] > 0]) == 0:
 			continue
@@ -164,7 +166,7 @@ def extract_audio_feature(data_config, data_df, feature_list):
 			continue
 
 		for col in list(tmp_raw_data_df.columns):
-			if 'jitterLocal_sma' in col or 'shimmerLocal_sma' in col or 'F0final_sma' in col:
+			if 'jitterLocal_sma' in col or 'shimmerLocal_sma' in col or 'F0final_sma' in col or 'F0_sma' in col:
 				tmp_data_df[col + '_mean'] = np.nanmean(np.array(tmp_raw_data_df.loc[tmp_raw_data_df[col] > 0][col]))
 				tmp_data_df[col + '_std'] = np.nanstd(np.array(tmp_raw_data_df.loc[tmp_raw_data_df[col] > 0][col]))
 
@@ -232,18 +234,17 @@ def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 	audio_feature = data_config.audio_sensor_dict['audio_feature']
 	pause_threshold = str(data_config.audio_sensor_dict['pause_threshold'])
 		
-	for idx, participant_id in enumerate(top_participant_id_list[:]):
+	for idx, participant_id in enumerate(top_participant_id_list[180:]):
 
 		print('read_filter_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
 
 		# Read other sensor data, the aim is to detect whether people workes during a day
 		if os.path.exists(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id)) is False:
 			continue
-
-		if len(os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id))) < 3:
-			continue
 			
 		file_list = [file for file in os.listdir(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id)) if 'utterance' not in file and 'minute' not in file and 'snippet' not in file]
+		if len(file_list) < 5:
+			continue
 
 		for file in file_list:
 			tmp_raw_audio_df = pd.read_csv(os.path.join(data_config.audio_sensor_dict['filter_path'], participant_id, file), index_col=0)
@@ -263,7 +264,7 @@ def main(tiles_data_path, config_path, experiment, skip_preprocess=False):
 			if file_exist == True:
 				continue
 			'''
-			tmp_raw_audio_df = tmp_raw_audio_df.drop(columns=['F0_sma'])
+			# tmp_raw_audio_df = tmp_raw_audio_df.drop(columns=['F0_sma'])
 
 			day_df = extract_audio_feature(data_config, tmp_raw_audio_df, feature_list)
 			day_df.to_csv(os.path.join(filter_path, participant_id, file_name), compression='gzip')
