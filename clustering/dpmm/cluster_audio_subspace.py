@@ -16,6 +16,8 @@ from vdpgmm import VDPGMM
 from pybgmm.prior import NIW
 from pybgmm.igmm import PCRPMM
 from datetime import timedelta
+from sklearn.datasets import load_iris
+from dpkmeans import dpmeans
 
 from scipy.stats import invwishart, invgamma, wishart
 
@@ -95,6 +97,9 @@ def cluster_audio(data_df, data_config, iter=100):
 			model = VDPGMM(T=20, alpha=float(data_config.audio_sensor_dict['cluster_alpha']), max_iter=300)
 			model.fit(np.array(col_data_df))
 			cluster_id = model.predict(np.array(col_data_df))
+		elif data_config.audio_sensor_dict['cluster_method'] == 'dpkmeans':
+			dp = dpmeans(np.array(col_data_df))
+			cluster_id, obj, em_time = dp.fit(np.array(col_data_df))
 		elif data_config.audio_sensor_dict['cluster_method'] == 'pcrpmm':
 			# Model parameters
 			alpha = float(data_config.audio_sensor_dict['cluster_alpha'])

@@ -337,7 +337,11 @@ def load_clustering_path(data_config, process_data_path, data_name='clustering',
 	tp_path = os.path.join(tp_path, data_config.audio_sensor_dict['cluster_data'])
 	create_folder(tmp_path)
 	create_folder(tp_path)
-	cluster_str = 'alpha_' + data_config.audio_sensor_dict['cluster_alpha'] + '_method_' + data_config.audio_sensor_dict['cluster_method']
+	
+	if 'bgm' in data_config.audio_sensor_dict['cluster_method'] or 'kmeans' in data_config.audio_sensor_dict['cluster_method']:
+		cluster_str = 'method_' + data_config.audio_sensor_dict['cluster_method']
+	else:
+		cluster_str = 'alpha_' + data_config.audio_sensor_dict['cluster_alpha'] + '_method_' + data_config.audio_sensor_dict['cluster_method']
 	tmp_path = os.path.join(tmp_path, cluster_str)
 	tp_path = os.path.join(tp_path, cluster_str)
 	create_folder(tmp_path)
