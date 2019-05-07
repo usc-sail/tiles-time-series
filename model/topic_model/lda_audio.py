@@ -18,8 +18,17 @@ from datetime import timedelta
 import pymc3 as pm
 from theano import tensor as tt
 import matplotlib.pyplot as plt
+import seaborn as sns
+import statsmodels.api as sm
+from scipy.spatial.distance import cdist
 
 from datetime import datetime
+import operator
+
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import NMF
+from sklearn.preprocessing import normalize
 
 ###########################################################
 # Change to your own library path
@@ -29,6 +38,123 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.
 
 import config
 import load_sensor_data, load_data_path, load_data_basic, parser
+
+
+def plot_tp(data_config, participant_id, tp_weight_df, location_and_tp_df, enable_filter=False):
+	# Read topic and location data
+	topic_method = data_config.audio_sensor_dict['topic_method']
+	topic_num = str(data_config.audio_sensor_dict['topic_num'])
+	overlap = data_config.audio_sensor_dict['overlap']
+	cluster_offset = data_config.audio_sensor_dict['cluster_offset']
+	save_prefix = topic_method + '_' + topic_num + '_overlap_' + str(overlap) + '_' + str(cluster_offset)
+	data_tp_path = data_config.audio_sensor_dict['tp_path']
+	
+	# Read relevant data
+	tp_list = [str(i) for i in list(tp_weight_df.index)]
+	loc_list = [col for col in location_and_tp_df.columns if col not in tp_list and 'key' not in col]
+	location_df = location_and_tp_df.loc[:, loc_list]
+	topic_df = location_and_tp_df.loc[:, tp_list]
+	
+	if len(tp_list) > 3:
+		top_tp_list = [tp_list[i] for i in np.argsort(np.mean(np.array(topic_df.dropna()), axis=0))[-3:][::-1]]
+	else:
+		top_tp_list = tp_list
+		
+	location_norm_array = np.array(location_df) / np.sum(np.array(location_df), axis=1).reshape([len(location_df), 1])
+	
+	fig, ax = plt.subplots(nrows=1, figsize=(16, 10))
+	corr_df = pd.DataFrame(index=[str(i) for i in range(len(top_tp_list))], columns=loc_list)
+	corr_df.loc[:, :] = np.array(location_and_tp_df.drop(columns=['key_word']).corr().loc[top_tp_list, loc_list])
+	sns.heatmap(corr_df, annot=True, linewidths=.5, ax=ax)
+	plt.savefig(os.path.join(data_tp_path, participant_id, save_prefix + '_offset_subspace_corr.png'))
+	plt.close()
+	
+	location_and_tp_df.loc[:, loc_list] = location_norm_array
+	
+	fig1, ax1 = plt.subplots(nrows=2, figsize=(16, 10))
+	fig2, ax2 = plt.subplots(nrows=2, figsize=(16, 10))
+	
+	# filter_array = plt_array.copy()
+	for i in range(location_norm_array.shape[1]):
+		# plt_array = location_norm_array[:, i]
+		plt_array = location_and_tp_df.loc[:, loc_list[i]].fillna(0)
+		plt_array = np.array(plt_array)
+		
+		cycle, tmp_filter_array = sm.tsa.filters.hpfilter(plt_array, 100)
+		location_and_tp_df.loc[:, loc_list[i]] = tmp_filter_array
+		
+		# ax1[0].plot(list(pd.to_datetime(location_df.index)), plt_array, label=loc_list[i])
+		ax1[0].plot(list(pd.to_datetime(location_df.index)), tmp_filter_array, label=loc_list[i])
+		
+		if enable_filter:
+			cycle, filter_array = sm.tsa.filters.hpfilter(plt_array, 100)
+			ax2[0].plot(list(pd.to_datetime(location_df.index)), filter_array, label=loc_list[i])
+	
+	plt_array = np.array(location_and_tp_df.loc[:, loc_list].fillna(0)) # .reshape([len(location_and_tp_df), len(loc_list)])
+	# ax1[0].stackplot(list(pd.to_datetime(location_df.index)), plt_array)
+	# ax1[0].stackplot(list(pd.to_datetime(location_df.index)), plt_array.T, labels=loc_list)
+		
+	ax1[0].legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True, fontsize=14)
+	ax1[0].set_xlim([pd.to_datetime(topic_df.index[0]), pd.to_datetime(topic_df.index[-1])])
+	
+	ax1[0].legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True, fontsize=14)
+	ax1[0].set_xlim([pd.to_datetime(topic_df.index[0]), pd.to_datetime(topic_df.index[-1])])
+	
+	topic_df = topic_df.fillna(0)
+	# for i in range(topic_df.shape[1]):
+	
+	X = np.array(location_and_tp_df.loc[:, tp_list])
+	dist = cdist(X, X, metric='jensenshannon')
+	K = np.exp(-dist)
+	
+	from sklearn.cluster import AffinityPropagation
+	# clustering_topics = AffinityPropagation().fit(np.array(topic_df.loc[:, top_tp_list])).predict(np.array(topic_df.loc[:, top_tp_list]))
+	clustering_topics = AffinityPropagation(affinity='precomputed').fit(K).predict(K)
+	
+	
+	plt.imshow(K)
+	plt.show()
+	
+	for i in range(len(top_tp_list)):
+		# plt_array = np.array(topic_df)[:, i]
+		plt_array = np.array(topic_df.loc[:, top_tp_list[i]])
+		
+		cycle, tmp_filter_array = sm.tsa.filters.hpfilter(plt_array, 100)
+		topic_df.loc[:, top_tp_list[i]] = tmp_filter_array
+		
+		# ax1[1].plot(list(pd.to_datetime(topic_df.index)), plt_array, label='topic: ' + str(top_tp_list[i]))
+		ax1[1].plot(list(pd.to_datetime(topic_df.index)), tmp_filter_array, label='topic: ' + str(top_tp_list[i]))
+		
+		if enable_filter:
+			cycle, filter_array = sm.tsa.filters.hpfilter(plt_array, 10)
+			ax2[1].plot(list(pd.to_datetime(topic_df.index)), filter_array, label='topic: ' + str(top_tp_list[i]))
+	
+	plt_array = np.array(topic_df.loc[:, top_tp_list])
+	# ax1[1].stackplot(list(pd.to_datetime(location_df.index)), plt_array.T, labels=top_tp_list)
+		
+	ax1[1].legend(bbox_to_anchor=(1, 1), fancybox=True, shadow=True, fontsize=14)
+	ax1[1].set_xlim([pd.to_datetime(topic_df.index[0]), pd.to_datetime(topic_df.index[-1])])
+	fig1.savefig(os.path.join(data_tp_path, participant_id, save_prefix + '_offset_subspace_topic_and_location.png'))
+	plt.close(fig=fig1)
+	# data_perc = data.divide(data.sum(axis=1), axis=0)
+	
+	if enable_filter:
+		fig2.savefig(os.path.join(data_tp_path, participant_id, save_prefix + '_offset_subspace_topic_and_location_filter.png'))
+		plt.close(fig=fig2)
+
+
+def get_nmf_topics(model, n_top_words, num_topics, vectorizer):
+	# the word ids obtained need to be reverse-mapped to the words so we can print the topic names.
+	feat_names = vectorizer.get_feature_names()
+	
+	word_dict = {}
+	for i in range(num_topics):
+		# for each topic, obtain the largest values, and add the words they map to into the dictionary.
+		words_ids = model.components_[i].argsort()[:-20 - 1:-1]
+		words = [feat_names[key] for key in words_ids]
+		word_dict[str(i)] = words
+	
+	return pd.DataFrame(word_dict)
 
 
 def main(tiles_data_path, config_path, experiment):
@@ -71,13 +197,30 @@ def main(tiles_data_path, config_path, experiment):
 	overlap = data_config.audio_sensor_dict['overlap']
 	
 	# 'pcm_fftMag_spectralCentroid_sma_cluster'
-	process_col_list = ['F0_sma_cluster', 'duration_cluster', # 'pcm_loudness_sma_cluster',
-						'pcm_fftMag_spectralCentroid_sma_cluster', 'pcm_fftMag_spectralEntropy_sma_cluster',
-						'audspecRasta_lengthL1norm_sma_cluster']
+	process_col_list = ['F0_sma_cluster',
+						'pcm_loudness_sma_cluster',
+						'duration_cluster',
+						# 'logHNR_sma_cluster',
+						# 'audspecRasta_lengthL1norm_sma_cluster',
+						# 'pcm_fftMag_spectralCentroid_sma_cluster',
+						# 'pcm_fftMag_spectralEntropy_sma_cluster'
+						]
+						# 'audspecRasta_lengthL1norm_sma_cluster']
+	'''
+	process_col_list = ['F0_sma_cluster',
+						'pcm_loudness_sma_cluster',
+						'duration_cluster',
+						'logHNR_sma_cluster',
+						# 'audspecRasta_lengthL1norm_sma_cluster',
+						# 'pcm_fftMag_spectralCentroid_sma_cluster',
+						# 'pcm_fftMag_spectralEntropy_sma_cluster'
+						]
+	'''
+	
 	# process_col_list = ['F0final_sma_cluster', 'duration_cluster', 'spectral_cluster']
 	# pcm_loudness_sma_cluster 'audspecRasta_lengthL1norm_sma_cluster' 'audspec_lengthL1norm_sma_cluster'
 	
-	for idx, participant_id in enumerate(top_participant_id_list[:3]):
+	for idx, participant_id in enumerate(top_participant_id_list[:5]):
 		
 		if participant_id not in list(igtb_df.ParticipantID):
 			continue
@@ -91,7 +234,8 @@ def main(tiles_data_path, config_path, experiment):
 		
 		# Initialize start parameters
 		cluster_offset = data_config.audio_sensor_dict['cluster_offset']
-		time_offest = (12 * 3600 - 60 * int(overlap)) / (60 * int(cluster_offset))
+		# time_offest = (12 * 3600 - 60 * int(overlap)) / (60 * int(cluster_offset))
+		time_offest = (10 * 3600) / (60 * int(cluster_offset))
 		if shift == 'Day shift':
 			work_start_time, work_end_time = 7, 19
 		else:
@@ -143,10 +287,16 @@ def main(tiles_data_path, config_path, experiment):
 		location_df = pd.DataFrame(np.zeros([len(time_index_list), len(owl_in_one_col_list)]),
 								   index=time_index_list, columns=owl_in_one_col_list)
 
-		if len(audio_data_df) < 1500 or len(time_start_end_list) < 10:
+		if len(audio_data_df) < 1500 or len(time_start_end_list) < 15:
 			continue
+			
+		select_array = np.random.choice(len(time_start_end_list), 15)
 		# Iterate
+		# for select_index in select_array:
+		
+		word_count_dict = {}
 		for time_start_end in time_start_end_list[:]:
+			# time_start_end = time_start_end_list[select_index]
 			
 			# Extract start and end time of a shift
 			start_time, end_time = pd.to_datetime(time_start_end[0]), pd.to_datetime(time_start_end[1])
@@ -155,24 +305,36 @@ def main(tiles_data_path, config_path, experiment):
 			else:
 				start_time = (start_time - timedelta(hours=12)).replace(hour=work_start_time, minute=0, second=0, microsecond=0).strftime(load_data_basic.date_time_format)[:-3]
 			
-			end_time = (pd.to_datetime(start_time) + timedelta(hours=12) - timedelta(minutes=int(overlap))).strftime(load_data_basic.date_time_format)[:-3]
-			
+			# end_time = (pd.to_datetime(start_time) + timedelta(hours=10) - timedelta(minutes=int(overlap))).strftime(load_data_basic.date_time_format)[:-3]
+			end_time = (pd.to_datetime(start_time) + timedelta(hours=10)).strftime(load_data_basic.date_time_format)[:-3]
+		
 			owl_in_one_day_df = owl_in_one_df[start_time:end_time]
 			if len(owl_in_one_day_df) == 0:
 				continue
 			if len(owl_in_one_day_df.loc[owl_in_one_day_df['unknown'] == 1]) / len(owl_in_one_day_df) > 0.5:
 				continue
+				
+			day_audio_df = audio_data_df[start_time:end_time]
+			for tmp_data_index, row_series in day_audio_df[process_col_list].iterrows():
+				word = ''
+				for row_series_index, value in row_series.iteritems():
+					word += chr(97 + value)
+				if word not in list(word_count_dict.keys()):
+					word_count_dict[word] = 1
+				else:
+					word_count_dict[word] += 1
 			
 			for offset in range(int(time_offest)):
-				tmp_start = (pd.to_datetime(start_time) + timedelta(minutes=int(cluster_offset) * offset)).strftime(load_data_basic.date_time_format)[:-3]
-
+				
 				if overlap == 'False':
 					minute_offset = int(cluster_offset)
 				elif overlap == 'True':
 					minute_offset = 2 * int(cluster_offset)
 				else:
 					minute_offset = int(overlap)
-				tmp_end = (pd.to_datetime(start_time) + timedelta(minutes=int(cluster_offset)*offset+minute_offset)).strftime(load_data_basic.date_time_format)[:-3]
+				
+				tmp_start = (pd.to_datetime(start_time) + timedelta(minutes=int(cluster_offset)*offset-int(minute_offset/2))).strftime(load_data_basic.date_time_format)[:-3]
+				tmp_end = (pd.to_datetime(start_time) + timedelta(minutes=int(cluster_offset)*offset+int(minute_offset/2))).strftime(load_data_basic.date_time_format)[:-3]
 				
 				tmp_data_df = audio_data_df[tmp_start:tmp_end]
 				tmp_owl_in_one_df = owl_in_one_df[tmp_start:tmp_end]
@@ -190,14 +352,37 @@ def main(tiles_data_path, config_path, experiment):
 						word = ''
 						for row_series_index, value in row_series.iteritems():
 							word += chr(97+value)
-						
+							
 						time_word_dict[time_index].append(word)
-	
+		
+		sorted_word_count = sorted(word_count_dict.items(), key=operator.itemgetter(1))[::-1]
+		valid_word_list = []
+		for i in range(len(sorted_word_count)):
+			word = sorted_word_count[i][0]
+			# if 50 < sorted_word_count[i][1] < 500:
+			if 10 < sorted_word_count[i][1]:
+				valid_word_list.append(word)
+		
+		valid_point_list = list(np.where(np.nansum(np.array(location_df), axis=1) > (int(data_config.audio_sensor_dict['overlap']) * 3))[0])
 		word_list = []
-		for time_index in time_index_list:
-			word_list.append(time_word_dict[time_index])
+		for valid_point in valid_point_list:
+			time_index = time_index_list[int(valid_point)]
+			# for time_index in time_index_list:
+			valid_word_at_time_list = [word for word in time_word_dict[time_index] if word in valid_word_list]
+			word_list.append(valid_word_at_time_list)
+			time_word_dict[time_index] = valid_word_at_time_list
 		word_dictionary = Dictionary(word_list)
 		word_corpus = [word_dictionary.doc2bow(text) for text in word_list]
+		
+		train_sentences = [' '.join(text) for text in word_list]
+		vectorizer = CountVectorizer(analyzer='word', max_features=5000)
+		x_counts = vectorizer.fit_transform(train_sentences)
+		transformer = TfidfTransformer(smooth_idf=False)
+		x_tfidf = transformer.fit_transform(x_counts)
+		xtfidf_norm = normalize(x_tfidf, norm='l1', axis=1)
+		
+		vectorizer = TfidfVectorizer(min_df=20, max_df=1000)
+		xtfidf_norm = vectorizer.fit_transform(train_sentences)
 		
 		if len(word_corpus) == 0:
 			continue
@@ -205,34 +390,60 @@ def main(tiles_data_path, config_path, experiment):
 		if data_config.audio_sensor_dict['topic_method'] == 'lda':
 			model = LdaModel(corpus=word_corpus, id2word=word_dictionary,
 						     num_topics=int(data_config.audio_sensor_dict['topic_num']), update_every=1, passes=1)
+		elif data_config.audio_sensor_dict['topic_method'] == 'nmf':
+			model = NMF(n_components=int(data_config.audio_sensor_dict['topic_num']), init='nndsvd')
+			# fit the model
+			model.fit(xtfidf_norm)
+			y = model.fit_transform(xtfidf_norm)
+			
 		else:
 			# model = HdpModel(word_corpus, word_dictionary, T=int(data_config.audio_sensor_dict['topic_num']))
-			model = HdpModel(word_corpus, word_dictionary, T=int(data_config.audio_sensor_dict['topic_num']))
+			model = HdpModel(word_corpus, word_dictionary, T=int(data_config.audio_sensor_dict['topic_num']), alpha=0.1, gamma=0.1)
 		
 		# Get main topic in each document
 		topic_list = []
-		for time_index in time_index_list:
-			if len(time_word_dict[time_index]) > 0:
-				model_list = model[word_dictionary.doc2bow(time_word_dict[time_index])]
-				# row = model_list[0] if model.per_word_topics else model_list
-				row = model_list
-				for topic in model_list:
-					if topic[1] > 0:
-						location_df.loc[time_index, str(topic[0])] = topic[1]
-						topic_list.append(str(topic[0]))
+		# for time_index in time_index_list:
+		if data_config.audio_sensor_dict['topic_method'] == 'nmf':
+			key_word_df = get_nmf_topics(model, 3, int(data_config.audio_sensor_dict['topic_num']), vectorizer)
+			for valid_point in valid_point_list:
+				time_index = time_index_list[int(valid_point)]
 				
-				row = sorted(row, key=lambda x: (x[1]), reverse=True)
-				# Get the Dominant topic, Perc Contribution and Keywords for each document
-				for j, (topic_num, prop_topic) in enumerate(row):
-					if j == 0:  # => dominant topic
-						wp = model.show_topic(topic_num)
-						topic_keywords = ", ".join([word for word, prop in wp])
-						location_df.loc[time_index, 'key_word'] = topic_keywords
+				model_list = model.transform(vectorizer.transform([' '.join(time_word_dict[time_index])]))
+				# row = model_list[0] if model.per_word_topics else model_list
+				for topic, weight in enumerate(list(model_list)[0]):
+					location_df.loc[time_index, str(topic)] = weight
+				
+				topic_list.append(str(np.argmax(model_list[0])))
+				
+				topic_keywords = ", ".join(list(key_word_df[str(np.argmax(model_list[0]))]))
+				location_df.loc[time_index, 'key_word'] = topic_keywords
+		else:
+			for valid_point in valid_point_list:
+				time_index = time_index_list[int(valid_point)]
+				if len(time_word_dict[time_index]) > 0:
+					model_list = model[word_dictionary.doc2bow(time_word_dict[time_index])]
+					# row = model_list[0] if model.per_word_topics else model_list
+					row = model_list
+					for topic in model_list:
+						if topic[1] > 0:
+							location_df.loc[time_index, str(topic[0])] = topic[1]
+							topic_list.append(str(topic[0]))
+					
+					row = sorted(row, key=lambda x: (x[1]), reverse=True)
+					# Get the Dominant topic, Perc Contribution and Keywords for each document
+					for j, (topic_num, prop_topic) in enumerate(row):
+						if j == 0:  # => dominant topic
+							wp = model.show_topic(topic_num)
+							topic_keywords = ", ".join([word for word, prop in wp])
+							location_df.loc[time_index, 'key_word'] = topic_keywords
 
 		# Topic
 		topic_list = list(set(topic_list))
 		# Fill na
-		location_df = location_df.fillna(0)
+		valie_time_index_list = [time_index_list[point] for point in valid_point_list]
+		valid_rows_df = location_df.loc[valie_time_index_list, :].fillna(0)
+		location_df.loc[valie_time_index_list, list(valid_rows_df.columns)] = valid_rows_df.loc[valie_time_index_list, list(valid_rows_df.columns)]
+		# location_df.loc[:, ] = location_df.loc[time_index_list[valid_point_list], :]
 
 		'''
 			from sklearn.cluster import AffinityPropagation
@@ -250,15 +461,24 @@ def main(tiles_data_path, config_path, experiment):
 			fig.colorbar(cax, ticks=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, .75, .8, .85, .90, .95, 1])
 			plt.show()
 		'''
+		
+		topic_method = data_config.audio_sensor_dict['topic_method']
+		topic_num = str(data_config.audio_sensor_dict['topic_num'])
+		save_prefix = topic_method + '_' + topic_num + '_overlap_' + str(overlap) + '_' + str(cluster_offset)
+		
+		if data_config.audio_sensor_dict['topic_method'] != 'nmf':
+			topic_weight_df = pd.DataFrame()
 
-		topic_weight_df = pd.DataFrame()
-
-		for topic in topic_list:
-			row_df = pd.DataFrame(index=[str(topic)])
-			topic_tuple_list = model.show_topic(int(topic))
-			for word_tuple in topic_tuple_list:
-				row_df[str(word_tuple[0])] = word_tuple[1]
-			topic_weight_df = topic_weight_df.append(row_df)
+			for topic in topic_list:
+				row_df = pd.DataFrame(index=[str(topic)])
+				topic_tuple_list = model.show_topic(int(topic))
+				for word_tuple in topic_tuple_list:
+					row_df[str(word_tuple[0])] = word_tuple[1]
+				topic_weight_df = topic_weight_df.append(row_df)
+			topic_weight_df.to_csv(os.path.join(data_tp_path, participant_id, save_prefix + '_offset_subspace_topic_weight.csv.gz'), compression='gzip')
+		
+		else:
+			topic_weight_df = key_word_df.transpose()
 		'''
 		for index, topic_tuple_list in model.show_topics(formatted=False):
 			row_df = pd.DataFrame(index=[str(index)])
@@ -266,20 +486,16 @@ def main(tiles_data_path, config_path, experiment):
 				row_df[str(word_tuple[0])] = word_tuple[1]
 			topic_weight_df = topic_weight_df.append(row_df)
 		'''
-
-		topic_method = data_config.audio_sensor_dict['topic_method']
-		topic_num = str(data_config.audio_sensor_dict['topic_num'])
-		save_prefix = topic_method + '_' + topic_num + '_overlap_' + str(overlap) + '_' + str(cluster_offset)
-
+		
 		if os.path.exists(os.path.join(data_tp_path, participant_id)) is False:
 			os.mkdir(os.path.join(data_tp_path, participant_id))
-
-		from gensim.test.utils import datapath
-		# temp_file = datapath("model")
-		model.save(os.path.join(data_tp_path, participant_id, save_prefix + '_offset_subspace_topic_model'))
-		topic_weight_df.to_csv(os.path.join(data_tp_path, participant_id, save_prefix + '_offset_subspace_topic_weight.csv.gz'), compression='gzip')
+		
+		if data_config.audio_sensor_dict['topic_method'] != 'nmf':
+			model.save(os.path.join(data_tp_path, participant_id, save_prefix + '_offset_subspace_topic_model'))
 		location_df.to_csv(os.path.join(data_tp_path, participant_id, save_prefix + '_offset_subspace_topic_and_location.csv.gz'), compression='gzip')
 		
+		plot_tp(data_config, participant_id, topic_weight_df, location_df, enable_filter=False)
+
 
 if __name__ == '__main__':
 
