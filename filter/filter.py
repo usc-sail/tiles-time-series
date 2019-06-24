@@ -7,6 +7,7 @@ import os
 import pandas as pd
 import numpy as np
 from datetime import timedelta
+from datetime import datetime
 
 # date_time format
 date_time_format = '%Y-%m-%dT%H:%M:%S.%f'
@@ -55,6 +56,186 @@ class Filter(object):
             ###########################################################
             realizd_df.to_csv(os.path.join(self.data_config.realizd_sensor_dict['filter_path'], participant_id + '.csv.gz'), compression='gzip')
             data_df.to_csv(os.path.join(self.data_config.fitbit_sensor_dict['filter_path'], participant_id + '.csv.gz'), compression='gzip')
+        
+        elif self.data_config.filter_method == 'om_signal':
+            ###########################################################
+            # If there is no realizd data or not enough data, return
+            ###########################################################
+            if omsignal_df is None:
+                return np.nan, np.nan, np.nan
+    
+            # Define start and end date
+            start_date = datetime(year=2018, month=2, day=15)
+            end_date = datetime(year=2018, month=9, day=10)
+    
+            # Create a time range for the data to be used. We read through all the
+            # files and obtain the earliest and latest dates. This is the time range
+            # used to produced the data to be saved in 'preprocessed/'
+            dates_range = pd.date_range(start=start_date, end=end_date, normalize=True)
+            days_at_work = pd.DataFrame(np.nan, index=dates_range, columns=[participant_id])
+    
+            ###########################################################
+            # Find valid owl-in-one data
+            ###########################################################
+            if owl_in_one_df is not None:
+                time_diff = list((pd.to_datetime(list(owl_in_one_df.index[1:])) - pd.to_datetime(list(owl_in_one_df.index[:-1]))).total_seconds())
+        
+                change_point_start_list = [0]
+                change_point_end_list = list(np.where(np.array(time_diff) > 3600 * 8)[0])
+        
+                if len(change_point_end_list) > 2:
+                    [change_point_start_list.append(change_point_end + 1) for change_point_end in change_point_end_list]
+                    change_point_end_list.append(len(owl_in_one_df.index) - 1)
+            
+                    time_start_end_list = []
+                    for i, change_point_end in enumerate(change_point_end_list):
+                        if 60 < change_point_end - change_point_start_list[i] < 900:
+                            time_start_end_list.append([list(owl_in_one_df.index)[change_point_start_list[i]], list(owl_in_one_df.index)[change_point_end]])
+                    
+                            days_at_work.loc[pd.to_datetime(list(owl_in_one_df.index)[change_point_start_list[i]]).date(), participant_id] = 1
+
+            ###########################################################
+            # Find valid om_signal data
+            ###########################################################
+            time_diff = list((pd.to_datetime(list(omsignal_df.index[1:])) - pd.to_datetime(list(omsignal_df.index[:-1]))).total_seconds())
+
+            change_point_start_list = [0]
+            change_point_end_list = list(np.where(np.array(time_diff) > 3600 * 8)[0])
+
+            if len(change_point_end_list) < 2:
+                return np.nan, np.nan, np.nan
+
+            [change_point_start_list.append(change_point_end + 1) for change_point_end in change_point_end_list]
+            change_point_end_list.append(len(omsignal_df.index) - 1)
+
+            time_start_end_list = []
+            time_list = []
+            for i, change_point_end in enumerate(change_point_end_list):
+                if 0 < change_point_end - change_point_start_list[i] < 900:
+                    duration = pd.to_datetime(list(omsignal_df.index)[change_point_end]) - pd.to_datetime(list(omsignal_df.index)[change_point_start_list[i]])
+                    time_start_end_list.append([list(omsignal_df.index)[change_point_start_list[i]], list(omsignal_df.index)[change_point_end]])
+                    time_list.append(duration.total_seconds() / 3600)
+                    
+            if len(omsignal_df) > 0:
+                data_df = omsignal_df.copy()
+                data_df.index = pd.to_datetime(omsignal_df.index)
+                dates_worked = list(set([date.date() for date in data_df.index]))
+        
+                for date in dates_range:
+                    if date.date() in dates_worked:
+                        days_at_work.loc[date.date(), participant_id] = 1
+    
+            if len(mgt_df) > 1:
+                for index, row in mgt_df.iterrows():
+                    try:
+                        if row['location_mgt'] == 2.0:
+                            days_at_work.loc[pd.to_datetime(index).date(), participant_id] = 1.0
+                    except KeyError:
+                        print('Participant ' + row['uid'] + ' is not in participant list from IDs.csv.')
+    
+            return len(time_start_end_list) / np.nansum(days_at_work), np.nansum(days_at_work), np.nanmean(np.array(time_list))
+
+        elif self.data_config.filter_method == 'fitbit':
+            ###########################################################
+            # If there is no realizd data or not enough data, return
+            ###########################################################
+            if data_df is None:
+                return np.nan, np.nan, np.nan
+    
+            # Define start and end date
+            start_date = datetime(year=2018, month=2, day=15)
+            end_date = datetime(year=2018, month=9, day=10)
+    
+            # Create a time range for the data to be used. We read through all the
+            # files and obtain the earliest and latest dates. This is the time range
+            # used to produced the data to be saved in 'preprocessed/'
+            dates_range = pd.date_range(start=start_date, end=end_date, normalize=True)
+            days_available_df = pd.DataFrame(np.nan, index=dates_range, columns=[participant_id])
+            
+            ###########################################################
+            # Find valid fitbit data
+            ###########################################################
+            time_list = []
+            for date_in_range in dates_range:
+                start_str = pd.to_datetime(date_in_range).strftime(date_time_format)[:-3]
+                end_str = (pd.to_datetime(date_in_range) + timedelta(hours=24)).strftime(date_time_format)[:-3]
+                
+                tmp_data_df = data_df[start_str:end_str]
+                tmp_data_df = tmp_data_df.dropna()
+
+                if len(tmp_data_df) > 0:
+                    days_available_df.loc[pd.to_datetime(start_str).date(), participant_id] = 1
+                    time_list.append(len(tmp_data_df) / 60)
+
+            if np.nansum(days_available_df) / 70 > 1:
+                return 1, np.nansum(days_available_df), np.nanmean(np.array(time_list))
+            else:
+                return np.nansum(days_available_df) / 70, np.nansum(days_available_df), np.nanmean(np.array(time_list))
+
+        elif self.data_config.filter_method == 'owl_in_one':
+            ###########################################################
+            # If there is no realizd data or not enough data, return
+            ###########################################################
+            if owl_in_one_df is None:
+                return np.nan, np.nan, np.nan
+
+            # Define start and end date
+            start_date = datetime(year=2018, month=2, day=15)
+            end_date = datetime(year=2018, month=9, day=10)
+
+            # Create a time range for the data to be used. We read through all the
+            # files and obtain the earliest and latest dates. This is the time range
+            # used to produced the data to be saved in 'preprocessed/'
+            dates_range = pd.date_range(start=start_date, end=end_date, normalize=True)
+            days_at_work = pd.DataFrame(np.nan, index=dates_range, columns=[participant_id])
+
+            ###########################################################
+            # Find valid owl-in-one data
+            ###########################################################
+            time_diff = list((pd.to_datetime(list(owl_in_one_df.index[1:])) - pd.to_datetime(list(owl_in_one_df.index[:-1]))).total_seconds())
+
+            change_point_start_list = [0]
+            change_point_end_list = list(np.where(np.array(time_diff) > 3600 * 8)[0])
+
+            if len(change_point_end_list) < 2:
+                return np.nan, np.nan, np.nan
+
+            [change_point_start_list.append(change_point_end + 1) for change_point_end in change_point_end_list]
+            change_point_end_list.append(len(owl_in_one_df.index) - 1)
+            
+            time_start_end_list = []
+            time_list = []
+            for i, change_point_end in enumerate(change_point_end_list):
+                if 0 < change_point_end - change_point_start_list[i] < 900:
+                    time_start_end_list.append([list(owl_in_one_df.index)[change_point_start_list[i]], list(owl_in_one_df.index)[change_point_end]])
+                    days_at_work.loc[pd.to_datetime(list(owl_in_one_df.index)[change_point_start_list[i]]).date(), participant_id] = 1
+                    
+                    duration = pd.to_datetime(list(owl_in_one_df.index)[change_point_end]) - pd.to_datetime(list(owl_in_one_df.index)[change_point_start_list[i]])
+                    time_list.append(duration.total_seconds() / 3600)
+                    
+            if len(mgt_df) > 1:
+                for index, row in mgt_df.iterrows():
+                    try:
+                        if row['location_mgt'] == 2.0:
+                            days_at_work.loc[pd.to_datetime(index).date(), participant_id] = 1.0
+                    except KeyError:
+                        print('Participant ' + row['uid'] + ' is not in participant list from IDs.csv.')
+            
+            days_at_work_without_om_df = days_at_work.copy()
+            
+            # diff
+            if len(omsignal_df) > 0:
+                data_df = omsignal_df.copy()
+                data_df.index = pd.to_datetime(omsignal_df.index)
+                dates_worked = list(set([date.date() for date in data_df.index]))
+
+                for date in dates_range:
+                    if date.date() in dates_worked:
+                        days_at_work.loc[date.date(), participant_id] = 1
+            
+            diff = np.nansum(days_at_work) - np.nansum(days_at_work_without_om_df)
+            
+            return len(time_start_end_list) / np.nansum(days_at_work_without_om_df), np.nansum(days_at_work), np.nanmean(np.array(time_list))
 
         elif self.data_config.filter_method == 'audio':
     

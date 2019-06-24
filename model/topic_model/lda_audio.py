@@ -55,8 +55,8 @@ def plot_tp(data_config, participant_id, tp_weight_df, location_and_tp_df, enabl
 	location_df = location_and_tp_df.loc[:, loc_list]
 	topic_df = location_and_tp_df.loc[:, tp_list]
 	
-	if len(tp_list) > 3:
-		top_tp_list = [tp_list[i] for i in np.argsort(np.mean(np.array(topic_df.dropna()), axis=0))[-3:][::-1]]
+	if len(tp_list) > 10:
+		top_tp_list = [tp_list[i] for i in np.argsort(np.mean(np.array(topic_df.dropna()), axis=0))[-10:][::-1]]
 	else:
 		top_tp_list = tp_list
 		
@@ -87,7 +87,7 @@ def plot_tp(data_config, participant_id, tp_weight_df, location_and_tp_df, enabl
 		ax1[0].plot(list(pd.to_datetime(location_df.index)), tmp_filter_array, label=loc_list[i])
 		
 		if enable_filter:
-			cycle, filter_array = sm.tsa.filters.hpfilter(plt_array, 100)
+			cycle, filter_array = sm.tsa.filters.hpfilter(plt_array, 10)
 			ax2[0].plot(list(pd.to_datetime(location_df.index)), filter_array, label=loc_list[i])
 	
 	plt_array = np.array(location_and_tp_df.loc[:, loc_list].fillna(0)) # .reshape([len(location_and_tp_df), len(loc_list)])
@@ -103,23 +103,11 @@ def plot_tp(data_config, participant_id, tp_weight_df, location_and_tp_df, enabl
 	topic_df = topic_df.fillna(0)
 	# for i in range(topic_df.shape[1]):
 	
-	X = np.array(location_and_tp_df.loc[:, tp_list])
-	dist = cdist(X, X, metric='jensenshannon')
-	K = np.exp(-dist)
-	
-	from sklearn.cluster import AffinityPropagation
-	# clustering_topics = AffinityPropagation().fit(np.array(topic_df.loc[:, top_tp_list])).predict(np.array(topic_df.loc[:, top_tp_list]))
-	clustering_topics = AffinityPropagation(affinity='precomputed').fit(K).predict(K)
-	
-	
-	plt.imshow(K)
-	plt.show()
-	
 	for i in range(len(top_tp_list)):
 		# plt_array = np.array(topic_df)[:, i]
 		plt_array = np.array(topic_df.loc[:, top_tp_list[i]])
 		
-		cycle, tmp_filter_array = sm.tsa.filters.hpfilter(plt_array, 100)
+		cycle, tmp_filter_array = sm.tsa.filters.hpfilter(plt_array, 10)
 		topic_df.loc[:, top_tp_list[i]] = tmp_filter_array
 		
 		# ax1[1].plot(list(pd.to_datetime(topic_df.index)), plt_array, label='topic: ' + str(top_tp_list[i]))
@@ -141,6 +129,17 @@ def plot_tp(data_config, participant_id, tp_weight_df, location_and_tp_df, enabl
 	if enable_filter:
 		fig2.savefig(os.path.join(data_tp_path, participant_id, save_prefix + '_offset_subspace_topic_and_location_filter.png'))
 		plt.close(fig=fig2)
+	
+	X = np.array(location_and_tp_df.loc[:, tp_list])
+	dist = cdist(X, X, metric='jensenshannon')
+	K = np.exp(-dist)
+	
+	from sklearn.cluster import AffinityPropagation
+	# clustering_topics = AffinityPropagation().fit(np.array(topic_df.loc[:, top_tp_list])).predict(np.array(topic_df.loc[:, top_tp_list]))
+	# clustering_topics = AffinityPropagation(affinity='precomputed').fit(K).predict(K)
+	
+	plt.imshow(K)
+	plt.show()
 
 
 def get_nmf_topics(model, n_top_words, num_topics, vectorizer):
@@ -357,11 +356,17 @@ def main(tiles_data_path, config_path, experiment):
 		
 		sorted_word_count = sorted(word_count_dict.items(), key=operator.itemgetter(1))[::-1]
 		valid_word_list = []
+		
+		'''
 		for i in range(len(sorted_word_count)):
 			word = sorted_word_count[i][0]
 			# if 50 < sorted_word_count[i][1] < 500:
 			if 10 < sorted_word_count[i][1]:
 				valid_word_list.append(word)
+		'''
+		for i in range(10):
+			word = sorted_word_count[i][0]
+			valid_word_list.append(word)
 		
 		valid_point_list = list(np.where(np.nansum(np.array(location_df), axis=1) > (int(data_config.audio_sensor_dict['overlap']) * 3))[0])
 		word_list = []
@@ -498,6 +503,21 @@ def main(tiles_data_path, config_path, experiment):
 
 
 if __name__ == '__main__':
+	import bayesian_hmm
+	
+	# create emission sequences
+	base_sequence = list(range(5)) + list(range(5, 0, -1))
+	sequences = [base_sequence * 20 for _ in range(50)]
+	
+	# initialise object with overestimate of true number of latent states
+	hmm = bayesian_hmm.HDPHMM(sequences, sticky=False)
+	hmm.initialise(k=20)
+	
+	# estimate parameters, making use of multithreading functionality
+	results = hmm.mcmc(n=500, burn_in=100)
+	
+	# print final probability estimates (expect 10 latent states)
+	hmm.print_probabilities()
 
 	# Read args
 	args = parser.parse_args()

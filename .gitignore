@@ -11,3 +11,5 @@ config_file/
 *.png
 *.csv
 *.idea
+*.pkl
+*.zip

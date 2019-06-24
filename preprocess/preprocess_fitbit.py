@@ -37,7 +37,7 @@ def main(tiles_data_path, config_path, experiment):
     ###########################################################
     # 2. Iterate all participant
     ###########################################################
-    for i, participant_id in enumerate(participant_id_list[:100]):
+    for i, participant_id in enumerate(participant_id_list[:]):
     
         print('Complete process for %s: %.2f' % (participant_id, 100 * i / len(participant_id_list)))
         

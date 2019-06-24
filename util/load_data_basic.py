@@ -126,10 +126,123 @@ def read_Demographic(main_data_directory):
 
 # Load IGTB data
 def read_IGTB_Raw(main_data_directory):
-    IGTB = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'IGTB_R.csv'), index_col=False)
-    IGTB.index = pd.to_datetime(IGTB.index)
+    Day_IGTB = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'IGTB', 'USC_DAY_IGTB.csv'), index_col=2).iloc[1:, :]
+    Night_IGTB = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'IGTB', 'USC_NIGHT_IGTB.csv'), index_col=2).iloc[1:, :]
+    Pilot_IGTB = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'IGTB', 'USC_PILOT_IGTB.csv'), index_col=2).iloc[1:, :]
+
+    IGTB = Day_IGTB.append(Night_IGTB)
+    IGTB = IGTB.append(Pilot_IGTB)
     
     return IGTB
+
+
+def read_PSQI_Raw(main_data_directory):
+    
+    if os.path.exists(os.path.join(main_data_directory, 'ground_truth', 'IGTB', 'psqi_raw.csv.gz')) is True:
+        psqi_df = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'IGTB', 'psqi_raw.csv.gz'), index_col=0)
+        return psqi_df
+    
+    Day_IGTB = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'IGTB', 'USC_DAY_IGTB.csv'), index_col=2).iloc[1:, :]
+    Night_IGTB = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'IGTB', 'USC_NIGHT_IGTB.csv'), index_col=2).iloc[1:, :]
+    Pilot_IGTB = pd.read_csv(os.path.join(main_data_directory, 'ground_truth', 'IGTB', 'USC_PILOT_IGTB.csv'), index_col=2).iloc[1:, :]
+    
+    IGTB = Day_IGTB.append(Night_IGTB)
+    IGTB = IGTB.append(Pilot_IGTB)
+    
+    psqi_cols = [col for col in list(IGTB.columns) if 'psqi' in col]
+
+    IGTB = IGTB[psqi_cols]
+    
+    psqi_df = pd.DataFrame(index=list(IGTB.index), columns=['psqi_subject_quality', 'psqi_sleep_latency',
+                                                            'psqi_sleep_duration', 'psqi_sleep_efficiency',
+                                                            'psqi_sleep_disturbance', 'psqi_sleep_medication',
+                                                            'psqi_day_dysfunction'])
+    
+    for i in range(len(IGTB)):
+        uid = list(IGTB.index)[i]
+        participant_psqi_df = IGTB.iloc[i, :]
+        
+        # Component 1
+        psqi_df.loc[uid, 'psqi_subject_quality'] = participant_psqi_df['psqi6']
+        
+        # Component 2
+        sleep_latency = float(participant_psqi_df['psqi2'])
+        if sleep_latency <= 15:
+            tmp_score = 0
+        elif 15 < sleep_latency <= 30:
+            tmp_score = 1
+        elif 30 < sleep_latency <= 60:
+            tmp_score = 2
+        else:
+            tmp_score = 3
+
+        tmp_score += float(participant_psqi_df['psqi5a'])
+        component2_dict = {0: 0, 1: 1, 2: 1, 3: 2, 4: 2, 5: 3, 6: 3}
+        psqi_df.loc[uid, 'psqi_sleep_latency'] = component2_dict[tmp_score]
+
+        # Component 3
+        sleep_duration = float(participant_psqi_df['psqi4'])
+        
+        if sleep_duration > 7:
+            tmp_score = 0
+        elif 6 < sleep_duration <= 7:
+            tmp_score = 1
+        elif 5 < sleep_duration <= 6:
+            tmp_score = 2
+        else:
+            tmp_score = 3
+        psqi_df.loc[uid, 'psqi_sleep_duration'] = tmp_score
+        
+        # Component 4
+        time1 = float(participant_psqi_df['psqi1'][:-2]) + float(participant_psqi_df['psqi1'][-2:]) / 60
+        time2 = float(participant_psqi_df['psqi3'][:-2]) + float(participant_psqi_df['psqi3'][-2:]) / 60
+        
+        if float(participant_psqi_df['psqi1ampm']) == float(participant_psqi_df['psqi3ampm']):
+            time_in_bed = time2 - time1
+        else:
+            time_in_bed = 12 - time1 + time2
+            
+        sleep_effieciency = sleep_duration / time_in_bed
+        if sleep_effieciency > 0.85:
+            tmp_score = 0
+        elif 0.75 < sleep_effieciency <= 0.85:
+            tmp_score = 1
+        elif 65 < sleep_effieciency <= 0.75:
+            tmp_score = 2
+        else:
+            tmp_score = 3
+
+        psqi_df.loc[uid, 'psqi_sleep_efficiency'] = tmp_score
+
+        # Component 5
+        sleep_disturbance = float(participant_psqi_df['psqi5b']) + float(participant_psqi_df['psqi5c'])
+        sleep_disturbance += float(participant_psqi_df['psqi5d']) + float(participant_psqi_df['psqi5e'])
+        sleep_disturbance += float(participant_psqi_df['psqi5f']) + float(participant_psqi_df['psqi5g'])
+        sleep_disturbance += float(participant_psqi_df['psqi5h']) + float(participant_psqi_df['psqi5i'])
+        sleep_disturbance = np.nansum(np.array([float(participant_psqi_df['psqi5jb']), sleep_disturbance]))
+        
+        if sleep_disturbance < 1:
+            tmp_score = 0
+        elif 1 <= sleep_disturbance <= 9:
+            tmp_score = 1
+        elif 10 <= sleep_disturbance <= 18:
+            tmp_score = 2
+        else:
+            tmp_score = 3
+
+        psqi_df.loc[uid, 'psqi_sleep_disturbance'] = tmp_score
+
+        # Component 6
+        psqi_df.loc[uid, 'psqi_sleep_medication'] = int(participant_psqi_df['psqi7'])
+        
+        # Component 7
+        tmp_score = float(participant_psqi_df['psqi8']) + float(participant_psqi_df['psqi9']) - 1
+        component7_dict = {0: 0, 1: 1, 2: 1, 3: 2, 4: 2, 5: 3, 6: 3}
+        psqi_df.loc[uid, 'psqi_day_dysfunction'] = component7_dict[tmp_score]
+
+    psqi_df.to_csv(os.path.join(main_data_directory, 'ground_truth', 'IGTB', 'psqi_raw.csv.gz'), compression='gzip')
+        
+    return psqi_df
 
 
 # Load all basic data

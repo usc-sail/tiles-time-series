@@ -109,6 +109,49 @@ class Config(object):
         configFilePath = os.path.join(dataDir, experiement + '.cfg')
         with open(configFilePath, 'w') as config_file:
             self.config.write(config_file)
+
+    def readChiConfigFile(self, dataDir, experiement='chi'):
+        ###########################################################
+        # Config folder information
+        ###########################################################
+        configFilePath = os.path.join(dataDir, experiement + '.cfg')
+    
+        if os.path.exists(configFilePath) is False:
+            print('Config file not exist! Please Check!')
+    
+        self.config.read(configFilePath)
+    
+        self.experiement = experiement
+    
+        ###########################################################
+        # Read Fitbit
+        ###########################################################
+        self.fitbit_sensor_dict = {}
+        self.fitbit_sensor_dict['name'] = 'fitbit'
+        self.fitbit_sensor_dict['preprocess_setting'] = self.getSetting('fitbit', 'preprocess_setting')
+        self.fitbit_sensor_dict['offset'] = int(self.getSetting('fitbit', 'offset'))
+        self.fitbit_sensor_dict['overlap'] = int(self.getSetting('fitbit', 'overlap'))
+        self.fitbit_sensor_dict['feature'] = self.getSetting('fitbit', 'feature')
+        self.fitbit_sensor_dict['imputation'] = self.getSetting('fitbit', 'imputation')
+        self.fitbit_sensor_dict['imputation_threshold'] = int(self.getSetting('fitbit', 'imputation_threshold'))
+        self.fitbit_sensor_dict['preprocess_cols'] = self.getSetting('fitbit', 'preprocess_cols')
+        self.fitbit_sensor_dict['segmentation_method'] = self.getSetting('fitbit', 'segmentation_method')
+        self.fitbit_sensor_dict['segmentation_lamb'] = float(self.getSetting('fitbit', 'segmentation_lamb'))
+        self.fitbit_sensor_dict['cluster_method'] = self.getSetting('fitbit', 'cluster_method')
+        self.fitbit_sensor_dict['num_cluster'] = int(self.getSetting('fitbit', 'num_cluster'))
+    
+        if self.fitbit_sensor_dict['cluster_method'] == 'ticc':
+            self.fitbit_sensor_dict['ticc_window'] = int(self.getSetting('fitbit', 'ticc_window'))
+            self.fitbit_sensor_dict['ticc_switch_penalty'] = float(self.getSetting('fitbit', 'ticc_switch_penalty'))
+            self.fitbit_sensor_dict['ticc_sparsity'] = float(self.getSetting('fitbit', 'ticc_sparsity'))
+            self.fitbit_sensor_dict['ticc_cluster_days'] = int(self.getSetting('fitbit', 'ticc_cluster_days'))
+    
+        ###########################################################
+        # Read global parameters
+        ###########################################################
+        self.num_point_per_day = int(self.getSetting('global', 'num_point_per_day'))
+        self.window = int(self.getSetting('global', 'window'))
+        self.save_path = ''
         
     def readConfigFile(self, dataDir, experiement):
     

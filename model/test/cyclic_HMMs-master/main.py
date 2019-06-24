@@ -19,7 +19,7 @@ if __name__ == '__main__':
     samples = [a['sample'] for a in data_generator.all_individual_data]
 
     
-    model = cyclic_HMM.fit_cyhmm_model(n_states=4,
+    model = cyclic_HMM.fit_cyhmm_model(n_states=3,
                                        samples=samples,
                                        symptom_names=data_generator.symptoms,
                                        max_iterations=100,

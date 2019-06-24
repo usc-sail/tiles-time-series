@@ -207,7 +207,11 @@ class cyclic_HMM(object):
     This class is the main CyHMM class. 
     Checked. 
     """
-    def __init__(self, n_states, state_duration_means, state_duration_scales, duration_distribution_name, emission_distribution_name, max_duration, emission_parameters = None, samples = None, symptom_names = None, verbose = True, min_iterations = 0):
+    def __init__(self, n_states, state_duration_means, state_duration_scales, duration_distribution_name,
+                 emission_distribution_name, max_duration,
+                 emission_parameters = None, samples = None, participant_type=None,
+                 symptom_names = None, verbose = True, min_iterations = 0,
+                 data_config=None, participant_id_list=None):
         self.n_states = n_states
         assert(duration_distribution_name in valid_distributions)
         assert(emission_distribution_name in valid_emission_distributions)
@@ -224,6 +228,9 @@ class cyclic_HMM(object):
         self.n_symptoms = len(self.symptom_names)
         self.samples = samples
         self.emission_distributions = []
+        self.data_config = data_config
+        self.participant_id_list = participant_id_list
+        self.participant_type = participant_type
         for j in range(self.n_states):
             self.emission_distributions.append(emissionDistribution(self.emission_distribution_name, self.symptom_names, emission_parameters, samples, verbose = self.verbose))
 
@@ -347,7 +354,7 @@ class cyclic_HMM(object):
                 self.emission_distributions[j].initialize_using_sufficient_statistics(summed_EX[j, :], summed_EX2[j, :], total_counts[j, :], total_counts_including_missing[j, :])
                 duration_mean, duration_scale = self.get_state_duration_params(j, transition_matrix_counts = all_transition_counts)
                 duration_means.append(duration_mean)
-                duration_scales.append(duration_scales)
+                duration_scales.append(duration_scale)
 
             # Basically we run one iteration and then create a new HMM. This is pretty fast. 
             self.state_duration_means = duration_means
@@ -362,9 +369,19 @@ class cyclic_HMM(object):
             self.iteration = iteration
 
             if self.verbose:
+                param_file_path = self.participant_type + '_state_' + str(self.n_states) + '_max_duration_' + str(self.max_duration) + '_' + self.duration_distribution_name + '_param.csv.gz'
+                cycle_file_path = self.participant_type + '_state_' + str(self.n_states) + '_max_duration_' + str(self.max_duration) + '_' + self.duration_distribution_name + '_cycle.pkl'
+
+                save_path = os.path.join(self.data_config.fitbit_sensor_dict['preprocess_path'], param_file_path)
                 print(all_params)
                 print(all_params.loc['duration_mean'].sum() + len(all_params.columns), 'total cycle length')
-                self.compute_cycle_lengths_using_viterbi()
+
+                all_inferred_cycle_lengths_dict = self.compute_cycle_lengths_using_viterbi()
+                all_params.to_csv(save_path, compression='gzip')
+
+                output = open(os.path.join(self.data_config.fitbit_sensor_dict['preprocess_path'], cycle_file_path), 'wb')
+                pickle.dump(all_inferred_cycle_lengths_dict, output)
+
             if converged and iteration >= self.min_iterations:
                 if self.verbose:
                     print('Converged after iteration', iteration)
@@ -388,12 +405,30 @@ class cyclic_HMM(object):
         Checked. Returns the median and mean cycle length for a small subset of samples. 
         If you print this while fitting, helps confirm model is heading in the right direction. 
         """
+        all_inferred_cycle_lengths_dict = {}
         all_inferred_cycle_lengths = []
-        for X_i in random.sample(self.samples, min(len(self.samples), 300)):
+        
+        mean_cycle_lengths_list = []
+        # for X_i in random.sample(self.samples, min(len(self.samples), 300)):
+        for i, X_i in enumerate(self.samples):
             viterbi_path = self.get_viterbi_path(X_i)
             all_inferred_cycle_lengths += list(get_cycle_lengths(extract_stage_starts(viterbi_path == 0)))
+            all_inferred_cycle_lengths_dict[self.participant_id_list[i]] = {}
+            
+            participant_cycle_list = list(get_cycle_lengths(extract_stage_starts(viterbi_path == 0)))
+            all_inferred_cycle_lengths_dict[self.participant_id_list[i]]['cycle'] = participant_cycle_list
+            all_inferred_cycle_lengths_dict[self.participant_id_list[i]]['cycle_mean'] = np.mean(participant_cycle_list)
+            all_inferred_cycle_lengths_dict[self.participant_id_list[i]]['cycle_std'] = np.std(participant_cycle_list)
+            all_inferred_cycle_lengths_dict[self.participant_id_list[i]]['cycle_median'] = np.median(participant_cycle_list)
+            all_inferred_cycle_lengths_dict[self.participant_id_list[i]]['cycle_path'] = viterbi_path
+            
+            mean_cycle_lengths_list.append(np.mean(np.array(list(get_cycle_lengths(extract_stage_starts(viterbi_path == 0))))))
+        
         print('Mean inferred cycle length using viterbi: %2.1f; median: %2.1f' % (np.mean(all_inferred_cycle_lengths), np.median(all_inferred_cycle_lengths)))
-    
+        print('Mean inferred cycle length per participant: %2.1f; median: %2.1f' % (np.mean(mean_cycle_lengths_list), np.median(mean_cycle_lengths_list)))
+        
+        return all_inferred_cycle_lengths_dict
+        
     def turn_viterbi_state_to_int(self, Z_i): 
         """ 
         small helper method: return an int rather than the state name (a string). Checked. 
@@ -746,7 +781,11 @@ def fit_cyhmm_model(n_states,
                     symptom_names, 
                     hypothesized_duration, 
                     duration_distribution_name, 
-                    emission_distribution_name, 
+                    emission_distribution_name,
+                    max_duration=10,
+                    data_config=None,
+                    participant_id_list=None,
+                    participant_type=None,
                     verbose = True, 
                     n_processes = 5,
                     min_iterations = 0, 
@@ -756,15 +795,18 @@ def fit_cyhmm_model(n_states,
     samples is an list of samples where each element is a n_timesteps x n_symptoms matrix. 
     symptom_names is a list of symptom_names. 
     """
-    model = cyclic_HMM(n_states = n_states, 
+    if data_config is None:
+        return None
+    
+    model = cyclic_HMM(n_states = n_states, data_config=data_config, participant_type=participant_type,
                        state_duration_means = [float(hypothesized_duration) / n_states - 1 for i in range(n_states)],
-                       state_duration_scales = [5 for i in range(n_states)], 
+                       state_duration_scales = [5 for i in range(n_states)],
                        duration_distribution_name = duration_distribution_name, 
                        emission_distribution_name = emission_distribution_name, 
-                       max_duration = 25, 
+                       max_duration = max_duration,
                        samples = samples, 
                        symptom_names = symptom_names, 
-                       verbose = verbose, 
+                       verbose = verbose, participant_id_list=participant_id_list,
                        min_iterations = min_iterations)
     model.fit(max_iterations = max_iterations, n_processes = n_processes)
     model.samples = None  

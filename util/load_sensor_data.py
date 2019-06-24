@@ -102,7 +102,7 @@ def read_preprocessed_omsignal(path, participant_id):
     return omsignal_all_df
 
 
-def read_preprocessed_fitbit_with_pad(data_config, participant_id):
+def read_preprocessed_fitbit_with_pad(data_config, participant_id, pad=None):
     ###########################################################
     # 1. Read all fitbit file
     ###########################################################
@@ -155,19 +155,122 @@ def read_preprocessed_fitbit_with_pad(data_config, participant_id):
     
         final_df_all = pd.DataFrame(index=time_arr, columns=final_df.columns)
         final_df_all.loc[final_df.index, :] = final_df
+        
+        if pad is not None:
+            final_df_all = final_df_all.fillna(pad)
+        else:
+            ###########################################################
+            # Assign pad
+            ###########################################################
+            pad_time_arr = list(set(time_arr) - set(final_df.dropna().index))
+            pad_df = pd.DataFrame(np.zeros([len(pad_time_arr), len(final_df_all.columns)]), index=pad_time_arr, columns=list(final_df_all.columns))
+            temp = np.random.normal(size=(2, 2))
+            temp2 = np.dot(temp, temp.T)
+            for j in range(len(pad_df)):
+                data_pad_tmp = np.random.multivariate_normal(np.zeros(2) - 50, temp2)
+                pad_df.loc[pad_time_arr[j], :] = data_pad_tmp
+            final_df_all.loc[pad_df.index, :] = pad_df
     
-        ###########################################################
-        # Assign pad
-        ###########################################################
-        pad_time_arr = list(set(time_arr) - set(final_df.dropna().index))
-        pad_df = pd.DataFrame(np.zeros([len(pad_time_arr), len(final_df_all.columns)]), index=pad_time_arr, columns=list(final_df_all.columns))
-        temp = np.random.normal(size=(2, 2))
-        temp2 = np.dot(temp, temp.T)
-        for j in range(len(pad_df)):
-            data_pad_tmp = np.random.multivariate_normal(np.zeros(2) - 50, temp2)
-            pad_df.loc[pad_time_arr[j], :] = data_pad_tmp
-        final_df_all.loc[pad_df.index, :] = pad_df
+        processed_data_dict_array['data'] = final_df_all
+        processed_data_dict_array['mean'] = np.nanmean(processed_data_dict_array['raw'], axis=0)
+        processed_data_dict_array['std'] = np.nanstd(processed_data_dict_array['raw'], axis=0)
+        
+        return final_df_all, processed_data_dict_array['mean'], processed_data_dict_array['std']
     
+    else:
+        return None, None, None
+
+
+def read_preprocessed_fitbit_with_pad_and_norm(data_config, participant_id, pad=None):
+    ###########################################################
+    # 1. Read all fitbit file
+    ###########################################################
+    fitbit_folder = os.path.join(data_config.fitbit_sensor_dict['preprocess_path'], participant_id)
+    if not os.path.exists(fitbit_folder):
+        return None, None, None
+    
+    ###########################################################
+    # List files and remove 'DS' file in mac system
+    ###########################################################
+    data_file_array = os.listdir(fitbit_folder)
+    
+    for data_file in data_file_array:
+        if 'DS' in data_file: data_file_array.remove(data_file)
+    
+    processed_data_dict_array = {}
+    
+    if len(data_file_array) > 0:
+        ###########################################################
+        # Create dict for participant
+        ###########################################################
+        processed_data_dict_array['data'] = pd.DataFrame()
+        processed_data_dict_array['raw'] = pd.DataFrame()
+        
+        for data_file in data_file_array:
+            ###########################################################
+            # Read data and append
+            ###########################################################
+            csv_path = os.path.join(fitbit_folder, data_file)
+            data_df = pd.read_csv(csv_path, index_col=0)
+            
+            ###########################################################
+            # Append data
+            ###########################################################
+            processed_data_dict_array['raw'] = processed_data_dict_array['raw'].append(data_df)
+        
+        ###########################################################
+        # Assign data
+        ###########################################################
+        interval = int(data_config.fitbit_sensor_dict['offset'] / 60)
+        
+        final_df = processed_data_dict_array['raw'].sort_index()
+        final_df[final_df < 0] = 0
+        start_str = pd.to_datetime(final_df.index[0]).replace(hour=0, minute=0, second=0, microsecond=0).strftime(date_time_format)[:-3]
+        end_str = (pd.to_datetime(final_df.index[-1]) + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).strftime(date_time_format)[:-3]
+        
+        time_length = (pd.to_datetime(end_str) - pd.to_datetime(start_str)).total_seconds()
+        point_length = int(time_length / data_config.fitbit_sensor_dict['offset']) + 1
+        n_days = int(time_length / (24 * 3600))
+        time_arr = [(pd.to_datetime(start_str) + timedelta(minutes=i * interval)).strftime(date_time_format)[:-3] for i in range(0, point_length)]
+        day_arr = [(pd.to_datetime(start_str) + timedelta(days=i)).strftime(date_time_format)[:-3] for i in range(0, n_days)]
+
+        final_df_all = pd.DataFrame(index=time_arr, columns=final_df.columns)
+        final_df_all.loc[final_df.index, :] = final_df
+        
+        day_norm_df = pd.DataFrame(index=day_arr, columns=final_df.columns)
+        for i in range(0, n_days):
+            norm_start_str = (pd.to_datetime(start_str) + timedelta(days=i-7)).strftime(date_time_format)[:-3]
+            norm_end_str = (pd.to_datetime(start_str) + timedelta(days=i+7)).strftime(date_time_format)[:-3]
+            day_str = (pd.to_datetime(start_str) + timedelta(days=i)).strftime(date_time_format)[:-3]
+            
+            norm_week_df = final_df_all[norm_start_str:norm_end_str]
+            
+            if len(norm_week_df.dropna()) == 0:
+                day_norm_df.loc[day_str, :] = 0
+            else:
+                day_norm_df.loc[day_str, :] = np.nanmean(np.array(norm_week_df), axis=0)
+
+        for i in range(0, n_days):
+            day_start_str = (pd.to_datetime(start_str) + timedelta(days=i)).strftime(date_time_format)[:-3]
+            day_end_str = (pd.to_datetime(start_str) + timedelta(days=i+1)).strftime(date_time_format)[:-3]
+            
+            final_df_all.loc[day_start_str:day_end_str] = final_df_all.loc[day_start_str:day_end_str] - np.array(day_norm_df.loc[day_str, :])
+            
+        if pad is not None:
+            final_df_all = final_df_all.fillna(pad)
+        else:
+            ###########################################################
+            # Assign pad
+            ###########################################################
+            pad_time_arr = list(set(time_arr) - set(final_df.dropna().index))
+            pad_df = pd.DataFrame(np.zeros([len(pad_time_arr), len(final_df_all.columns)]), index=pad_time_arr, columns=list(final_df_all.columns))
+            temp = np.random.normal(size=(2, 2))
+            temp2 = np.dot(temp, temp.T)
+            for j in range(len(pad_df)):
+                data_pad_tmp = np.random.multivariate_normal(np.zeros(2) - 50, temp2)
+                pad_df.loc[pad_time_arr[j], :] = data_pad_tmp
+            final_df_all.loc[pad_df.index, :] = pad_df
+        
         processed_data_dict_array['data'] = final_df_all
         processed_data_dict_array['mean'] = np.nanmean(processed_data_dict_array['raw'], axis=0)
         processed_data_dict_array['std'] = np.nanstd(processed_data_dict_array['raw'], axis=0)
@@ -188,6 +291,34 @@ def read_preprocessed_owl_in_one(path, participant_id):
         owl_in_one_all_df = owl_in_one_all_df.sort_index()
     
         return owl_in_one_all_df
+    else:
+        return None
+
+
+def read_preprocessed_days_at_work(path, participant_id):
+    ###########################################################
+    # 1. Read all omsignal file
+    ###########################################################
+    days_at_work_path = os.path.join(path, participant_id + '.csv.gz')
+    if os.path.exists(days_at_work_path) is True:
+        days_at_work_df = pd.read_csv(days_at_work_path, index_col=0)
+        days_at_work_df = days_at_work_df.sort_index()
+        
+        return days_at_work_df
+    else:
+        return None
+
+
+def read_preprocessed_days_at_work_detailed(path, participant_id):
+    ###########################################################
+    # 1. Read all omsignal file
+    ###########################################################
+    days_at_work_path = os.path.join(path, participant_id + '_detailed.csv.gz')
+    if os.path.exists(days_at_work_path) is True:
+        days_at_work_df = pd.read_csv(days_at_work_path, index_col=0)
+        days_at_work_df = days_at_work_df.sort_index()
+        
+        return days_at_work_df
     else:
         return None
 

@@ -35,7 +35,7 @@ def load_preprocess_path(data_config, process_data_path, data_name='preprocess')
 	tmp_path = os.path.join(process_data_path, data_name, data_config.fitbit_sensor_dict['name'])
 	create_folder(tmp_path)
 
-	if data_config.fitbit_sensor_dict['imputation'] != None:
+	if data_config.fitbit_sensor_dict['imputation'] != '':
 		preprocess_str = 'impute_' + data_config.fitbit_sensor_dict['imputation'] + '_' + str(data_config.fitbit_sensor_dict['imputation_threshold'])
 	else:
 		preprocess_str = data_config.fitbit_sensor_dict['feature']
@@ -371,6 +371,58 @@ def load_clustering_path(data_config, process_data_path, data_name='clustering',
 														 data_config.audio_sensor_dict['topic_num']
 
 
+def load_days_at_work_path(data_config, process_data_path):
+	tmp_path = os.path.join(process_data_path, 'preprocess')
+	create_folder(tmp_path)
+	
+	tmp_path = os.path.join(tmp_path, 'days_at_work')
+	create_folder(tmp_path)
+	
+	data_config.days_at_work_path = tmp_path
+
+
+def load_sleep_path(data_config, process_data_path, data_name='preprocess'):
+	tmp_path = os.path.join(process_data_path, data_name, 'sleep')
+	create_folder(tmp_path)
+	
+	if data_config.fitbit_sensor_dict['imputation'] != '':
+		preprocess_str = 'impute_' + data_config.fitbit_sensor_dict['imputation'] + '_' + str(data_config.fitbit_sensor_dict['imputation_threshold'])
+	else:
+		preprocess_str = data_config.fitbit_sensor_dict['feature']
+	preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['preprocess_setting']
+	preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['preprocess_cols']
+	tmp_path = os.path.join(tmp_path, preprocess_str)
+	create_folder(tmp_path)
+	
+	data_config.sleep_path = tmp_path
+
+
+def load_phone_usage_path(data_config, process_data_path, data_name='preprocess'):
+	tmp_path = os.path.join(process_data_path, data_name, 'phone_usage')
+	create_folder(tmp_path)
+	
+	data_config.phone_usage_path = tmp_path
+	
+
+def load_chi_preprocess_path(chi_data_config, process_data_path, experiment='chi'):
+	if chi_data_config.fitbit_sensor_dict['imputation'] != '':
+		preprocess_str = 'impute_' + chi_data_config.fitbit_sensor_dict['imputation'] + '_' + str(chi_data_config.fitbit_sensor_dict['imputation_threshold'])
+	else:
+		preprocess_str = chi_data_config.fitbit_sensor_dict['feature']
+	
+	tmp_path = os.path.join(process_data_path, experiment)
+	create_folder(tmp_path)
+	
+	tmp_path = os.path.join(process_data_path, experiment, preprocess_str)
+	create_folder(tmp_path)
+	
+	chi_config_str = 'num_of_point_' + str(chi_data_config.num_point_per_day) + '_window_' + str(chi_data_config.window)
+	tmp_path = os.path.join(process_data_path, experiment, preprocess_str, chi_config_str)
+	create_folder(tmp_path)
+	
+	chi_data_config.save_path =os.path.join(process_data_path, experiment, preprocess_str, chi_config_str)
+
+
 def load_all_available_path(data_config, process_data_path, filter_data=False,
 							preprocess_data_identifier='preprocess',
 							segmentation_data_identifier='segmentation',
@@ -401,4 +453,13 @@ def load_all_available_path(data_config, process_data_path, filter_data=False,
 
 	# Load plot folder
 	load_plot_path(data_config, process_data_path, data_name=plot_identifier)
+	
+	# Load days at work folder
+	load_days_at_work_path(data_config, process_data_path)
+	
+	# Load sleep folder
+	load_sleep_path(data_config, process_data_path)
+	
+	# Load daily phone usage folder
+	load_phone_usage_path(data_config, process_data_path)
 
