@@ -215,7 +215,9 @@ def main(tiles_data_path, config_path, experiment):
     # 1, 1.1,   0 - 20
     # 0.1, 1.01, 0 - 10, 10 - 20, 20 - 25, 25 - 30, 30 - 40
     # 1, 1.01,   0 - 10, 10 - 20
-    for idx, participant_id in enumerate(top_participant_id_list[30:40]):
+    # 0 - 100 100 -
+    # 0 - 50 50 - 100 100 -
+    for idx, participant_id in enumerate(top_participant_id_list[100:]):
         
         print('read_filter_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
         
