@@ -57,10 +57,10 @@ def main(tiles_data_path, config_path, experiment):
     if os.path.exists(os.path.join(os.path.dirname(__file__), 'shift_trans.pkl')) is True:
         pkl_file = open(os.path.join(os.path.dirname(__file__), 'shift_trans.pkl'), 'rb')
         shift_dict = pickle.load(pkl_file)
-        
-        freq_add_list = []
-        freq_decrease_list = []
+
         for shift in ['day', 'night']:
+            freq_add_list = []
+            freq_decrease_list = []
             shift_data = shift_dict[shift][4]
             shift_array = np.zeros([len(shift_data), len(shift_data[0].index), len(shift_data[0].columns)])
             
@@ -158,6 +158,6 @@ if __name__ == '__main__':
     # If arg not specified, use default value
     tiles_data_path = '../../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
     config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'config_file')) if args.config is None else args.config
-    experiment = 'ticc' if args.experiment is None else args.experiment
+    experiment = 'dpmm' if args.experiment is None else args.experiment
     
     main(tiles_data_path, config_path, experiment)

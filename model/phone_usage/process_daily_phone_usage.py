@@ -46,11 +46,7 @@ def main(tiles_data_path, config_path, experiment):
     # Read ground truth data
     igtb_df = load_data_basic.read_AllBasic(tiles_data_path)
     igtb_df = igtb_df.drop_duplicates(keep='first')
-    igtb_cols = [col for col in list(igtb_df.columns) if 'igtb' in col]
-    psqi_raw_igtb = load_data_basic.read_PSQI_Raw(tiles_data_path)
-    
-    # mgt_df = load_data_basic.read_MGT(tiles_data_path)
-    
+
     # Get participant id list, k=None, save all participant data
     top_participant_id_df = load_data_basic.return_top_k_participant(os.path.join(process_data_path, 'participant_id.csv.gz'), tiles_data_path, data_config=data_config)
     top_participant_id_list = list(top_participant_id_df.index)
@@ -66,7 +62,7 @@ def main(tiles_data_path, config_path, experiment):
         nurse = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].currentposition[0]
         primary_unit = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit[0]
         shift = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].Shift[0]
-        job_str = 'nurse' if nurse == 1 and 'Dialysis' not in primary_unit else 'non_nurse'
+        job_str = 'nurse' if nurse == 1 else 'non_nurse'
         shift_str = 'day' if shift == 'Day shift' else 'night'
 
         uid = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].index)[0]
@@ -119,14 +115,22 @@ def main(tiles_data_path, config_path, experiment):
                     
                     if day_usage > 300:
                         data_df = realizd_df[start_str:end_str]
-                        daily_array[i, j, 0] = np.nanmean(np.array(data_df))
+
+                        if num_point_per_day != 1440:
+                            daily_array[i, j, 0] = np.nansum(np.array(data_df))
+                        else:
+                            daily_array[i, j, 0] = np.nanmean(np.array(data_df))
                     
                     if fitbit_len > 360:
                         data_df = fitbit_df[start_str:end_str]
                         if len(data_df['HeartRatePPG'].dropna()) > window / 2:
                             daily_array[i, j, 1] = np.nanmean(data_df['HeartRatePPG'])
                         if len(data_df['StepCount'].dropna()) > window / 2:
-                            daily_array[i, j, 2] = np.nanmean(data_df['StepCount'].dropna().astype(int))
+
+                            if num_point_per_day != 1440:
+                                daily_array[i, j, 2] = np.nansum(data_df['StepCount'].dropna().astype(int))
+                            else:
+                                daily_array[i, j, 2] = np.nanmean(data_df['StepCount'].dropna().astype(int))
                 
                 if dates_str in days_at_work_list:
                     days_at_work_array[i] = 1
@@ -164,6 +168,6 @@ if __name__ == '__main__':
     # If arg not specified, use default value
     tiles_data_path = '../../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
     config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'config_file')) if args.config is None else args.config
-    experiment = 'ticc' if args.experiment is None else args.experiment
+    experiment = 'dpmm' if args.experiment is None else args.experiment
     
     main(tiles_data_path, config_path, experiment)

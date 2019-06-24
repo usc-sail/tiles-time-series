@@ -263,9 +263,7 @@ class Preprocess(object):
                 work = mgt_df.iloc[i, :].location_mgt
                 time_stamp = mgt_df.iloc[i, :].timestamp
                 time_of_survey = pd.to_datetime(time_stamp)
-                
-                dates_str = time_of_survey.replace(hour=0, minute=0, second=0, microsecond=0).strftime(date_time_format)[:-3]
-    
+
                 if work != 2:
                     continue
                 
@@ -349,15 +347,10 @@ class Preprocess(object):
         
         if fitbit_summary_df is None or fitbit_df is None or days_at_work_df is None:
             return
-        
-        sleep_data_df = pd.DataFrame()
+
         sleep_col_list = []
         for i in range(4):
             sleep_col_list.append([col for col in list(fitbit_summary_df.columns) if 'Sleep' + str(i) in col])
-            
-        main_sleep_col_list = [col.replace('1', '') for col in sleep_col_list[1]]
-        # main_sleep_col_list.append('duration')
-        # main_sleep_col_list.append('min_of_step_above_zero')
         
         sleep_dict = {}
         sleep_dict['summary'] = pd.DataFrame()

@@ -37,7 +37,7 @@ def main(tiles_data_path, config_path, experiment):
     ###########################################################
     # 2. Iterate all realizd files
     ###########################################################
-    for participant_id in participant_id_list:
+    for participant_id in participant_id_list[150:]:
         
         ###########################################################
         # 2.0 Init realizd preprocess
@@ -71,6 +71,6 @@ if __name__ == "__main__":
     
     tiles_data_path = '../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
     config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file')) if args.config is None else args.config
-    experiment = 'baseline' if args.config is None else args.config
+    experiment = 'dpmm' if args.config is None else args.config
     
     main(tiles_data_path, config_path, experiment)

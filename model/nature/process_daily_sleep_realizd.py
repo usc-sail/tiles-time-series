@@ -25,11 +25,10 @@ import collections
 
 
 def process_sleep_realizd(data_config, data_df, sleep_df, igtb_df, participant_id):
-    days = (pd.to_datetime(data_df.index[-1]).date() - pd.to_datetime(data_df.index[0]).date()).days
-    
+
     process_df = pd.DataFrame()
     
-    if len(data_df) < 1000 and len(sleep_df) < 10:
+    if len(data_df) < 1000 or len(sleep_df) < 10:
         return None
     
     for i in range(len(sleep_df)):
@@ -136,8 +135,6 @@ def main(tiles_data_path, config_path, experiment):
     # Read ground truth data
     igtb_df = load_data_basic.read_AllBasic(tiles_data_path)
     igtb_df = igtb_df.drop_duplicates(keep='first')
-    igtb_cols = [col for col in list(igtb_df.columns) if 'igtb' in col]
-    psqi_raw_igtb = load_data_basic.read_PSQI_Raw(tiles_data_path)
     
     # Get participant id list, k=None, save all participant data
     top_participant_id_df = load_data_basic.return_top_k_participant(os.path.join(process_data_path, 'participant_id.csv.gz'), tiles_data_path, data_config=data_config)
@@ -170,7 +167,7 @@ def main(tiles_data_path, config_path, experiment):
             nurse = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].currentposition[0]
             primary_unit = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit[0]
             shift = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].Shift[0]
-            job_str = 'nurse' if nurse == 1 and 'Dialysis' not in primary_unit else 'non_nurse'
+            job_str = 'nurse' if nurse == 1 else 'non_nurse'
             shift_str = 'day' if shift == 'Day shift' else 'night'
 
             all_df.loc[participant_id, 'job'] = job_str
@@ -183,26 +180,17 @@ def main(tiles_data_path, config_path, experiment):
     all_df = pd.DataFrame()
     for idx, participant_id in enumerate(top_participant_id_list[:]):
         print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
-        
-        nurse = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].currentposition[0]
-        primary_unit = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit[0]
-        shift = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].Shift[0]
-        job_str = 'nurse' if nurse == 1 and 'Dialysis' not in primary_unit else 'non_nurse'
-        shift_str = 'day' if shift == 'Day shift' else 'night'
-        
-        uid = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].index)[0]
-        realizd_df = load_sensor_data.read_preprocessed_realizd(data_config.realizd_sensor_dict['preprocess_path'], participant_id)
-        
+
         if os.path.exists(os.path.join(data_config.sleep_path, participant_id + '.pkl')) is False:
-            continue
-            
-        if realizd_df is None:
             continue
 
         pkl_file = open(os.path.join(data_config.sleep_path, participant_id + '.pkl'), 'rb')
         participant_sleep_dict = pickle.load(pkl_file)
 
         realizd_raw_df = load_sensor_data.read_realizd(os.path.join(tiles_data_path, '2_raw_csv_data/realizd/'), participant_id)
+        if realizd_raw_df is None:
+            continue
+
         participant_df = process_sleep_realizd(data_config, realizd_raw_df, participant_sleep_dict['summary'], igtb_df, participant_id)
         
         if participant_df is not None:
@@ -219,6 +207,6 @@ if __name__ == '__main__':
     # If arg not specified, use default value
     tiles_data_path = '../../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
     config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'config_file')) if args.config is None else args.config
-    experiment = 'ticc' if args.experiment is None else args.experiment
+    experiment = 'dpmm' if args.experiment is None else args.experiment
     
     main(tiles_data_path, config_path, experiment)

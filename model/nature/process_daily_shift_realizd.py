@@ -231,19 +231,13 @@ def main(tiles_data_path, config_path, experiment):
         nurse = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].currentposition[0]
         primary_unit = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit[0]
         shift = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].Shift[0]
-        job_str = 'nurse' if nurse == 1 and 'Dialysis' not in primary_unit else 'non_nurse'
+        job_str = 'nurse' if nurse == 1 else 'non_nurse'
         shift_str = 'day' if shift == 'Day shift' else 'night'
         
         uid = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].index)[0]
-        realizd_df = load_sensor_data.read_preprocessed_realizd(data_config.realizd_sensor_dict['preprocess_path'], participant_id)
-        # days_at_work_df = load_sensor_data.read_preprocessed_days_at_work(data_config.days_at_work_path, participant_id)
         days_at_work_detail_df = load_sensor_data.read_preprocessed_days_at_work_detailed(data_config.days_at_work_path, participant_id)
-        # days_at_work_df = days_at_work_df.dropna()
-        
+
         if os.path.exists(os.path.join(data_config.sleep_path, participant_id + '.pkl')) is False:
-            continue
-            
-        if realizd_df is None:
             continue
 
         pkl_file = open(os.path.join(data_config.sleep_path, participant_id + '.pkl'), 'rb')
@@ -251,6 +245,10 @@ def main(tiles_data_path, config_path, experiment):
 
         sleep_df = participant_sleep_dict['summary'].sort_index()
         realizd_raw_df = load_sensor_data.read_realizd(os.path.join(tiles_data_path, '2_raw_csv_data/realizd/'), participant_id)
+
+        if realizd_raw_df is None:
+            continue
+
         shift_dict = process_shift_realizd(data_config, realizd_raw_df, sleep_df, days_at_work_detail_df, igtb_df, participant_id)
 
         output = open(os.path.join(data_config.phone_usage_path, participant_id + '.pkl'), 'wb')
@@ -264,6 +262,6 @@ if __name__ == '__main__':
     # If arg not specified, use default value
     tiles_data_path = '../../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
     config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'config_file')) if args.config is None else args.config
-    experiment = 'ticc' if args.experiment is None else args.experiment
+    experiment = 'dpmm' if args.experiment is None else args.experiment
     
     main(tiles_data_path, config_path, experiment)
