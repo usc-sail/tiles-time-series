@@ -67,7 +67,6 @@ def process_shift_realizd(data_config, data_df, sleep_df, days_at_work_df, igtb_
         pre_end_str = start_str
         day_raw_data = data_df[pre_start_str:pre_end_str]
         sleep_raw_data = sleep_df[pre_start_str:pre_end_str]
-
         row_df = pd.DataFrame(index=[pre_start_str])
 
         if len(sleep_raw_data) > 0:
@@ -79,16 +78,35 @@ def process_shift_realizd(data_config, data_df, sleep_df, days_at_work_df, igtb_
             row_df['frequency'] = len(day_raw_data)
             row_df['total_time'] = np.sum(np.array(day_raw_data))
             row_df['mean_time'] = np.mean(np.array(day_raw_data))
-            row_df['std_time'] = np.std(np.array(day_raw_data))
             row_df['above_1min'] = len(np.where(np.array(day_raw_data) > 60)[0])
             row_df['less_than_1min'] = len(np.where(np.array(day_raw_data) <= 60)[0])
         else:
             row_df['frequency'] = 0
             row_df['total_time'] = 0
             row_df['mean_time'] = 0
-            row_df['std_time'] = 0
             row_df['above_1min'] = 0
             row_df['less_than_1min'] = 0
+
+        # Inter duration
+        inter_df = pd.DataFrame()
+        for j in range(len(day_raw_data)):
+            time_df = day_raw_data.iloc[j, :]
+            time_row_df = pd.DataFrame(index=[list(day_raw_data.index)[j]])
+            time_row_df['start'] = list(day_raw_data.index)[j]
+            time_row_df['end'] = (pd.to_datetime(list(day_raw_data.index)[j]) + timedelta(seconds=int(time_df['SecondsOnPhone']))).strftime(load_data_basic.date_time_format)[:-3]
+            inter_df = inter_df.append(time_row_df)
+        inter_duration_list = []
+        if len(inter_df) > 3:
+            start_list = list(pd.to_datetime(inter_df['start']))
+            end_list = list(pd.to_datetime(inter_df['end']))
+            for j in range(len(day_raw_data) - 1):
+                inter_time = (start_list[j + 1] - end_list[j]).total_seconds()
+                # if inter time is larger than 4 hours, we assume it is sleep
+                if inter_time > 3600 * 4:
+                    continue
+                inter_duration_list.append(inter_time)
+        row_df['mean_inter'] = np.mean(inter_duration_list)
+        
         shift_df = shift_df.append(row_df)
 
         for day in range(days):
@@ -117,29 +135,46 @@ def process_shift_realizd(data_config, data_df, sleep_df, days_at_work_df, igtb_
                 row_df['frequency'] = len(day_raw_data)
                 row_df['total_time'] = np.sum(np.array(day_raw_data))
                 row_df['mean_time'] = np.mean(np.array(day_raw_data))
-                row_df['std_time'] = np.std(np.array(day_raw_data))
                 row_df['above_1min'] = len(np.where(np.array(day_raw_data) > 60)[0])
                 row_df['less_than_1min'] = len(np.where(np.array(day_raw_data) <= 60)[0])
             else:
                 row_df['frequency'] = 0
                 row_df['total_time'] = 0
                 row_df['mean_time'] = 0
-                row_df['std_time'] = 0
                 row_df['above_1min'] = 0
                 row_df['less_than_1min'] = 0
-                
+
+            # Inter duration
+            inter_df = pd.DataFrame()
+            for j in range(len(day_raw_data)):
+                time_df = day_raw_data.iloc[j, :]
+                time_row_df = pd.DataFrame(index=[list(day_raw_data.index)[j]])
+                time_row_df['start'] = list(day_raw_data.index)[j]
+                time_row_df['end'] = (pd.to_datetime(list(day_raw_data.index)[j]) + timedelta(seconds=int(time_df['SecondsOnPhone']))).strftime(load_data_basic.date_time_format)[:-3]
+                inter_df = inter_df.append(time_row_df)
+            inter_duration_list = []
+            if len(inter_df) > 3:
+                start_list = list(pd.to_datetime(inter_df['start']))
+                end_list = list(pd.to_datetime(inter_df['end']))
+                for j in range(len(day_raw_data) - 1):
+                    inter_time = (start_list[j + 1] - end_list[j]).total_seconds()
+                    # if inter time is larger than 4 hours, we assume it is sleep
+                    if inter_time > 3600 * 4:
+                        continue
+                    inter_duration_list.append(inter_time)
+                row_df['mean_inter'] = np.mean(inter_duration_list)
+            
+            '''
             if len(shift_raw_data) > 0:
                 row_df['shift_frequency'] = len(shift_raw_data)
                 row_df['shift_total_time'] = np.sum(np.array(shift_raw_data))
                 row_df['shift_mean_time'] = np.mean(np.array(shift_raw_data))
-                row_df['shift_std_time'] = np.std(np.array(shift_raw_data))
                 row_df['shift_above_1min'] = len(np.where(np.array(shift_raw_data) > 60)[0])
                 row_df['shift_less_than_1min'] = len(np.where(np.array(shift_raw_data) <= 60)[0])
             else:
                 row_df['shift_frequency'] = 0
                 row_df['shift_total_time'] = 0
                 row_df['shift_mean_time'] = 0
-                row_df['shift_std_time'] = 0
                 row_df['shift_above_1min'] = 0
                 row_df['shift_less_than_1min'] = 0
                 
@@ -147,16 +182,17 @@ def process_shift_realizd(data_config, data_df, sleep_df, days_at_work_df, igtb_
                 row_df['off_frequency'] = len(off_raw_data)
                 row_df['off_total_time'] = np.sum(np.array(off_raw_data))
                 row_df['off_mean_time'] = np.mean(np.array(off_raw_data))
-                row_df['off_std_time'] = np.std(np.array(off_raw_data))
+                # row_df['off_std_time'] = np.std(np.array(off_raw_data))
                 row_df['off_above_1min'] = len(np.where(np.array(off_raw_data) > 60)[0])
                 row_df['off_less_than_1min'] = len(np.where(np.array(off_raw_data) <= 60)[0])
             else:
                 row_df['off_frequency'] = 0
                 row_df['off_total_time'] = 0
                 row_df['off_mean_time'] = 0
-                row_df['off_std_time'] = 0
+                # row_df['off_std_time'] = 0
                 row_df['off_above_1min'] = 0
                 row_df['off_less_than_1min'] = 0
+            '''
             shift_df = shift_df.append(row_df)
 
         # After the shift
@@ -176,16 +212,34 @@ def process_shift_realizd(data_config, data_df, sleep_df, days_at_work_df, igtb_
             row_df['frequency'] = len(day_raw_data)
             row_df['total_time'] = np.sum(np.array(day_raw_data))
             row_df['mean_time'] = np.mean(np.array(day_raw_data))
-            row_df['std_time'] = np.std(np.array(day_raw_data))
             row_df['above_1min'] = len(np.where(np.array(day_raw_data) > 60)[0])
             row_df['less_than_1min'] = len(np.where(np.array(day_raw_data) <= 60)[0])
         else:
             row_df['frequency'] = 0
             row_df['total_time'] = 0
             row_df['mean_time'] = 0
-            row_df['std_time'] = 0
             row_df['above_1min'] = 0
             row_df['less_than_1min'] = 0
+
+        # Inter duration
+        inter_df = pd.DataFrame()
+        for j in range(len(day_raw_data)):
+            time_df = day_raw_data.iloc[j, :]
+            time_row_df = pd.DataFrame(index=[list(day_raw_data.index)[j]])
+            time_row_df['start'] = list(day_raw_data.index)[j]
+            time_row_df['end'] = (pd.to_datetime(list(day_raw_data.index)[j]) + timedelta(seconds=int(time_df['SecondsOnPhone']))).strftime(load_data_basic.date_time_format)[:-3]
+            inter_df = inter_df.append(time_row_df)
+        inter_duration_list = []
+        if len(inter_df) > 3:
+            start_list = list(pd.to_datetime(inter_df['start']))
+            end_list = list(pd.to_datetime(inter_df['end']))
+            for j in range(len(day_raw_data) - 1):
+                inter_time = (start_list[j + 1] - end_list[j]).total_seconds()
+                # if inter time is larger than 4 hours, we assume it is sleep
+                if inter_time > 3600 * 4:
+                    continue
+                inter_duration_list.append(inter_time)
+        row_df['mean_inter'] = np.mean(inter_duration_list)
         shift_df = shift_df.append(row_df)
 
         shift_dict[start_str] = {}

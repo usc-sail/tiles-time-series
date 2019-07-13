@@ -66,13 +66,12 @@ def main(tiles_data_path, config_path, experiment):
             
             for i in range(len(shift_data)):
                 shift_array[i, :, :] = np.array(shift_data[i])
-                if shift_data[i]['frequency'][1] + shift_data[i]['frequency'][2] > shift_data[i]['frequency'][0] + shift_data[i]['frequency'][3]:
+                # if shift_data[i]['frequency'][1] + shift_data[i]['frequency'][2] > shift_data[i]['frequency'][0] + shift_data[i]['frequency'][3]:
+                if shift_data[i]['mean_time'][1] + shift_data[i]['mean_time'][2] > shift_data[i]['mean_time'][0] + shift_data[i]['mean_time'][3]:
                     freq_add_list.append(shift)
                 else:
                     freq_decrease_list.append(shift)
-            
-            print()
-        print()
+        
     else:
         participant_dict = {}
         shift_data = {}
@@ -112,7 +111,7 @@ def main(tiles_data_path, config_path, experiment):
                          'shift_total_time', 'shift_mean_time', 'shift_frequency',
                          'off_total_time', 'off_mean_time', 'off_frequency']
             '''
-            data_cols = ['above_1min', 'less_than_1min', 'frequency', 'mean_time', 'total_time']
+            data_cols = ['above_1min', 'less_than_1min', 'frequency', 'mean_time', 'total_time', 'mean_inter']
     
             participant_dict[participant_id] = {}
             for i in [4, 5, 6]:
@@ -149,7 +148,6 @@ def main(tiles_data_path, config_path, experiment):
         output = open(os.path.join(os.path.dirname(__file__), 'participant_trans.pkl'), 'wb')
         pickle.dump(participant_dict, output)
     
-
 
 if __name__ == '__main__':
     # Read args
