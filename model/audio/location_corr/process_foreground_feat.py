@@ -44,11 +44,19 @@ def main(tiles_data_path, config_path, experiment):
 	top_participant_id_df = load_data_basic.return_top_k_participant(os.path.join(process_data_path, 'participant_id.csv.gz'), tiles_data_path, data_config=data_config)
 	top_participant_id_list = list(top_participant_id_df.index)
 	top_participant_id_list.sort()
+	'''
+	['F0final_sma', 'jitterLocal_sma', 'jitterDDP_sma', 'shimmerLocal_sma', 'logHNR_sma', 'voiceProb_sma', 'F0_sma',
+	 'F0env_sma', 'audspec_lengthL1norm_sma', 'audspecRasta_lengthL1norm_sma', 'pcm_RMSenergy_sma', 'pcm_zcr_sma',
+	 'pcm_intensity_sma', 'pcm_loudness_sma', 'pcm_fftMag_fband250-650_sma', 'pcm_fftMag_fband1000-4000_sma',
+	 'pcm_fftMag_spectralRollOff25.0_sma', 'pcm_fftMag_spectralRollOff50.0_sma', 'pcm_fftMag_spectralRollOff75.0_sma',
+	 'pcm_fftMag_spectralRollOff90.0_sma', 'pcm_fftMag_spectralFlux_sma', 'pcm_fftMag_spectralCentroid_sma',
+	 'pcm_fftMag_spectralEntropy_sma', 'pcm_fftMag_spectralVariance_sma', 'pcm_fftMag_spectralSkewness_sma',
+	 'pcm_fftMag_spectralKurtosis_sma', 'pcm_fftMag_spectralSlope_sma', 'pcm_fftMag_psySharpness_sma',
+	 'pcm_fftMag_spectralHarmonicity_sma']
+	 '''
+	feat = 'pcm_fftMag_spectralRollOff25.0_sma' # pcm_loudness_sma, pcm_intensity_sma, pcm_RMSenergy_sma, pcm_zcr_sma
 
-	audio_length_loc = {}
-	threshold = 1
-
-	for idx, participant_id in enumerate(top_participant_id_list[0:]):
+	for idx, participant_id in enumerate(top_participant_id_list[:]):
 
 		print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
 
@@ -70,6 +78,7 @@ def main(tiles_data_path, config_path, experiment):
 
 		if len(owl_in_one_change_idx) < 5:
 			continue
+
 		start_end_list = [[owl_in_one_df.index[0], owl_in_one_df.index[owl_in_one_change_idx[0]]]]
 		for i, owl_in_one_idx in enumerate(owl_in_one_change_idx[:-1]):
 			start_end_list.append([owl_in_one_df.index[owl_in_one_change_idx[i]+1], owl_in_one_df.index[owl_in_one_change_idx[i+1]]])
@@ -77,9 +86,9 @@ def main(tiles_data_path, config_path, experiment):
 
 		unique_list = list(owl_in_one_df.columns)
 
-		audio_length_loc[participant_id] = {}
+		audio_loc = {}
 		for loc_str in unique_list:
-			audio_length_loc[participant_id][loc_str] = []
+			audio_loc[loc_str] = []
 
 		valid_start_end = []
 		for start_end in start_end_list:
@@ -107,30 +116,6 @@ def main(tiles_data_path, config_path, experiment):
 			if len(audio_sec_df) == 0:
 				continue
 
-			# Extract audio length
-			audio_off_time = list((pd.to_datetime(audio_sec_df.index[1:]) - pd.to_datetime(audio_sec_df.index[:-1])).total_seconds())
-			audio_change_idx = np.where(np.array(audio_off_time) > threshold)[0]
-
-			if len(audio_change_idx) < 20:
-				continue
-
-			audio_length_df = pd.DataFrame()
-			audio_len = (pd.to_datetime(audio_sec_df.index[audio_change_idx[0]]) - pd.to_datetime(audio_sec_df.index[0])).total_seconds()
-			tmp_df = pd.DataFrame(index=[audio_sec_df.index[0]])
-			tmp_df['length'] = audio_len
-			audio_length_df = audio_length_df.append(tmp_df)
-
-			for i, audio_idx in enumerate(audio_change_idx[:-1]):
-				audio_len = (pd.to_datetime(audio_sec_df.index[audio_change_idx[i + 1]]) - pd.to_datetime(audio_sec_df.index[audio_change_idx[i] + 1])).total_seconds()
-				tmp_df = pd.DataFrame(index=[audio_sec_df.index[audio_change_idx[i] + 1]])
-				tmp_df['length'] = audio_len
-				audio_length_df = audio_length_df.append(tmp_df)
-
-			audio_len = (pd.to_datetime(audio_sec_df.index[-1]) - pd.to_datetime(audio_sec_df.index[audio_change_idx[-1] + 1])).total_seconds()
-			tmp_df = pd.DataFrame(index=[audio_sec_df.index[audio_change_idx[-1] + 1]])
-			tmp_df['length'] = audio_len
-			audio_length_df = audio_length_df.append(tmp_df)
-
 			owl_sec_time_list = list(owl_in_one_sec_df.index)
 			for j in range(len(owl_in_one_sec_df)):
 				location_series = owl_in_one_sec_df.iloc[j, :]
@@ -140,24 +125,25 @@ def main(tiles_data_path, config_path, experiment):
 				start_loc = (loc_time - timedelta(seconds=30)).strftime(load_data_basic.date_time_format)[:-3]
 				end_loc = (loc_time + timedelta(seconds=30)).strftime(load_data_basic.date_time_format)[:-3]
 
-				tmp_audio_df = audio_length_df[start_loc:end_loc]
-				if len(tmp_audio_df['length']) == 0:
+				tmp_audio_df = audio_sec_df[start_loc:end_loc]
+				if len(tmp_audio_df[feat]) == 0:
 					continue
 
-				for length in list(tmp_audio_df['length']):
-					audio_length_loc[participant_id][location].append(length)
+				for feat_value in list(tmp_audio_df[feat]):
+					if feat_value != 0:
+						audio_loc[location].append(feat_value)
 
 		if os.path.exists(os.path.join('data')) is False:
 			os.mkdir(os.path.join('data'))
 
-		if os.path.exists(os.path.join('data', 'len')) is False:
-			os.mkdir(os.path.join('data', 'len'))
+		if os.path.exists(os.path.join('data', feat)) is False:
+			os.mkdir(os.path.join('data', feat))
 
-		if os.path.exists(os.path.join('data', 'len', 'data_' + str(threshold))) is False:
-			os.mkdir(os.path.join('data', 'len', 'data_' + str(threshold)))
+		if os.path.exists(os.path.join('data', feat)) is False:
+			os.mkdir(os.path.join('data', feat))
 
-		output = open(os.path.join('data', 'len', 'data_' + str(threshold), participant_id + '.pkl'), 'wb')
-		pickle.dump(audio_length_loc[participant_id], output)
+		output = open(os.path.join('data', feat, participant_id + '.pkl'), 'wb')
+		pickle.dump(audio_loc, output)
 
 
 if __name__ == '__main__':

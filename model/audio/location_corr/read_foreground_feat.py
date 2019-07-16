@@ -51,9 +51,10 @@ def main(tiles_data_path, config_path, experiment):
 	top_participant_id_list = list(top_participant_id_df.index)
 	top_participant_id_list.sort()
 
-	threshold = 20
+	feat = 'F0_sma'  # pcm_loudness_sma, pcm_intensity_sma, pcm_RMSenergy_sma, pcm_zcr_sma, F0_sma
+	tmp_greater_than5, tmp_within5, tmp_less5 = 0, 0, 0
 
-	for idx, participant_id in enumerate(top_participant_id_list[0:]):
+	for idx, participant_id in enumerate(top_participant_id_list[:]):
 
 		print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
 
@@ -73,11 +74,16 @@ def main(tiles_data_path, config_path, experiment):
 
 		shift_str = 'day' if shift == 'Day shift' else 'night'
 
-		if os.path.exists(os.path.join('data', 'len', 'data_' + str(threshold), participant_id + '.pkl')) is False:
+		if os.path.exists(os.path.join('data', feat, participant_id + '.pkl')) is False:
 			continue
 
-		pkl_file = open(os.path.join('data', 'len', 'data_' + str(threshold), participant_id + '.pkl'), 'rb')
+		pkl_file = open(os.path.join('data', feat, participant_id + '.pkl'), 'rb')
 		audio_length_part = pickle.load(pkl_file)
+
+		if shift_str == 'night':
+			continue
+
+		print('Shift : %s, ICU : %s' % (shift_str, icu_str))
 
 		if 'lounge' not in list(audio_length_part.keys()):
 			continue
@@ -86,28 +92,34 @@ def main(tiles_data_path, config_path, experiment):
 
 			fig = plt.figure(figsize=(8, 16))
 
-			'''
-			loc_list = list(audio_length_part.keys())
-			
-			if 'floor2' in list(audio_length_part.keys()):
-				loc_list.remove('floor2')
-			loc_list.sort()
-			if 'floor2' in list(audio_length_part.keys()):
-				audio_length_part['other_floor'] += audio_length_part['floor2']
-			'''
 			loc_list = ['lounge', 'med', 'ns', 'pat', 'unknown']
 			axes = fig.subplots(nrows=len(loc_list))
 
+			if (np.nanmedian(np.array(audio_length_part['pat'])) - np.nanmedian(np.array(audio_length_part['lounge']))) > 5:
+				tmp_greater_than5 += 1
+			elif (np.nanmedian(np.array(audio_length_part['pat'])) - np.nanmedian(np.array(audio_length_part['lounge']))) < -5:
+				tmp_less5 += 1
+			else:
+				tmp_within5 += 1
+
 			for i, loc in enumerate(loc_list):
+
+				print('loc: %s' % (loc))
+				print(np.nanmedian(np.array(audio_length_part[loc])))
+				print()
+
 				len_list = audio_length_part[loc]
 				# sns.kdeplot(len_list, shade=True, ax=axes[i])
-				bins = np.arange(0, 20, 1)
+				# bins = np.arange(0, 2.5, 0.05)
+				bins = np.arange(20, 500, 10)
 				n, bins, patches = axes[i].hist(len_list, bins=bins, density=1, color=color_list[i])
-				axes[i].set_xlim([0, 20])
-				axes[i].set_ylim([0, 0.3])
+				# n, bins, patches = axes[i].hist(len_list, density=1, color=color_list[i])
+				axes[i].set_xlim([20, 500])
+				# axes[i].set_ylim([0, 0.25])
+				# axes[i].set_xlim([0, 2.5])
 				axes[i].set_title(loc)
 
-				if i != len(audio_length_part.keys()) - 1:
+				if i != len(loc_list) - 1:
 					axes[i].set_xticklabels('')
 
 			plt.tight_layout()
@@ -115,21 +127,21 @@ def main(tiles_data_path, config_path, experiment):
 			if os.path.exists(os.path.join('plot')) is False:
 				os.mkdir(os.path.join('plot'))
 
-			if os.path.exists(os.path.join('plot', 'len')) is False:
-				os.mkdir(os.path.join('plot', 'len'))
+			if os.path.exists(os.path.join('plot', feat)) is False:
+				os.mkdir(os.path.join('plot', feat))
 
-			if os.path.exists(os.path.join('plot', 'len', 'data_' + str(threshold))) is False:
-				os.mkdir(os.path.join('plot', 'len', 'data_' + str(threshold)))
+			if os.path.exists(os.path.join('plot', feat, shift_str)) is False:
+				os.mkdir(os.path.join('plot', feat, shift_str))
 
-			if os.path.exists(os.path.join('plot', 'len', 'data_' + str(threshold), shift_str)) is False:
-				os.mkdir(os.path.join('plot', 'len', 'data_' + str(threshold), shift_str))
+			if os.path.exists(os.path.join('plot', feat, icu_str)) is False:
+				os.mkdir(os.path.join('plot', feat, icu_str))
 
-			if os.path.exists(os.path.join('plot', 'len', 'data_' + str(threshold), icu_str)) is False:
-				os.mkdir(os.path.join('plot', 'len', 'data_' + str(threshold), icu_str))
+			plt.savefig(os.path.join('plot', feat, shift_str, participant_id))
+			plt.savefig(os.path.join('plot', feat, icu_str, participant_id))
 
-			plt.savefig(os.path.join('plot', 'len', 'data_' + str(threshold), shift_str, participant_id))
-			plt.savefig(os.path.join('plot', 'len', 'data_' + str(threshold), icu_str, participant_id))
-
+	print('tmp_greater_than5: %d' % tmp_greater_than5)
+	print('tmp_less5: %d' % tmp_less5)
+	print('tmp_within5: %d' % tmp_within5)
 
 if __name__ == '__main__':
 	# Read args
