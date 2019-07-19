@@ -82,7 +82,7 @@ class PCRPMM(IGMM):
             '''
 
 			if flag_power and n_power > 1:
-				if i_iter % 20 == 0:
+				if i_iter % 5 == 0:
 					logger.info(" Permutate data; " + "Power value: {}".format(n_power))
 				data_loop_list = np.random.permutation(range(self.components.N))
 			else:

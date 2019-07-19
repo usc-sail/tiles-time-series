@@ -60,17 +60,15 @@ def main(tiles_data_path, config_path, experiment):
         print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
 
         nurse = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].currentposition[0]
-        primary_unit = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit[0]
         shift = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].Shift[0]
-        job_str = 'nurse' if nurse == 1 else 'non_nurse'
-        shift_str = 'day' if shift == 'Day shift' else 'night'
-
+        
         uid = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].index)[0]
         
         realizd_df = load_sensor_data.read_preprocessed_realizd(data_config.realizd_sensor_dict['preprocess_path'], participant_id)
         fitbit_df = load_sensor_data.read_preprocessed_fitbit(data_config.fitbit_sensor_dict['preprocess_path'], participant_id)
         days_at_work_df = load_sensor_data.read_preprocessed_days_at_work(data_config.days_at_work_path, participant_id)
-        
+
+        realizd_df.loc[realizd_df['SecondsOnPhone'] > 60].loc[:, 'SecondsOnPhone'] = 60
         if realizd_df is not None and fitbit_df is not None:
             
             dates_range = (pd.to_datetime(realizd_df.index[-1]) - pd.to_datetime(realizd_df.index[0])).days
@@ -168,6 +166,6 @@ if __name__ == '__main__':
     # If arg not specified, use default value
     tiles_data_path = '../../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
     config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, 'config_file')) if args.config is None else args.config
-    experiment = 'dpmm' if args.experiment is None else args.experiment
+    experiment = 'chi' if args.experiment is None else args.experiment
     
     main(tiles_data_path, config_path, experiment)

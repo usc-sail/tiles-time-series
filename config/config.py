@@ -145,6 +145,11 @@ class Config(object):
             self.fitbit_sensor_dict['ticc_switch_penalty'] = float(self.getSetting('fitbit', 'ticc_switch_penalty'))
             self.fitbit_sensor_dict['ticc_sparsity'] = float(self.getSetting('fitbit', 'ticc_sparsity'))
             self.fitbit_sensor_dict['ticc_cluster_days'] = int(self.getSetting('fitbit', 'ticc_cluster_days'))
+
+        self.cluster_dict = {}
+        self.cluster_dict['cluster_method'] = self.getSetting('clustering', 'cluster_method')
+        self.cluster_dict['cluster_alpha'] = self.getSetting('clustering', 'cluster_alpha')
+        self.cluster_dict['power'] = self.getSetting('clustering', 'power')
     
         ###########################################################
         # Read global parameters
@@ -231,6 +236,7 @@ class Config(object):
         self.audio_sensor_dict['cluster_alpha'] = self.getSetting('audio', 'cluster_alpha')
         self.audio_sensor_dict['cluster_method'] = self.getSetting('audio', 'cluster_method')
         self.audio_sensor_dict['cluster_data'] = self.getSetting('audio', 'cluster_data')
+        self.audio_sensor_dict['power'] = self.getSetting('audio', 'power')
         self.audio_sensor_dict['lda_num'] = self.getSetting('audio', 'lda_num')
         self.audio_sensor_dict['audio_feature'] = self.getSetting('audio', 'audio_feature')
         self.audio_sensor_dict['pause_threshold'] = self.getSetting('audio', 'pause_threshold')

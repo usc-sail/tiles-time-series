@@ -7,7 +7,7 @@ class dpmeans:
         # Initialize parameters for DP means
         
         self.K = 1
-        self.K_init = 5
+        self.K_init = 10
         self.d = X.shape[1]
         self.z = np.mod(np.random.permutation(X.shape[0]), self.K) + 1
         self.mu = np.random.standard_normal((self.K, self.d))
@@ -21,7 +21,7 @@ class dpmeans:
         # init lambda
         self.Lambda = self.kpp_init(X, self.K_init)
         
-        self.max_iter = 100
+        self.max_iter = 300
         self.obj = np.zeros(self.max_iter)
         self.em_time = np.zeros(self.max_iter)
     
