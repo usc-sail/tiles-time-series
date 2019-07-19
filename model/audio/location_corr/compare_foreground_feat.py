@@ -24,6 +24,45 @@ color_list = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 
 icu_list = ['4 South', '5 North', '5 South ICU', '5 West', '7 West', '7 East', '7 South', '8 West']
 
+def compare_feature(data_df, threshold, room1, room2, participant_type='icu'):
+
+	if participant_type == 'icu':
+		first_df = data_df.loc[data_df['icu'] == 'icu']
+		second_df = data_df.loc[data_df['icu'] == 'non_icu']
+		first_str, second_str = 'icu', 'non_icu'
+	else:
+		first_df = data_df.loc[data_df['shift'] == 'day']
+		second_df = data_df.loc[data_df['shift'] == 'night']
+		first_str, second_str = 'day', 'night'
+
+	print('\n---------------------------------------------')
+	print('p-value, %s-%s' % (room1, room2))
+
+	# group 1
+	print('---------------------------------------------')
+	cond1 = first_df[room1 + '_' + room2 + '_p'] < 0.05
+	cond2 = first_df[room1 + '_' + room2 + '_median_above_' + str(threshold)] == 1
+	valid_len1 = len(first_df.loc[cond1 & cond2]) / len(first_df) * 100
+	print('%s (%s - %s > %.1f): %.2f %%' % (first_str, room1, room2, threshold, valid_len1))
+	cond2 = first_df[room1 + '_' + room2 + '_median_under_negative_' + str(threshold)] == 1
+	valid_len2 = len(first_df.loc[cond1 & cond2]) / len(first_df) * 100
+	print('%s (other): %.2f %%' % (first_str, 100 - valid_len1 - valid_len2))
+	# cond2 = first_df[room1 + '_' + room2 + '_median_within_' + str(threshold)] == 1
+	print('%s (-%.1f < %s - %s < %.1f): %.2f %%' % (first_str, threshold, room1, room2, threshold, 100 - valid_len1 - valid_len2))
+
+	# group 2
+	print('---------------------------------------------')
+	cond1 = second_df[room1 + '_' + room2 + '_p'] < 0.05
+	cond2 = second_df[room1 + '_' + room2 + '_median_above_' + str(threshold)] == 1
+	valid_len1 = len(second_df.loc[cond1 & cond2]) / len(second_df) * 100
+	print('%s (%s - %s > %.1f): %.2f %%' % (second_str, room1, room2, threshold, valid_len1))
+	cond2 = second_df[room1 + '_' + room2 + '_median_under_negative_' + str(threshold)] == 1
+	valid_len2 = len(second_df.loc[cond1 & cond2]) / len(second_df) * 100
+	print('%s (%s - %s < -%.1f): %.2f %%' % (second_str, room1, room2, threshold, valid_len2))
+	# cond2 = second_df[room1 + '_' + room2 + '_median_within_' + str(threshold)] == 1
+	print('%s (other): %.2f %%' % (second_str, 100 - valid_len1 - valid_len2))
+	print('---------------------------------------------\n')
+
 
 def main(tiles_data_path, config_path, experiment):
 
@@ -50,86 +89,121 @@ def main(tiles_data_path, config_path, experiment):
 	top_participant_id_list = list(top_participant_id_df.index)
 	top_participant_id_list.sort()
 
-	feat = 'F0_sma'  # pcm_loudness_sma, pcm_intensity_sma, pcm_RMSenergy_sma, pcm_zcr_sma, F0_sma
-	tmp_greater_than5, tmp_within5, tmp_less5 = 0, 0, 0
+	feat = 'pcm_loudness_sma'  # pcm_loudness_sma, pcm_intensity_sma, pcm_RMSenergy_sma, pcm_zcr_sma, F0_sma
 
-	final_df = pd.DataFrame()
-	for idx, participant_id in enumerate(top_participant_id_list[:]):
+	if feat == 'F0_sma':
+		threshold = 5
+	else:
+		threshold = 0.05
 
-		print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
+	if os.path.exists(os.path.join('compare_' + feat + '.csv.gz')) is False:
+		final_df = pd.DataFrame()
+		for idx, participant_id in enumerate(top_participant_id_list[:]):
 
-		# Read id
-		uid = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].index)[0]
-		position = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].currentposition)[0]
-		shift = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].Shift)[0]
-		primary_unit = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit)[0]
+			print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
 
-		icu_str = 'non_icu'
-		if 'ICU' in primary_unit:
-			icu_str = 'icu'
+			# Read id
+			uid = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].index)[0]
+			position = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].currentposition)[0]
+			shift = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].Shift)[0]
+			primary_unit = list(igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit)[0]
 
-		for unit in icu_list:
-			if unit in primary_unit:
+			icu_str = 'non_icu'
+			if 'ICU' in primary_unit:
 				icu_str = 'icu'
 
-		shift_str = 'day' if shift == 'Day shift' else 'night'
+			for unit in icu_list:
+				if unit in primary_unit:
+					icu_str = 'icu'
 
-		if os.path.exists(os.path.join('data', feat, participant_id + '.pkl')) is False:
-			continue
+			shift_str = 'day' if shift == 'Day shift' else 'night'
 
-		pkl_file = open(os.path.join('data', feat, participant_id + '.pkl'), 'rb')
-		audio_length_part = pickle.load(pkl_file)
+			if os.path.exists(os.path.join('data', feat, participant_id + '.pkl')) is False:
+				continue
 
-		if 'lounge' not in list(audio_length_part.keys()):
-			continue
+			pkl_file = open(os.path.join('data', feat, participant_id + '.pkl'), 'rb')
+			audio_length_part = pickle.load(pkl_file)
 
-		if position == 1:
+			if 'lounge' not in list(audio_length_part.keys()):
+				continue
 
-			loc_list = ['lounge', 'med', 'ns', 'pat', 'unknown']
+			if position == 1:
 
-			pat_longue_stat, pat_longue_p = stats.ks_2samp(audio_length_part['pat'], audio_length_part['lounge'])
-			pat_ns_stat, pat_ns_p = stats.ks_2samp(audio_length_part['pat'], audio_length_part['ns'])
+				# loc_list = ['lounge', 'med', 'ns', 'pat', 'unknown']
+				row_df = pd.DataFrame(index=[participant_id])
+				row_df['shift'] = shift_str
+				row_df['icu'] = icu_str
 
-			print('\n\n')
-			print('K-S test for %s' % feat)
-			print('Statistics Patient-Lounge  = %.3f, p = %.3f' % (pat_longue_stat, pat_longue_p))
-			print('Statistics Patient-NS = %.3f, p = %.3f' % (pat_ns_stat, pat_ns_p))
-			print('Patient Room: mean = %.2f, std = %.2f' % (audio_length_part['pat'].dropna()), np.std(audio_length_part['pat'].dropna()))
-			print('Lounge: mean = %.2f, std = %.2f' % (audio_length_part['lounge'].dropna()), np.std(audio_length_part['lounge'].dropna()))
-			print('NS: mean = %.2f, std = %.2f' % (audio_length_part['ns'].dropna()), np.std(audio_length_part['ns'].dropna()))
+				final_col = []
+				for loc_first in ['pat', 'lounge', 'ns']:
+					for loc_second in  ['pat', 'lounge', 'ns']:
 
-			row_df = pd.DataFrame(index=[participant_id])
-			row_df['shift'] = shift_str
-			row_df['icu'] = icu_str
+						if loc_first == loc_second:
+							continue
 
-			row_df['Patient-Lounge-p'] = pat_longue_p
-			row_df['Patient-NS-p'] = pat_ns_p
-			row_df['Patient-Lounge-stat'] = pat_longue_stat
-			row_df['Patient-NS-stat'] = pat_ns_stat
+						if len(audio_length_part[loc_first]) < 1000 or len(audio_length_part[loc_second]) < 1000:
+							continue
 
-			final_df = final_df.append(row_df)
+						first_data_array = audio_length_part[loc_first]
+						second_data_array = audio_length_part[loc_second]
 
-		final_df.to_csv('tmp.csv.gz', compression='gzip')
+						stat, p = stats.ks_2samp(first_data_array, second_data_array)
+						row_df[loc_first + '_' + loc_second + '_p'] = p
+						row_df[loc_first + '_' + loc_second + '_stats'] = stat
 
-	'''
-	if (np.nanmedian(np.array(audio_length_part['pat'])) - np.nanmedian(np.array(audio_length_part['lounge']))) > 5:
-		tmp_greater_than5 += 1
-	elif (np.nanmedian(np.array(audio_length_part['pat'])) - np.nanmedian(np.array(audio_length_part['lounge']))) < -5:
-		tmp_less5 += 1
+				for col in ['lounge', 'ns', 'pat']:
+					row_df[col + '_median'] = np.nanmedian(audio_length_part[col])
+					row_df[col + '_mean'] = np.nanmean(audio_length_part[col])
+					row_df[col + '_quantile25'] = np.nanquantile(audio_length_part[col], 0.25)
+					row_df[col + '_quantile75'] = np.nanquantile(audio_length_part[col], 0.75)
+
+				final_col = []
+				for loc_first in ['pat', 'lounge', 'ns']:
+					for loc_second in  ['pat', 'lounge', 'ns']:
+
+						if loc_first == loc_second:
+							continue
+
+						if len(audio_length_part[loc_first]) < 1000 or len(audio_length_part[loc_second]) < 1000:
+							continue
+
+						loc = loc_first + '_' + loc_second
+						final_col.append(loc)
+
+						first_data_array = audio_length_part[loc_first]
+						second_data_array = audio_length_part[loc_second]
+
+						row_df[loc_first + '_' + loc_second + '_median_above_' + str(threshold)] = 0
+						row_df[loc_first + '_' + loc_second + '_median_under_negative_' + str(threshold)] = 0
+						row_df[loc_first + '_' + loc_second + '_median_within_' + str(threshold)] = 0
+						row_df[loc_first + '_' + loc_second + '_mean_above_' + str(threshold)] = 0
+						row_df[loc_first + '_' + loc_second + '_mean_under_negative_' + str(threshold)] = 0
+						row_df[loc_first + '_' + loc_second + '_mean_within_' + str(threshold)] = 0
+
+						if (np.nanmedian(np.array(first_data_array)) - np.nanmedian(np.array(second_data_array))) > threshold:
+							row_df[loc_first + '_' + loc_second + '_median_above_' + str(threshold)] = 1
+						elif (np.nanmedian(np.array(first_data_array)) - np.nanmedian(np.array(second_data_array))) < -threshold:
+							row_df[loc_first + '_' + loc_second + '_median_under_negative_' + str(threshold)] = 1
+						else:
+							row_df[loc_first + '_' + loc_second + '_median_within_' + str(threshold)] = 1
+
+						if (np.nanmean(np.array(first_data_array)) - np.nanmean(np.array(second_data_array))) > threshold:
+							row_df[loc_first + '_' + loc_second + '_mean_above_' + str(threshold)] = 1
+						elif (np.nanmean(np.array(first_data_array)) - np.nanmean(np.array(second_data_array))) < -threshold:
+							row_df[loc_first + '_' + loc_second + '_mean_under_negative_' + str(threshold)] = 1
+						else:
+							row_df[loc_first + '_' + loc_second + '_mean_within_' + str(threshold)] = 1
+
+				final_df = final_df.append(row_df)
+
+		final_df.to_csv('compare_' + feat + '.csv.gz', compression='gzip')
+
 	else:
-		tmp_within5 += 1
+		final_df = pd.read_csv('compare_' + feat + '.csv.gz', index_col=0)
 
-	for i, loc in enumerate(loc_list):
-
-		print('loc: %s' % (loc))
-		print(np.nanmedian(np.array(audio_length_part[loc])))
-		print()
-	'''
-	'''
-	print('tmp_greater_than5: %d' % tmp_greater_than5)
-	print('tmp_less5: %d' % tmp_less5)
-	print('tmp_within5: %d' % tmp_within5)
-	'''
+	compare_feature(final_df, threshold, 'pat', 'ns', participant_type='icu')
+	compare_feature(final_df, threshold, 'pat', 'lounge', participant_type='icu')
+	compare_feature(final_df, threshold, 'ns', 'lounge', participant_type='icu')
 
 
 if __name__ == '__main__':
