@@ -54,7 +54,7 @@ def main(tiles_data_path, config_path, experiment):
 	 'pcm_fftMag_spectralKurtosis_sma', 'pcm_fftMag_spectralSlope_sma', 'pcm_fftMag_psySharpness_sma',
 	 'pcm_fftMag_spectralHarmonicity_sma']
 	 '''
-	feat = 'pcm_fftMag_spectralRollOff25.0_sma' # pcm_loudness_sma, pcm_intensity_sma, pcm_RMSenergy_sma, pcm_zcr_sma
+	feat = 'pcm_fftMag_spectralCentroid_sma' # pcm_loudness_sma, pcm_intensity_sma, pcm_RMSenergy_sma, pcm_zcr_sma
 
 	for idx, participant_id in enumerate(top_participant_id_list[:]):
 

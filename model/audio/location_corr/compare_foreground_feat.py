@@ -18,8 +18,7 @@ import pandas as pd
 import numpy as np
 from datetime import timedelta
 import pickle
-import seaborn as sns
-import matplotlib.pyplot as plt
+from scipy import stats
 
 color_list = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 
@@ -52,7 +51,9 @@ def main(tiles_data_path, config_path, experiment):
 	top_participant_id_list.sort()
 
 	feat = 'F0_sma'  # pcm_loudness_sma, pcm_intensity_sma, pcm_RMSenergy_sma, pcm_zcr_sma, F0_sma
+	tmp_greater_than5, tmp_within5, tmp_less5 = 0, 0, 0
 
+	final_df = pd.DataFrame()
 	for idx, participant_id in enumerate(top_participant_id_list[:]):
 
 		print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
@@ -84,43 +85,51 @@ def main(tiles_data_path, config_path, experiment):
 
 		if position == 1:
 
-			fig = plt.figure(figsize=(8, 16))
-
 			loc_list = ['lounge', 'med', 'ns', 'pat', 'unknown']
-			axes = fig.subplots(nrows=len(loc_list))
 
-			for i, loc in enumerate(loc_list):
+			pat_longue_stat, pat_longue_p = stats.ks_2samp(audio_length_part['pat'], audio_length_part['lounge'])
+			pat_ns_stat, pat_ns_p = stats.ks_2samp(audio_length_part['pat'], audio_length_part['ns'])
 
-				len_list = audio_length_part[loc]
-				# sns.kdeplot(len_list, shade=True, ax=axes[i])
-				# bins = np.arange(0, 2.5, 0.05)
-				bins = np.arange(20, 500, 10)
-				n, bins, patches = axes[i].hist(len_list, bins=bins, density=1, color=color_list[i])
-				# n, bins, patches = axes[i].hist(len_list, density=1, color=color_list[i])
-				axes[i].set_xlim([20, 500])
-				# axes[i].set_ylim([0, 0.25])
-				# axes[i].set_xlim([0, 2.5])
-				axes[i].set_title(loc)
+			print('\n\n')
+			print('K-S test for %s' % feat)
+			print('Statistics Patient-Lounge  = %.3f, p = %.3f' % (pat_longue_stat, pat_longue_p))
+			print('Statistics Patient-NS = %.3f, p = %.3f' % (pat_ns_stat, pat_ns_p))
+			print('Patient Room: mean = %.2f, std = %.2f' % (audio_length_part['pat'].dropna()), np.std(audio_length_part['pat'].dropna()))
+			print('Lounge: mean = %.2f, std = %.2f' % (audio_length_part['lounge'].dropna()), np.std(audio_length_part['lounge'].dropna()))
+			print('NS: mean = %.2f, std = %.2f' % (audio_length_part['ns'].dropna()), np.std(audio_length_part['ns'].dropna()))
 
-				if i != len(loc_list) - 1:
-					axes[i].set_xticklabels('')
+			row_df = pd.DataFrame(index=[participant_id])
+			row_df['shift'] = shift_str
+			row_df['icu'] = icu_str
 
-			plt.tight_layout()
+			row_df['Patient-Lounge-p'] = pat_longue_p
+			row_df['Patient-NS-p'] = pat_ns_p
+			row_df['Patient-Lounge-stat'] = pat_longue_stat
+			row_df['Patient-NS-stat'] = pat_ns_stat
 
-			if os.path.exists(os.path.join('plot')) is False:
-				os.mkdir(os.path.join('plot'))
+			final_df = final_df.append(row_df)
 
-			if os.path.exists(os.path.join('plot', feat)) is False:
-				os.mkdir(os.path.join('plot', feat))
+		final_df.to_csv('tmp.csv.gz', compression='gzip')
 
-			if os.path.exists(os.path.join('plot', feat, shift_str)) is False:
-				os.mkdir(os.path.join('plot', feat, shift_str))
+	'''
+	if (np.nanmedian(np.array(audio_length_part['pat'])) - np.nanmedian(np.array(audio_length_part['lounge']))) > 5:
+		tmp_greater_than5 += 1
+	elif (np.nanmedian(np.array(audio_length_part['pat'])) - np.nanmedian(np.array(audio_length_part['lounge']))) < -5:
+		tmp_less5 += 1
+	else:
+		tmp_within5 += 1
 
-			if os.path.exists(os.path.join('plot', feat, icu_str)) is False:
-				os.mkdir(os.path.join('plot', feat, icu_str))
+	for i, loc in enumerate(loc_list):
 
-			plt.savefig(os.path.join('plot', feat, shift_str, participant_id))
-			plt.savefig(os.path.join('plot', feat, icu_str, participant_id))
+		print('loc: %s' % (loc))
+		print(np.nanmedian(np.array(audio_length_part[loc])))
+		print()
+	'''
+	'''
+	print('tmp_greater_than5: %d' % tmp_greater_than5)
+	print('tmp_less5: %d' % tmp_less5)
+	print('tmp_within5: %d' % tmp_within5)
+	'''
 
 
 if __name__ == '__main__':
