@@ -425,7 +425,7 @@ def activity_curve_change(chi_data_config, agg, sliding, realizd_df, fitbit_df, 
     num_point_per_day = chi_data_config.num_point_per_day
     dates_range = int((pd.to_datetime(realizd_df.index[-1]) - pd.to_datetime(realizd_df.index[0])).days / sliding)
     
-    if dates_range < 10:
+    if dates_range < 70 / sliding - 10:
         return None
     
     dist_dict = {}
