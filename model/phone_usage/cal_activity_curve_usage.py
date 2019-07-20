@@ -20,6 +20,8 @@ import pandas as pd
 
 from statsmodels.tsa.stattools import grangercausalitytests
 
+icu_list = ['4 South', '5 North', '5 South ICU', '5 West', '7 West', '7 East', '7 South', '8 West']
+
 
 def main(tiles_data_path, config_path, experiment):
     # Create Config
@@ -40,7 +42,7 @@ def main(tiles_data_path, config_path, experiment):
     agg, sliding = 10, 2
     
     load_data_path.load_chi_preprocess_path(chi_data_config, process_data_path)
-    load_data_path.load_chi_activity_curve_path(chi_data_config, process_data_path, agg=10, sliding=2)
+    load_data_path.load_chi_activity_curve_path(chi_data_config, process_data_path, agg=agg, sliding=sliding)
     
     # Read ground truth data
     igtb_df = load_data_basic.read_AllBasic(tiles_data_path)
@@ -58,10 +60,23 @@ def main(tiles_data_path, config_path, experiment):
         shift = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].Shift[0]
         job_str = 'nurse' if nurse == 1 else 'non_nurse'
         shift_str = 'day' if shift == 'Day shift' else 'night'
-        
-        print('job shift: %s, job type: %s' % (shift_str, job_str))
 
-        print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
+        icu_str = 'non_icu'
+        if 'ICU' in primary_unit:
+            icu_str = 'icu'
+
+        for unit in icu_list:
+            if unit in primary_unit:
+                icu_str = 'icu'
+        
+        if job_str == 'nurse':
+            continue
+        
+        # if icu_str == 'non_icu':
+        #    continue
+        
+        # print('job shift: %s, job type: %s' % (shift_str, job_str))
+        # print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
 
         if os.path.exists(os.path.join(chi_data_config.activity_curve_path, participant_id + '_physio.pkl')):
             physio_dict = np.load(os.path.join(chi_data_config.activity_curve_path, participant_id + '_physio.pkl'))
@@ -90,14 +105,15 @@ def main(tiles_data_path, config_path, experiment):
                 dist_array[dates_idx, 0] = physio_change / 100
                 dist_array[dates_idx, 1] = realizd_change / 100
 
-            dist_array = dist_array[:-2, :]
+            # dist_array = dist_array[:-2, :]
             # print(dist_array)
-            print(np.corrcoef(dist_array[:, 0], dist_array[:, 1]))
+            # print(np.corrcoef(dist_array[:, 0], dist_array[:, 1]))
+            print(np.corrcoef(dist_array[:, 0], dist_array[:, 1])[0, 1])
 
             dist_array_inv = dist_array
             dist_array_inv[:, 1] = dist_array[:, 0]
             dist_array_inv[:, 0] = dist_array[:, 1]
-            grangercausalitytests(dist_array, maxlag=3)
+            # grangercausalitytests(dist_array, maxlag=3)
             
 
 if __name__ == '__main__':
