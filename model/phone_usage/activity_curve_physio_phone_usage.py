@@ -425,7 +425,7 @@ def activity_curve_change(chi_data_config, agg, sliding, realizd_df, fitbit_df, 
     num_point_per_day = chi_data_config.num_point_per_day
     dates_range = int((pd.to_datetime(realizd_df.index[-1]) - pd.to_datetime(realizd_df.index[0])).days / sliding)
     
-    if dates_range < 20:
+    if dates_range < 10:
         return None
     
     dist_dict = {}
@@ -460,7 +460,7 @@ def main(tiles_data_path, config_path, experiment):
                                            segmentation_data_identifier='segmentation',
                                            filter_data_identifier='filter_data',
                                            clustering_data_identifier='clustering')
-    agg, sliding = 10, 2
+    agg, sliding = 10, 5
     
     load_data_path.load_chi_preprocess_path(chi_data_config, process_data_path)
     load_data_path.load_chi_activity_curve_path(chi_data_config, process_data_path, agg=agg, sliding=sliding)

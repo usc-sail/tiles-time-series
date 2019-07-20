@@ -37,10 +37,10 @@ def main(tiles_data_path, config_path, experiment):
                                            segmentation_data_identifier='segmentation',
                                            filter_data_identifier='filter_data',
                                            clustering_data_identifier='clustering')
-    agg, sliding = 10, 2
+    agg, sliding = 10, 5
     
     load_data_path.load_chi_preprocess_path(chi_data_config, process_data_path)
-    load_data_path.load_chi_activity_curve_path(chi_data_config, process_data_path, agg=10, sliding=2)
+    load_data_path.load_chi_activity_curve_path(chi_data_config, process_data_path, agg=agg, sliding=sliding)
     
     # Read ground truth data
     igtb_df = load_data_basic.read_AllBasic(tiles_data_path)

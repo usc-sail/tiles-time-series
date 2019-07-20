@@ -69,7 +69,7 @@ def main(tiles_data_path, config_path, experiment):
             if unit in primary_unit:
                 icu_str = 'icu'
         
-        if job_str == 'nurse':
+        if job_str == 'non_nurse':
             continue
         
         # if icu_str == 'non_icu':
@@ -105,7 +105,7 @@ def main(tiles_data_path, config_path, experiment):
                 dist_array[dates_idx, 0] = physio_change / 100
                 dist_array[dates_idx, 1] = realizd_change / 100
 
-            # dist_array = dist_array[:-2, :]
+            dist_array = dist_array[:-2, :]
             # print(dist_array)
             # print(np.corrcoef(dist_array[:, 0], dist_array[:, 1]))
             print(np.corrcoef(dist_array[:, 0], dist_array[:, 1])[0, 1])
