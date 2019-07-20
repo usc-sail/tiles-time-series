@@ -19,6 +19,8 @@ import numpy as np
 import pandas as pd
 
 from statsmodels.tsa.stattools import grangercausalitytests
+import scipy.stats
+from scipy import stats
 
 icu_list = ['4 South', '5 North', '5 South ICU', '5 West', '7 West', '7 East', '7 South', '8 West']
 
@@ -109,16 +111,16 @@ def main(tiles_data_path, config_path, experiment):
 				physio_change, realizd_change = 0, 0
 
 				for shuffle_idx in list(physio_shuffle_dist.keys()):
-					if np.sum(physio_shuffle_dist[shuffle_idx]['physio']['dist']) > physio_dist:
+					if np.sum(physio_shuffle_dist[shuffle_idx]['physio']['dist']) > physio_dist * 1.1:
 						physio_change += 1
 
-					if np.sum(realizd_shuffle_dist[shuffle_idx]['realizd']['dist']) > realizd_dist:
+					if np.sum(realizd_shuffle_dist[shuffle_idx]['realizd']['dist']) > realizd_dist * 1.1:
 						realizd_change += 1
 
 				dist_array[dates_idx, 0] = physio_change / 100
 				dist_array[dates_idx, 1] = realizd_change / 100
 
-			dist_array = dist_array[:-2, :]
+			# dist_array = dist_array[:-2, :]
 			# dist_array = dist_array[:, :]
 			# print(dist_array)
 			print(np.corrcoef(dist_array[:, 0], dist_array[:, 1])[0, 1])
@@ -128,7 +130,11 @@ def main(tiles_data_path, config_path, experiment):
 			dist_array_inv[:, 1] = dist_array[:, 0]
 			dist_array_inv[:, 0] = dist_array[:, 1]
 			'''
-			row_df['p'] = np.abs(np.corrcoef(dist_array[:, 0], dist_array[:, 1])[0, 1])
+			# row_df['p'] = np.abs(np.corrcoef(dist_array[:, 0], dist_array[:, 1])[0, 1])
+			# row_df['p'] = np.corrcoef(dist_array[:, 0], dist_array[:, 1])[0, 1]
+			# row_df['p'] = scipy.stats.spearmanr(dist_array[:, 0], dist_array[:, 1])[0]
+			row_df['p'] = np.abs(scipy.stats.spearmanr(dist_array[:, 0], dist_array[:, 1])[0])
+			# print(scipy.stats.spearmanr(dist_array[:, 0], dist_array[:, 1]))
 			for col in igtb_cols:
 				row_df[col] = igtb_df.loc[igtb_df['ParticipantID'] == participant_id][col][0]
 			# grangercausalitytests(dist_array, maxlag=3)
@@ -146,9 +152,9 @@ def main(tiles_data_path, config_path, experiment):
 
 	# len1 = len(non_nurse_df.loc[(non_nurse_df['p'] > 0.25) | (non_nurse_df['p'] < -0.25)])
 	# len2 = len(nurse_df.loc[(nurse_df['p'] > 0.25) | (nurse_df['p'] < -0.25)])
-	len0 = len(non_nurse_df.loc[(non_nurse_df['p'] > 0.3)])
-	len1 = len(lab_df.loc[(lab_df['p'] > 0.3)])
-	len2 = len(nurse_df.loc[(nurse_df['p'] > 0.3)])
+	len0 = len(non_nurse_df.loc[(non_nurse_df['p'] > 0.4)])
+	len1 = len(lab_df.loc[(lab_df['p'] > 0.4)])
+	len2 = len(nurse_df.loc[(nurse_df['p'] > 0.4)])
 
 	len3 = len(day_nurse_df.loc[(day_nurse_df['p'] > 0.3) | (day_nurse_df['p'] < -0.3)])
 	len4 = len(night_nurse_df.loc[(night_nurse_df['p'] > 0.3) | (night_nurse_df['p'] < -0.3)])
@@ -163,6 +169,16 @@ def main(tiles_data_path, config_path, experiment):
 	print('night nurse (%d): %.2f' % (len(night_nurse_df), len4 / len(night_nurse_df) * 100))
 	print('icu nurse (%d): %.2f' % (len(icu_nurse_df), len5 / len(icu_nurse_df) * 100))
 	print('non_icu nurse (%d): %.2f' % (len(non_icu_nurse_df), len6 / len(non_icu_nurse_df) * 100))
+
+	data1_df = final_df.loc[(final_df['p'] > 0.4)]
+	data2_df = final_df.loc[(final_df['p'] <= 0.4)]
+	for col in igtb_cols:
+		print(col)
+		stat, p = stats.ks_2samp(data1_df[col].dropna(), data2_df[col].dropna())
+		print('High sync: mean = %.2f, std = %.2f' % (np.mean(data1_df[col]), np.std(data1_df[col])))
+		print('Low sync: mean = %.2f, std = %.2f' % (np.mean(data2_df[col]), np.std(data2_df[col])))
+		print('K-S test for %s' % col)
+		print('Statistics = %.3f, p = %.3f\n\n' % (stat, p))
 
 
 if __name__ == '__main__':
