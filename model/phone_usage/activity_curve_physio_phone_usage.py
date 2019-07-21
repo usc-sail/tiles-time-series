@@ -465,7 +465,7 @@ def main(tiles_data_path, config_path, experiment):
                                            filter_data_identifier='filter_data',
                                            clustering_data_identifier='clustering')
     agg, sliding = 10, 5
-    num_of_interval = 24
+    num_of_interval = 48
     
     load_data_path.load_chi_preprocess_path(chi_data_config, process_data_path)
     load_data_path.load_chi_activity_curve_path(chi_data_config, process_data_path, agg=agg, sliding=sliding)
@@ -479,7 +479,7 @@ def main(tiles_data_path, config_path, experiment):
     top_participant_id_list = list(top_participant_id_df.index)
     top_participant_id_list.sort()
     
-    for idx, participant_id in enumerate(top_participant_id_list[100:]):
+    for idx, participant_id in enumerate(top_participant_id_list[:]):
 
         print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
 

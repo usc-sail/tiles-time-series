@@ -75,7 +75,7 @@ def main(tiles_data_path, config_path, experiment):
 										   segmentation_data_identifier='segmentation',
 										   filter_data_identifier='filter_data',
 										   clustering_data_identifier='clustering')
-	agg, sliding = 10, 5
+	agg, sliding = 10, 2
 	interval_offset = 60
 	interval = int(1440 / interval_offset)
 
@@ -184,19 +184,19 @@ def main(tiles_data_path, config_path, experiment):
 						first_shuffle_physio_array = physio_shuffle_dist[shuffle_idx]['physio']['first']
 						second_shuffle_physio_array = physio_shuffle_dist[shuffle_idx]['physio']['second']
 						tmp_dist = np.sum(cal_dist(first_shuffle_physio_array, second_shuffle_physio_array, unique_physio_list, interval, interval_offset))
-						if tmp_dist > physio_dist * 1.05:
+						if tmp_dist > physio_dist * 1.1:
 							physio_change += 1
 						
 						first_shuffle_realizd_array = realizd_shuffle_dist[shuffle_idx]['realizd']['first']
 						second_shuffle_realizd_array = realizd_shuffle_dist[shuffle_idx]['realizd']['second']
 						tmp_dist = np.sum(cal_dist(first_shuffle_realizd_array, second_shuffle_realizd_array, unique_realizd_list, interval, interval_offset))
-						if tmp_dist > realizd_dist * 1.05:
+						if tmp_dist > realizd_dist * 1.1:
 							realizd_change += 1
 	
 					dist_array[dates_idx, 0] = physio_change / 100
 					dist_array[dates_idx, 1] = realizd_change / 100
 	
-				# dist_array = dist_array[:-2, :]
+				dist_array = dist_array[:-1, :]
 				# dist_array = dist_array[:, :]
 				# print(dist_array)
 				print(np.corrcoef(dist_array[:, 0], dist_array[:, 1])[0, 1])
@@ -214,7 +214,7 @@ def main(tiles_data_path, config_path, experiment):
 				# print(scipy.stats.spearmanr(dist_array[:, 0], dist_array[:, 1]))
 				for col in igtb_cols:
 					row_df[col] = igtb_df.loc[igtb_df['ParticipantID'] == participant_id][col][0]
-				# grangercausalitytests(dist_array, maxlag=3)
+				grangercausalitytests(dist_array, maxlag=3)
 				final_df = final_df.append(row_df)
 
 		final_df = final_df.dropna()
