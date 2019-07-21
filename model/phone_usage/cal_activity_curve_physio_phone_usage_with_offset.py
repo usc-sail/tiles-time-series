@@ -214,7 +214,11 @@ def main(tiles_data_path, config_path, experiment):
 				# print(scipy.stats.spearmanr(dist_array[:, 0], dist_array[:, 1]))
 				for col in igtb_cols:
 					row_df[col] = igtb_df.loc[igtb_df['ParticipantID'] == participant_id][col][0]
-				grangercausalitytests(dist_array, maxlag=3)
+				test_stats = grangercausalitytests(dist_array, maxlag=3, verbose=False)
+				ssr_chi2test = test_stats[2][0]['ssr_chi2test']
+
+				print('chi test: %.3f' % (ssr_chi2test[1]))
+				row_df['chi_p'] = ssr_chi2test[1]
 				final_df = final_df.append(row_df)
 
 		final_df = final_df.dropna()
