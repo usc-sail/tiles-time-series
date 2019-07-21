@@ -41,7 +41,7 @@ def main(tiles_data_path, config_path, experiment):
 										   segmentation_data_identifier='segmentation',
 										   filter_data_identifier='filter_data',
 										   clustering_data_identifier='clustering')
-	agg, sliding = 10, 2
+	agg, sliding = 10, 5
 
 	load_data_path.load_chi_preprocess_path(chi_data_config, process_data_path)
 	load_data_path.load_chi_activity_curve_path(chi_data_config, process_data_path, agg=agg, sliding=sliding)
@@ -133,7 +133,8 @@ def main(tiles_data_path, config_path, experiment):
 			# row_df['p'] = np.abs(np.corrcoef(dist_array[:, 0], dist_array[:, 1])[0, 1])
 			# row_df['p'] = np.corrcoef(dist_array[:, 0], dist_array[:, 1])[0, 1]
 			# row_df['p'] = scipy.stats.spearmanr(dist_array[:, 0], dist_array[:, 1])[0]
-			row_df['p'] = np.abs(scipy.stats.spearmanr(dist_array[:, 0], dist_array[:, 1])[0])
+			# row_df['p'] = np.abs(scipy.stats.spearmanr(dist_array[:, 0], dist_array[:, 1])[0])
+			row_df['p'] = scipy.stats.spearmanr(dist_array[:, 0], dist_array[:, 1])[0]
 			# print(scipy.stats.spearmanr(dist_array[:, 0], dist_array[:, 1]))
 			for col in igtb_cols:
 				row_df[col] = igtb_df.loc[igtb_df['ParticipantID'] == participant_id][col][0]
@@ -152,16 +153,23 @@ def main(tiles_data_path, config_path, experiment):
 
 	# len1 = len(non_nurse_df.loc[(non_nurse_df['p'] > 0.25) | (non_nurse_df['p'] < -0.25)])
 	# len2 = len(nurse_df.loc[(nurse_df['p'] > 0.25) | (nurse_df['p'] < -0.25)])
-	len0 = len(non_nurse_df.loc[(non_nurse_df['p'] > 0.4)])
-	len1 = len(lab_df.loc[(lab_df['p'] > 0.4)])
-	len2 = len(nurse_df.loc[(nurse_df['p'] > 0.4)])
-
+	len0 = len(non_nurse_df.loc[(non_nurse_df['p'] > 0.3)])
+	len1 = len(lab_df.loc[(lab_df['p'] > 0.3)])
+	len2 = len(nurse_df.loc[(nurse_df['p'] > 0.3)])
+	
+	'''
 	len3 = len(day_nurse_df.loc[(day_nurse_df['p'] > 0.3) | (day_nurse_df['p'] < -0.3)])
 	len4 = len(night_nurse_df.loc[(night_nurse_df['p'] > 0.3) | (night_nurse_df['p'] < -0.3)])
 	len5 = len(icu_nurse_df.loc[(icu_nurse_df['p'] > 0.3) | (icu_nurse_df['p'] < -0.3)])
 	len6 = len(non_icu_nurse_df.loc[(non_icu_nurse_df['p'] > 0.3) | (non_icu_nurse_df['p'] < -0.3)])
-
-	print('non_nurse (%d): %.2f' % (len(non_nurse_df), len0 / len(non_nurse_df) * 100))
+	'''
+	
+	len3 = len(day_nurse_df.loc[(day_nurse_df['p'] > 0.3)])
+	len4 = len(night_nurse_df.loc[(night_nurse_df['p'] > 0.3)])
+	len5 = len(icu_nurse_df.loc[(icu_nurse_df['p'] > 0.3)])
+	len6 = len(non_icu_nurse_df.loc[(non_icu_nurse_df['p'] > 0.3)])
+	
+	print('\nnon_nurse (%d): %.2f' % (len(non_nurse_df), len0 / len(non_nurse_df) * 100))
 	print('lab (%d): %.2f\n' % (len(lab_df), len1 / len(lab_df) * 100))
 
 	print('nurse (%d): %.2f\n' % (len(nurse_df), len2 / len(nurse_df) * 100))
@@ -170,8 +178,8 @@ def main(tiles_data_path, config_path, experiment):
 	print('icu nurse (%d): %.2f' % (len(icu_nurse_df), len5 / len(icu_nurse_df) * 100))
 	print('non_icu nurse (%d): %.2f' % (len(non_icu_nurse_df), len6 / len(non_icu_nurse_df) * 100))
 
-	data1_df = final_df.loc[(final_df['p'] > 0.4)]
-	data2_df = final_df.loc[(final_df['p'] <= 0.4)]
+	data1_df = final_df.loc[(final_df['p'] > 0.3)]
+	data2_df = final_df.loc[(final_df['p'] <= 0.3)]
 	for col in igtb_cols:
 		print(col)
 		stat, p = stats.ks_2samp(data1_df[col].dropna(), data2_df[col].dropna())

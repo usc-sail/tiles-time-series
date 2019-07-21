@@ -31,6 +31,8 @@ from collections import Counter
 from sklearn import mixture
 import pickle
 from scipy.stats import entropy
+import warnings
+warnings.filterwarnings('ignore')
 
 
 def KL(P,Q):
@@ -122,7 +124,7 @@ def cluster_data(data, data_config, iter=100):
         cluster_id = pcrpmm.components.assignments
         model = pcrpmm
     else:
-        dpgmm = mixture.BayesianGaussianMixture(n_components=10, max_iter=1000, covariance_type='full').fit(np.array(data_df))
+        dpgmm = mixture.BayesianGaussianMixture(n_components=20, max_iter=1000, covariance_type='full').fit(np.array(data_df))
         cluster_id = dpgmm.predict(np.array(data_df))
         model = dpgmm
     
@@ -206,7 +208,7 @@ def read_day_data(realizd_df, fitbit_df, days):
     return np.array(daily_df).astype(float)
 
 
-def cal_shuffle_dist(agg, sliding, num_point_per_day, realizd_df, fitbit_df, agg_daily_array,
+def cal_shuffle_dist(agg, sliding, num_point_per_day, num_of_interval, realizd_df, fitbit_df, agg_daily_array,
                      realizd_model, realizd_cluster_list, min_realizd_array, max_realizd_array,
                      physio_model, physio_cluster_list, min_physio_array, max_physio_array):
     
@@ -256,19 +258,20 @@ def cal_shuffle_dist(agg, sliding, num_point_per_day, realizd_df, fitbit_df, agg
             first_physio_cluster_array = physio_model.predict(agg_physio_first_array)
             second_physio_cluster_array = physio_model.predict(agg_physio_second_array)
     
-            first_realizd_distribution, second_realizd_distribution = np.zeros([48, len(realizd_cluster_list)]), np.zeros([48, len(realizd_cluster_list)])
-            first_physio_distribution, second_physio_distribution = np.zeros([48, len(physio_cluster_list)]), np.zeros([48, len(physio_cluster_list)])
+            first_realizd_distribution, second_realizd_distribution = np.zeros([num_of_interval, len(realizd_cluster_list)]), np.zeros([num_of_interval, len(realizd_cluster_list)])
+            first_physio_distribution, second_physio_distribution = np.zeros([num_of_interval, len(physio_cluster_list)]), np.zeros([num_of_interval, len(physio_cluster_list)])
     
-            kl_realizd_dist_array, kl_physio_dist_array = np.zeros([1, 48]), np.zeros([1, 48])
+            kl_realizd_dist_array, kl_physio_dist_array = np.zeros([1, num_of_interval]), np.zeros([1, num_of_interval])
             
-            for i in range(48):
-                tmp_cluster_array = first_realizd_cluster_array[i * 30:(i + 1) * 30]
+            interval_offset = int(1440 / num_of_interval)
+            for i in range(num_of_interval):
+                tmp_cluster_array = first_realizd_cluster_array[i * interval_offset:(i + 1) * interval_offset]
                 counter_dict = Counter(tmp_cluster_array)
                 for cluster_id in list(counter_dict.keys()):
                     if cluster_id in realizd_cluster_list:
                         first_realizd_distribution[i, realizd_cluster_list.index(cluster_id)] = counter_dict[cluster_id]
     
-                tmp_cluster_array = second_realizd_cluster_array[i * 30:(i + 1) * 30]
+                tmp_cluster_array = second_realizd_cluster_array[i * interval_offset:(i + 1) * interval_offset]
                 counter_dict = Counter(tmp_cluster_array)
                 for cluster_id in list(counter_dict.keys()):
                     if cluster_id in realizd_cluster_list:
@@ -282,13 +285,13 @@ def cal_shuffle_dist(agg, sliding, num_point_per_day, realizd_df, fitbit_df, agg
                 kl_dist = kl_dist / 2
                 kl_realizd_dist_array[0, i] = kl_dist
 
-                tmp_cluster_array = first_physio_cluster_array[i * 30:(i + 1) * 30]
+                tmp_cluster_array = first_physio_cluster_array[i * interval_offset:(i + 1) * interval_offset]
                 counter_dict = Counter(tmp_cluster_array)
                 for cluster_id in list(counter_dict.keys()):
                     if cluster_id in physio_cluster_list:
                         first_physio_distribution[i, physio_cluster_list.index(cluster_id)] = counter_dict[cluster_id]
 
-                tmp_cluster_array = second_physio_cluster_array[i * 30:(i + 1) * 30]
+                tmp_cluster_array = second_physio_cluster_array[i * interval_offset:(i + 1) * interval_offset]
                 counter_dict = Counter(tmp_cluster_array)
                 for cluster_id in list(counter_dict.keys()):
                     if cluster_id in physio_cluster_list:
@@ -314,7 +317,7 @@ def cal_shuffle_dist(agg, sliding, num_point_per_day, realizd_df, fitbit_df, agg
     return dist_dict
 
 
-def cal_regular_dist(agg, sliding, num_point_per_day, realizd_df, fitbit_df, agg_daily_array,
+def cal_regular_dist(agg, sliding, num_point_per_day, num_of_interval, realizd_df, fitbit_df, agg_daily_array,
                      realizd_model, realizd_cluster_list, min_realizd_array, max_realizd_array,
                      physio_model, physio_cluster_list, min_physio_array, max_physio_array):
     dates_range = int(((pd.to_datetime(realizd_df.index[-1]) - pd.to_datetime(realizd_df.index[0])).days - agg) / sliding)
@@ -361,16 +364,18 @@ def cal_regular_dist(agg, sliding, num_point_per_day, realizd_df, fitbit_df, agg
         first_realizd_distribution, second_realizd_distribution = np.zeros([48, len(realizd_cluster_list)]), np.zeros([48, len(realizd_cluster_list)])
         first_physio_distribution, second_physio_distribution = np.zeros([48, len(physio_cluster_list)]), np.zeros([48, len(physio_cluster_list)])
 
-        kl_realizd_dist_array, kl_physio_dist_array = np.zeros([1, 48]), np.zeros([1, 48])
-        for i in range(48):
+        kl_realizd_dist_array, kl_physio_dist_array = np.zeros([1, num_of_interval]), np.zeros([1, num_of_interval])
+        
+        interval_offset = int(1440 / num_of_interval)
+        for i in range(num_of_interval):
             # realizd
-            tmp_cluster_array = first_realizd_cluster_array[i * 30:(i + 1) * 30]
+            tmp_cluster_array = first_realizd_cluster_array[i * interval_offset:(i + 1) * interval_offset]
             counter_dict = Counter(tmp_cluster_array)
             for cluster_id in list(counter_dict.keys()):
                 if cluster_id in realizd_cluster_list:
                     first_realizd_distribution[i, realizd_cluster_list.index(cluster_id)] = counter_dict[cluster_id]
             
-            tmp_cluster_array = second_realizd_cluster_array[i * 30:(i + 1) * 30]
+            tmp_cluster_array = second_realizd_cluster_array[i * interval_offset:(i + 1) * interval_offset]
             counter_dict = Counter(tmp_cluster_array)
             for cluster_id in list(counter_dict.keys()):
                 if cluster_id in realizd_cluster_list:
@@ -385,13 +390,13 @@ def cal_regular_dist(agg, sliding, num_point_per_day, realizd_df, fitbit_df, agg
             kl_realizd_dist_array[0, i] = kl_dist
 
             # Physio
-            tmp_cluster_array = first_physio_cluster_array[i * 30:(i + 1) * 30]
+            tmp_cluster_array = first_physio_cluster_array[i * interval_offset:(i + 1) * interval_offset]
             counter_dict = Counter(tmp_cluster_array)
             for cluster_id in list(counter_dict.keys()):
                 if cluster_id in physio_cluster_list:
                     first_physio_distribution[i, physio_cluster_list.index(cluster_id)] = counter_dict[cluster_id]
 
-            tmp_cluster_array = second_physio_cluster_array[i * 30:(i + 1) * 30]
+            tmp_cluster_array = second_physio_cluster_array[i * interval_offset:(i + 1) * interval_offset]
             counter_dict = Counter(tmp_cluster_array)
             for cluster_id in list(counter_dict.keys()):
                 if cluster_id in physio_cluster_list:
@@ -402,7 +407,6 @@ def cal_regular_dist(agg, sliding, num_point_per_day, realizd_df, fitbit_df, agg
             kl_dist = entropy(first_pdf + epsilon, second_pdf + epsilon) + entropy(second_pdf + epsilon, first_pdf + epsilon)
             kl_dist = kl_dist / 2
             kl_physio_dist_array[0, i] = kl_dist
-
 
         dist_dict[dates] = {}
         dist_dict[dates]['realizd'] = {}
@@ -418,7 +422,7 @@ def cal_regular_dist(agg, sliding, num_point_per_day, realizd_df, fitbit_df, agg
     return dist_dict
 
 
-def activity_curve_change(chi_data_config, agg, sliding, realizd_df, fitbit_df, agg_daily_array,
+def activity_curve_change(chi_data_config, agg, sliding, num_of_interval, realizd_df, fitbit_df, agg_daily_array,
                           realizd_model, realizd_cluster_list, min_realizd_array, max_realizd_array,
                           physio_model, physio_cluster_list, min_physio_array, max_physio_array):
 
@@ -430,11 +434,11 @@ def activity_curve_change(chi_data_config, agg, sliding, realizd_df, fitbit_df, 
     
     dist_dict = {}
     
-    reg_dist_dict = cal_regular_dist(agg, sliding, num_point_per_day, realizd_df, fitbit_df, agg_daily_array,
+    reg_dist_dict = cal_regular_dist(agg, sliding, num_point_per_day, num_of_interval, realizd_df, fitbit_df, agg_daily_array,
                                      realizd_model, realizd_cluster_list, min_realizd_array, max_realizd_array,
                                      physio_model, physio_cluster_list, min_physio_array, max_physio_array)
     
-    shuffle_dist_dict = cal_shuffle_dist(agg, sliding, num_point_per_day, realizd_df, fitbit_df, agg_daily_array,
+    shuffle_dist_dict = cal_shuffle_dist(agg, sliding, num_point_per_day, num_of_interval, realizd_df, fitbit_df, agg_daily_array,
                                          realizd_model, realizd_cluster_list, min_realizd_array, max_realizd_array,
                                          physio_model, physio_cluster_list, min_physio_array, max_physio_array)
 
@@ -461,6 +465,7 @@ def main(tiles_data_path, config_path, experiment):
                                            filter_data_identifier='filter_data',
                                            clustering_data_identifier='clustering')
     agg, sliding = 10, 5
+    num_of_interval = 24
     
     load_data_path.load_chi_preprocess_path(chi_data_config, process_data_path)
     load_data_path.load_chi_activity_curve_path(chi_data_config, process_data_path, agg=agg, sliding=sliding)
@@ -474,7 +479,7 @@ def main(tiles_data_path, config_path, experiment):
     top_participant_id_list = list(top_participant_id_df.index)
     top_participant_id_list.sort()
     
-    for idx, participant_id in enumerate(top_participant_id_list[:]):
+    for idx, participant_id in enumerate(top_participant_id_list[100:]):
 
         print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
 
@@ -501,7 +506,7 @@ def main(tiles_data_path, config_path, experiment):
             continue
         
         # Calculate change score
-        dist_dict = activity_curve_change(chi_data_config, agg, sliding, realizd_df, fitbit_df, agg_daily_array,
+        dist_dict = activity_curve_change(chi_data_config, agg, sliding, num_of_interval, realizd_df, fitbit_df, agg_daily_array,
                                           realizd_model, realizd_cluster_list, min_realizd_array, max_realizd_array,
                                           physio_model, physio_cluster_list, min_physio_array, max_physio_array)
 

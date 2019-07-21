@@ -141,7 +141,7 @@ def main(tiles_data_path, config_path, experiment):
 
 		if os.path.exists(os.path.join('data', feat)) is False:
 			os.mkdir(os.path.join('data', feat))
-
+ 
 		output = open(os.path.join('data', feat, participant_id + '.pkl'), 'wb')
 		pickle.dump(audio_loc, output)
 
