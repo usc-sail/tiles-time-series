@@ -76,7 +76,7 @@ def main(tiles_data_path, config_path, experiment):
 										   filter_data_identifier='filter_data',
 										   clustering_data_identifier='clustering')
 	agg, sliding = 10, 2
-	interval_offset = 60
+	interval_offset = 30
 	interval = int(1440 / interval_offset)
 
 	load_data_path.load_chi_preprocess_path(chi_data_config, process_data_path)
@@ -169,34 +169,60 @@ def main(tiles_data_path, config_path, experiment):
 				for dates_idx, dates in enumerate(list(regular_dict.keys())):
 					first_physio_array = regular_dict[dates]['physio']['first']
 					second_physio_array = regular_dict[dates]['physio']['second']
-					physio_dist = np.sum(cal_dist(first_physio_array, second_physio_array, unique_physio_list, interval, interval_offset))
+					physio_dist = cal_dist(first_physio_array, second_physio_array, unique_physio_list, interval, interval_offset)
 					
 					first_realizd_array = regular_dict[dates]['realizd']['first']
 					second_realizd_array = regular_dict[dates]['realizd']['second']
-					realizd_dist = np.sum(cal_dist(first_realizd_array, second_realizd_array, unique_realizd_list, interval, interval_offset))
+					realizd_dist = cal_dist(first_realizd_array, second_realizd_array, unique_realizd_list, interval, interval_offset)
 					
 					physio_shuffle_dist = shuffle_dict[dates]
 					realizd_shuffle_dist = shuffle_dict[dates]
 	
-					physio_change, realizd_change = 0, 0
-	
-					for shuffle_idx in list(physio_shuffle_dist.keys()):
+					dist_physio_hist = np.zeros([len(list(physio_shuffle_dist.keys())), len(physio_dist[0])])
+					dist_realizd_hist = np.zeros([len(list(realizd_shuffle_dist.keys())), len(realizd_dist[0])])
+					
+					# Calculate empirical dist
+					for shuffle_i, shuffle_idx in enumerate(list(physio_shuffle_dist.keys())):
 						first_shuffle_physio_array = physio_shuffle_dist[shuffle_idx]['physio']['first']
 						second_shuffle_physio_array = physio_shuffle_dist[shuffle_idx]['physio']['second']
-						tmp_dist = np.sum(cal_dist(first_shuffle_physio_array, second_shuffle_physio_array, unique_physio_list, interval, interval_offset))
-						if tmp_dist > physio_dist * 1.1:
-							physio_change += 1
+						tmp_dist = cal_dist(first_shuffle_physio_array, second_shuffle_physio_array, unique_physio_list, interval, interval_offset)
+						dist_physio_hist[shuffle_i, :] = tmp_dist[0]
 						
 						first_shuffle_realizd_array = realizd_shuffle_dist[shuffle_idx]['realizd']['first']
 						second_shuffle_realizd_array = realizd_shuffle_dist[shuffle_idx]['realizd']['second']
-						tmp_dist = np.sum(cal_dist(first_shuffle_realizd_array, second_shuffle_realizd_array, unique_realizd_list, interval, interval_offset))
-						if tmp_dist > realizd_dist * 1.1:
-							realizd_change += 1
-	
+						tmp_dist = cal_dist(first_shuffle_realizd_array, second_shuffle_realizd_array, unique_realizd_list, interval, interval_offset)
+						dist_realizd_hist[shuffle_i, :] = tmp_dist[0]
+						
+					# Calculate p value for each distribution
+					p_physio_array = np.zeros([1, len(physio_dist[0])])
+					p_realizd_array = np.zeros([1, len(realizd_dist[0])])
+					for distribution_i in range(len(physio_dist[0])):
+						p_physio_array[0, distribution_i] = len(np.where(dist_physio_hist[:, distribution_i] >= physio_dist[0][distribution_i])[0]) / 100
+						p_realizd_array[0, distribution_i] = len(np.where(dist_realizd_hist[:, distribution_i] >= realizd_dist[0][distribution_i])[0]) / 100
+					
+					# physio_change, realizd_change = interval, interval
+					physio_change, realizd_change = 0, 0
+					
+					p_physio_sort_array = np.sort(p_physio_array)
+					p_realizd_sort_array = np.sort(p_realizd_array)
+					for p_idx in range(len(p_physio_sort_array[0]), 0, -1):
+						if p_physio_sort_array[0][p_idx-1] <= p_idx * 0.05 / interval:
+							physio_change = p_idx
+							break
+					
+					for p_idx in range(len(p_realizd_sort_array[0]), 0, -1):
+						if p_realizd_sort_array[0][p_idx-1] <= p_idx * 0.05 / interval:
+							realizd_change = p_idx
+							break
+					
+					dist_array[dates_idx, 0] = physio_change
+					dist_array[dates_idx, 1] = realizd_change
+					
+					'''
 					dist_array[dates_idx, 0] = physio_change / 100
 					dist_array[dates_idx, 1] = realizd_change / 100
-	
-				dist_array = dist_array[:-1, :]
+					'''
+				dist_array = dist_array[:-2, :]
 				# dist_array = dist_array[:, :]
 				# print(dist_array)
 				print(np.corrcoef(dist_array[:, 0], dist_array[:, 1])[0, 1])
@@ -214,11 +240,18 @@ def main(tiles_data_path, config_path, experiment):
 				# print(scipy.stats.spearmanr(dist_array[:, 0], dist_array[:, 1]))
 				for col in igtb_cols:
 					row_df[col] = igtb_df.loc[igtb_df['ParticipantID'] == participant_id][col][0]
-				test_stats = grangercausalitytests(dist_array, maxlag=3, verbose=False)
-				ssr_chi2test = test_stats[2][0]['ssr_chi2test']
+					
+				'''
+				if scipy.stats.spearmanr(dist_array[:, 0], dist_array[:, 1])[0] > -1:
+					test_stats = grangercausalitytests(dist_array, maxlag=3, verbose=False)
+					ssr_chi2test = test_stats[2][0]['ssr_chi2test']
 
-				print('chi test: %.3f' % (ssr_chi2test[1]))
-				row_df['chi_p'] = ssr_chi2test[1]
+					print('chi test: %.3f' % (ssr_chi2test[1]))
+					row_df['chi_p'] = ssr_chi2test[1]
+				else:
+					row_df['chi_p'] = np.nan
+				'''
+				
 				final_df = final_df.append(row_df)
 
 		final_df = final_df.dropna()
@@ -237,9 +270,16 @@ def main(tiles_data_path, config_path, experiment):
 
 	# len1 = len(non_nurse_df.loc[(non_nurse_df['p'] > 0.25) | (non_nurse_df['p'] < -0.25)])
 	# len2 = len(nurse_df.loc[(nurse_df['p'] > 0.25) | (nurse_df['p'] < -0.25)])
+	
 	len0 = len(non_nurse_df.loc[(non_nurse_df['p'] > 0.3)])
 	len1 = len(lab_df.loc[(lab_df['p'] > 0.3)])
 	len2 = len(nurse_df.loc[(nurse_df['p'] > 0.3)])
+	
+	'''
+	len0 = len(non_nurse_df.loc[(non_nurse_df['chi_p'] <= 0.05)])
+	len1 = len(lab_df.loc[(lab_df['chi_p'] <= 0.05)])
+	len2 = len(nurse_df.loc[(nurse_df['chi_p'] <= 0.05)])
+	'''
 	
 	'''
 	len3 = len(day_nurse_df.loc[(day_nurse_df['p'] > 0.3) | (day_nurse_df['p'] < -0.3)])
@@ -262,8 +302,13 @@ def main(tiles_data_path, config_path, experiment):
 	print('icu nurse (%d): %.2f' % (len(icu_nurse_df), len5 / len(icu_nurse_df) * 100))
 	print('non_icu nurse (%d): %.2f' % (len(non_icu_nurse_df), len6 / len(non_icu_nurse_df) * 100))
 
-	data1_df = final_df.loc[(final_df['p'] > 0.3)]
-	data2_df = final_df.loc[(final_df['p'] <= 0.3)]
+	data1_df = final_df.loc[(final_df['p'] > 0.35)]
+	data2_df = final_df.loc[(final_df['p'] <= 0.35)]
+	
+	'''
+	data1_df = final_df.loc[(final_df['chi_p'] > 0.05)]
+	data2_df = final_df.loc[(final_df['chi_p'] <= 0.05)]
+	'''
 	for col in igtb_cols:
 		print(col)
 		stat, p = stats.ks_2samp(data1_df[col].dropna(), data2_df[col].dropna())
