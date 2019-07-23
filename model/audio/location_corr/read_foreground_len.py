@@ -51,7 +51,7 @@ def main(tiles_data_path, config_path, experiment):
 	top_participant_id_list = list(top_participant_id_df.index)
 	top_participant_id_list.sort()
 
-	threshold = 20
+	threshold = 0.1
 
 	for idx, participant_id in enumerate(top_participant_id_list[0:]):
 

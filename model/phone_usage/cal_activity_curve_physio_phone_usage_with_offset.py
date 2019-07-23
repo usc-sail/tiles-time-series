@@ -76,7 +76,7 @@ def main(tiles_data_path, config_path, experiment):
 										   filter_data_identifier='filter_data',
 										   clustering_data_identifier='clustering')
 	agg, sliding = 10, 2
-	interval_offset = 30
+	interval_offset = 40
 	interval = int(1440 / interval_offset)
 
 	load_data_path.load_chi_preprocess_path(chi_data_config, process_data_path)
@@ -102,7 +102,6 @@ def main(tiles_data_path, config_path, experiment):
 		os.mkdir(os.path.join('data', chi_data_config.activity_curve_path.split('/')[-2], chi_data_config.activity_curve_path.split('/')[-1]))
 		
 	save_path = os.path.join('data', chi_data_config.activity_curve_path.split('/')[-2], chi_data_config.activity_curve_path.split('/')[-1])
-	
 	if os.path.exists(os.path.join(save_path, 'offset_' + str(interval_offset) + '.csv.gz')) is False:
 		final_df = pd.DataFrame()
 		for idx, participant_id in enumerate(top_participant_id_list[:]):
@@ -274,6 +273,8 @@ def main(tiles_data_path, config_path, experiment):
 	len0 = len(non_nurse_df.loc[(non_nurse_df['p'] > 0.3)])
 	len1 = len(lab_df.loc[(lab_df['p'] > 0.3)])
 	len2 = len(nurse_df.loc[(nurse_df['p'] > 0.3)])
+
+	print('\nOverall: %d\n' % (len0 + len2))
 	
 	'''
 	len0 = len(non_nurse_df.loc[(non_nurse_df['chi_p'] <= 0.05)])
@@ -300,10 +301,10 @@ def main(tiles_data_path, config_path, experiment):
 	print('day nurse (%d): %.2f' % (len(day_nurse_df), len3/ len(day_nurse_df) * 100))
 	print('night nurse (%d): %.2f' % (len(night_nurse_df), len4 / len(night_nurse_df) * 100))
 	print('icu nurse (%d): %.2f' % (len(icu_nurse_df), len5 / len(icu_nurse_df) * 100))
-	print('non_icu nurse (%d): %.2f' % (len(non_icu_nurse_df), len6 / len(non_icu_nurse_df) * 100))
+	print('non_icu nurse (%d): %.2f\n' % (len(non_icu_nurse_df), len6 / len(non_icu_nurse_df) * 100))
 
-	data1_df = final_df.loc[(final_df['p'] > 0.35)]
-	data2_df = final_df.loc[(final_df['p'] <= 0.35)]
+	data1_df = final_df.loc[(final_df['p'] > 0.3)]
+	data2_df = final_df.loc[(final_df['p'] <= 0.3)]
 	
 	'''
 	data1_df = final_df.loc[(final_df['chi_p'] > 0.05)]

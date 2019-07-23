@@ -46,9 +46,9 @@ def main(tiles_data_path, config_path, experiment):
 	top_participant_id_list.sort()
 
 	audio_length_loc = {}
-	threshold = 1
+	threshold = 0.1
 
-	for idx, participant_id in enumerate(top_participant_id_list[0:]):
+	for idx, participant_id in enumerate(top_participant_id_list[:]):
 
 		print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
 
@@ -144,8 +144,12 @@ def main(tiles_data_path, config_path, experiment):
 				if len(tmp_audio_df['length']) == 0:
 					continue
 
+				audio_length_loc[participant_id][location].append(np.sum(tmp_audio_df['length']))
+
+				'''
 				for length in list(tmp_audio_df['length']):
 					audio_length_loc[participant_id][location].append(length)
+				'''
 
 		if os.path.exists(os.path.join('data')) is False:
 			os.mkdir(os.path.join('data'))

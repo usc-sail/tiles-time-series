@@ -51,7 +51,9 @@ def main(tiles_data_path, config_path, experiment):
 	top_participant_id_list = list(top_participant_id_df.index)
 	top_participant_id_list.sort()
 
-	feat = 'F0_sma'  # pcm_loudness_sma, pcm_intensity_sma, pcm_RMSenergy_sma, pcm_zcr_sma, F0_sma
+	# pcm_loudness_sma, pcm_intensity_sma, pcm_RMSenergy_sma, pcm_zcr_sma, F0_sma
+	# pcm_fftMag_fband250-650_sma, pcm_fftMag_fband1000-4000_sma, pcm_fftMag_spectralCentroid_sma
+	feat = 'pcm_intensity_sma'
 
 	for idx, participant_id in enumerate(top_participant_id_list[:]):
 
@@ -92,12 +94,19 @@ def main(tiles_data_path, config_path, experiment):
 			for i, loc in enumerate(loc_list):
 
 				len_list = audio_length_part[loc]
+
+				if feat == 'pcm_intensity_sma':
+					len_list = np.log10(np.array(len_list) * (np.power(10, 12))) * 10
 				# sns.kdeplot(len_list, shade=True, ax=axes[i])
 				# bins = np.arange(0, 2.5, 0.05)
-				bins = np.arange(20, 500, 10)
+				# bins = np.arange(20, 500, 10)
+				# bins = np.arange(100, 1000, 20)
+				bins = np.arange(20, 80, 2)
 				n, bins, patches = axes[i].hist(len_list, bins=bins, density=1, color=color_list[i])
 				# n, bins, patches = axes[i].hist(len_list, density=1, color=color_list[i])
-				axes[i].set_xlim([20, 500])
+				axes[i].set_xlim([20, 80])
+				# axes[i].set_xlim([100, 1000])
+				# axes[i].set_xlim([20, 500])
 				# axes[i].set_ylim([0, 0.25])
 				# axes[i].set_xlim([0, 2.5])
 				axes[i].set_title(loc)
