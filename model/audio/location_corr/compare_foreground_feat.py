@@ -67,7 +67,7 @@ def compare_feature(data_df, threshold, room1, room2, participant_type='icu'):
 
 def compare_diff_dis(data_df, room1, room2, igtb_cols, participant_type='icu', feat='F0_sma'):
 	# stat_cols = ['median', 'mean', 'quantile25', 'quantile75']
-	stat_cols = ['median']
+	stat_cols = ['median', 'mean', 'quantile25', 'quantile75']
 
 	data_corr_df = data_df.copy().loc[:, igtb_cols]
 
@@ -87,6 +87,8 @@ def compare_diff_dis(data_df, room1, room2, igtb_cols, participant_type='icu', f
 	for stat_col in stat_cols:
 		diff_first_array = first_df[room1 + '_' + stat_col] - first_df[room2 + '_' + stat_col]
 		diff_second_array = second_df[room1 + '_' + stat_col] - second_df[room2 + '_' + stat_col]
+		diff_first_array = first_df[room1 + '_' + stat_col]
+		diff_second_array = second_df[room1 + '_' + stat_col]
 
 		first_corr_df.loc[:, room1 + '_' + room2 + '_' + stat_col] = diff_first_array
 		second_corr_df.loc[:, room1 + '_' + room2 + '_' + stat_col] = diff_second_array
@@ -105,6 +107,9 @@ def compare_diff_dis(data_df, room1, room2, igtb_cols, participant_type='icu', f
 		max_num = np.nanmax(data_df[room1 + '_' + stat_col] - data_df[room2 + '_' + stat_col])
 		min_num = np.nanmin(data_df[room1 + '_' + stat_col] - data_df[room2 + '_' + stat_col])
 
+		max_num = 10
+		min_num = 0
+
 		plot_list = [diff_first_array, diff_second_array]
 		plot_str = [first_str, second_str]
 		for i in range(2):
@@ -112,9 +117,11 @@ def compare_diff_dis(data_df, room1, room2, igtb_cols, participant_type='icu', f
 			bins = np.linspace(min_num, max_num, 25)
 			n, bins, patches = axes[i].hist(plot_list[i], bins=bins, alpha=0.5, density=None, color=color_list[i])
 			axes[i].set_title(plot_str[i] + ' (' + room1 + '-' + room2 + '_' + stat_col + ')')
-			axes[i].set_ylim([0, 10])
-
-		plt.show()
+			axes[i].set_ylim([0, 15])
+		if stat_col == 'median':
+			plt.savefig(room1 + '.png', dpi=300)
+			plt.close()
+		# plt.show()
 
 
 def main(tiles_data_path, config_path, experiment):
@@ -147,7 +154,7 @@ def main(tiles_data_path, config_path, experiment):
 	# pcm_fftMag_fband250-650_sma, pcm_fftMag_fband1000-4000_sma, pcm_fftMag_spectralCentroid_sma
 	# pcm_fftMag_spectralRollOff25.0_sma, pcm_fftMag_spectralRollOff50.0_sma
 	# pcm_fftMag_spectralRollOff75.0_sma, pcm_fftMag_spectralRollOff90.0_sma
-	feat = 'F0_sma'
+	feat = 'len'
 
 	if feat == 'F0_sma':
 		threshold = 5
@@ -295,9 +302,10 @@ def main(tiles_data_path, config_path, experiment):
 	igtb_cols.append('icu')
 	igtb_cols.append('shift')
 
-	compare_diff_dis(final_df, 'lounge', 'ns', igtb_cols, participant_type='icu', feat=feat)
-	compare_diff_dis(final_df, 'lounge', 'pat', igtb_cols, participant_type='icu', feat=feat)
-	compare_diff_dis(final_df, 'ns', 'pat', igtb_cols, participant_type='icu', feat=feat)
+	compare_diff_dis(final_df, 'lounge', 'ns', igtb_cols, participant_type='shift', feat=feat)
+	compare_diff_dis(final_df, 'lounge', 'pat', igtb_cols, participant_type='shift', feat=feat)
+	compare_diff_dis(final_df, 'ns', 'pat', igtb_cols, participant_type='shift', feat=feat)
+	# compare_diff_dis(final_df, 'pat', 'pat', igtb_cols, participant_type='shift', feat=feat)
 
 
 if __name__ == '__main__':

@@ -28,6 +28,8 @@ def read_raw_audio(path, participant_id):
 def read_omsignal(path, participant_id):
     # Read data and participant id first
     omsignal_file_abs_path = os.path.join(path, participant_id + '_omsignal.csv.gz')
+    if os.path.exists(omsignal_file_abs_path) is False:
+        return None
     omsignal_df = pd.read_csv(omsignal_file_abs_path, index_col=0)
     
     omsignal_df = omsignal_df.fillna(0)

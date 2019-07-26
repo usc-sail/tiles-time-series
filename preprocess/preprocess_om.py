@@ -36,7 +36,7 @@ def main(tiles_data_path, config_path, experiment):
     ###########################################################
     # 1. Read all om_signal folder
     ###########################################################
-    omsignal_folder = os.path.join(main_folder, '3_preprocessed_data/omsignal/')
+    omsignal_folder = os.path.join(process_data_path, '3_preprocessed_data/omsignal/')
     omsignal_file_list = os.listdir(omsignal_folder)
     
     for omsignal_file in omsignal_file_list:

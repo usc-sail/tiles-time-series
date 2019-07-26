@@ -56,7 +56,67 @@ class Filter(object):
             ###########################################################
             realizd_df.to_csv(os.path.join(self.data_config.realizd_sensor_dict['filter_path'], participant_id + '.csv.gz'), compression='gzip')
             data_df.to_csv(os.path.join(self.data_config.fitbit_sensor_dict['filter_path'], participant_id + '.csv.gz'), compression='gzip')
-        
+
+        elif self.data_config.filter_method == 'om_location':
+            ###########################################################
+            # If there is not enough data or not enough data, return
+            ###########################################################
+            if len(omsignal_df) < 6 * 3600 * 10 or len(owl_in_one_df) < 6 * 60 * 10:
+                return np.nan, np.nan, np.nan
+
+            # Define start and end date
+            start_date = datetime(year=2018, month=2, day=15)
+            end_date = datetime(year=2018, month=9, day=10)
+
+            ###########################################################
+            # Find valid owl-in-one data
+            ###########################################################
+            time_diff = list((pd.to_datetime(list(owl_in_one_df.index[1:])) - pd.to_datetime(list(owl_in_one_df.index[:-1]))).total_seconds())
+
+            change_point_start_list = [0]
+            change_point_end_list = list(np.where(np.array(time_diff) > 3600 * 2)[0])
+
+            if len(change_point_end_list) < 4:
+                return
+
+            [change_point_start_list.append(change_point_end + 1) for change_point_end in change_point_end_list]
+            change_point_end_list.append(len(owl_in_one_df.index) - 1)
+
+            time_start_end_list = []
+            for i, change_point_end in enumerate(change_point_end_list):
+                if 240 < change_point_end - change_point_start_list[i] < 900:
+                    time_start_end_list.append([list(owl_in_one_df.index)[change_point_start_list[i]], list(owl_in_one_df.index)[change_point_end]])
+
+            if len(time_start_end_list) < 5:
+                return
+
+            ###########################################################
+            # Filter raw audio data
+            ###########################################################
+            for time_start_end in time_start_end_list:
+                start_time = (pd.to_datetime(time_start_end[0])).strftime(date_time_format)[:-3]
+                end_time = (pd.to_datetime(time_start_end[1])).strftime(date_time_format)[:-3]
+                tmp_omsignal_df = omsignal_df[start_time:end_time]
+                tmp_owl_in_one_df = owl_in_one_df[start_time:end_time]
+
+                if len(tmp_omsignal_df) > 3600 * 4:
+
+                    sum = 0
+                    if 'other' in list(tmp_owl_in_one_df.columns):
+                        sum += np.nansum(np.array(tmp_owl_in_one_df.other_floor))
+                    if 'unknown' in list(tmp_owl_in_one_df.columns):
+                        sum += np.nansum(np.array(tmp_owl_in_one_df.unknown))
+
+                    if sum / len(tmp_owl_in_one_df) < 0.5:
+                        if os.path.exists(os.path.join(self.data_config.omsignal_sensor_dict['filter_path'], participant_id)) is False:
+                            os.mkdir(os.path.join(self.data_config.omsignal_sensor_dict['filter_path'], participant_id))
+                        if os.path.exists(os.path.join(self.data_config.owl_in_one_sensor_dict['filter_path'], participant_id)) is False:
+                            os.mkdir(os.path.join(self.data_config.owl_in_one_sensor_dict['filter_path'], participant_id))
+
+                        tmp_omsignal_df.to_csv(os.path.join(self.data_config.omsignal_sensor_dict['filter_path'], participant_id, list(tmp_owl_in_one_df.index)[0] + '.csv.gz'), compression='gzip')
+                        if len(tmp_owl_in_one_df) > 0:
+                            tmp_owl_in_one_df.to_csv(os.path.join(self.data_config.owl_in_one_sensor_dict['filter_path'], participant_id, list(tmp_owl_in_one_df.index)[0] + '.csv.gz'), compression='gzip')
+
         elif self.data_config.filter_method == 'om_signal':
             ###########################################################
             # If there is no realizd data or not enough data, return

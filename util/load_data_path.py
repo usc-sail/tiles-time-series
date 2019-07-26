@@ -170,10 +170,10 @@ def load_filter_path(data_config, process_data_path, data_name='filter_data'):
 	# om signal
 	tmp_path = os.path.join(tmp_path, data_config.omsignal_sensor_dict['name'])
 	create_folder(tmp_path)
-	preprocess_str = data_config.omsignal_sensor_dict['feature']
-	preprocess_str = preprocess_str + '_' + data_config.omsignal_sensor_dict['preprocess_setting']
-	preprocess_str = preprocess_str + '_' + data_config.omsignal_sensor_dict['preprocess_cols']
-	tmp_path = os.path.join(tmp_path, preprocess_str)
+	# preprocess_str = data_config.omsignal_sensor_dict['feature']
+	# preprocess_str = preprocess_str + '_' + data_config.omsignal_sensor_dict['preprocess_setting']
+	# preprocess_str = preprocess_str + '_' + data_config.omsignal_sensor_dict['preprocess_cols']
+	# tmp_path = os.path.join(tmp_path, preprocess_str)
 	create_folder(tmp_path)
 
 	data_config.omsignal_sensor_dict['filter_path'] = tmp_path

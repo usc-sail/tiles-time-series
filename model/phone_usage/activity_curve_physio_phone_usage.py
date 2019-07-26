@@ -143,7 +143,7 @@ def clustering_data(chi_data_config, agg, realizd_df, fitbit_df, agg_daily_array
     start_time = pd.to_datetime(realizd_df.index[0]).replace(hour=0, minute=0)
     final_data_df = pd.DataFrame()
     
-    if dates_range < 4:
+    if dates_range < 2:
         return None, None, None, None
     
     for i in range(dates_range):
@@ -168,7 +168,7 @@ def clustering_data(chi_data_config, agg, realizd_df, fitbit_df, agg_daily_array
             dates_df.loc[:, :] = agg_dates_array
             final_data_df = final_data_df.append(dates_df)
             
-    if len(final_data_df) > 1440 * 4:
+    if len(final_data_df) > 1440 * 2:
         if cluster_type == 'realizd':
             model, cluster_list, min_array, max_array = cluster_data(final_data_df[['SecondsOnPhone', 'NumberOfTime']],
                                                                      chi_data_config, iter=300)
@@ -464,7 +464,7 @@ def main(tiles_data_path, config_path, experiment):
                                            segmentation_data_identifier='segmentation',
                                            filter_data_identifier='filter_data',
                                            clustering_data_identifier='clustering')
-    agg, sliding = 12, 3
+    agg, sliding = 15, 2
     num_of_interval = 48
     
     load_data_path.load_chi_preprocess_path(chi_data_config, process_data_path)

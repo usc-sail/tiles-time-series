@@ -157,6 +157,36 @@ class Config(object):
         self.num_point_per_day = int(self.getSetting('global', 'num_point_per_day'))
         self.window = int(self.getSetting('global', 'window'))
         self.save_path = ''
+
+    def readUbicompConfigFile(self, dataDir, experiement='ubicomp'):
+        ###########################################################
+        # Config folder information
+        ###########################################################
+        configFilePath = os.path.join(dataDir, experiement + '.cfg')
+
+        if os.path.exists(configFilePath) is False:
+            print('Config file not exist! Please Check!')
+
+        self.config.read(configFilePath)
+        self.experiement = experiement
+
+        ###########################################################
+        # Read OMSignal
+        ###########################################################
+        self.omsignal_sensor_dict = {}
+        self.omsignal_sensor_dict['name'] = 'om_signal'
+        self.omsignal_sensor_dict['preprocess_setting'] = self.getSetting('om_signal', 'preprocess_setting')
+        self.omsignal_sensor_dict['offset'] = int(self.getSetting('om_signal', 'offset'))
+        self.omsignal_sensor_dict['window'] = int(self.getSetting('om_signal', 'window'))
+        self.omsignal_sensor_dict['feature'] = self.getSetting('om_signal', 'feature')
+        self.omsignal_sensor_dict['imputation'] = self.getSetting('om_signal', 'imputation')
+
+        ###########################################################
+        # Read global parameters
+        ###########################################################
+        self.num_point_per_day = int(self.getSetting('global', 'num_point_per_day'))
+        self.window = int(self.getSetting('global', 'window'))
+        self.save_path = ''
         
     def readConfigFile(self, dataDir, experiement):
     
