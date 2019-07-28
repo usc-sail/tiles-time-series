@@ -56,7 +56,7 @@ def main(tiles_data_path, config_path, experiment):
 	 '''
 	feat_list = ['F0_sma', 'fft', 'pcm_intensity_sma'] # pcm_loudness_sma, pcm_intensity_sma, pcm_RMSenergy_sma, pcm_zcr_sma
 
-	for idx, participant_id in enumerate(top_participant_id_list[3:]):
+	for idx, participant_id in enumerate(top_participant_id_list[:]):
 
 		print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
 
@@ -106,6 +106,25 @@ def main(tiles_data_path, config_path, experiment):
 		if len(valid_start_end) < 10:
 			continue
 
+		'''
+		tmp_df = raw_audio_df.loc[raw_audio_df['F0_sma'] > 0]
+		feat_data_array = np.array(tmp_df['F0_sma'])
+		log_pitch_array = np.log(feat_data_array)
+		'''
+		tmp_index_list = list(raw_audio_df.loc[raw_audio_df['F0_sma'] == 0].index)
+		raw_audio_df.loc[tmp_index_list, 'F0_sma'] = np.nan
+		# log_pitch_array = np.log(raw_audio_df['F0_sma'])
+		raw_audio_df.loc[:, 'F0_sma'] = np.array(np.log(raw_audio_df['F0_sma']))
+
+		feat_data_array = np.divide(np.array(raw_audio_df['pcm_fftMag_fband1000-4000_sma']),
+		                            np.array(raw_audio_df['pcm_fftMag_fband250-650_sma']))
+		raw_audio_df.loc[:, 'fft'] = feat_data_array
+		raw_audio_df = raw_audio_df[feat_list]
+
+		log_pitch_array = np.array(raw_audio_df['F0_sma'].dropna())
+		fft_array = np.array(raw_audio_df['fft'].dropna())
+		intensity_array = np.array(raw_audio_df['pcm_intensity_sma'].dropna())
+
 		# Extract feature now
 		for start_end in start_end_list:
 			start, end = start_end[0], start_end[1]
@@ -117,17 +136,8 @@ def main(tiles_data_path, config_path, experiment):
 			audio_sec_df = raw_audio_df[start:end]
 			owl_in_one_sec_df = owl_in_one_df[start:end]
 			
-			day_arousal_df = pd.DataFrame(index=list(owl_in_one_sec_df.index), columns=feat_list + ['loc'])
-			
-			audio_sec_df = audio_sec_df.loc[audio_sec_df['F0_sma'] > 0]
-			feat_data_array = np.array(audio_sec_df['F0_sma'])
-			feat_data_array = np.log(feat_data_array)
-			audio_sec_df.loc[:, 'F0_sma'] = feat_data_array
-			
-			feat_data_array = np.divide(np.array(audio_sec_df['pcm_fftMag_fband1000-4000_sma']),
-										np.array(audio_sec_df['pcm_fftMag_fband250-650_sma']))
-			audio_sec_df.loc[:, 'fft'] = feat_data_array
-			
+			day_arousal_df = pd.DataFrame(index=list(owl_in_one_sec_df.index), columns=feat_list)
+
 			if len(audio_sec_df) == 0:
 				continue
 
@@ -142,16 +152,20 @@ def main(tiles_data_path, config_path, experiment):
 				end_loc = (loc_time + timedelta(seconds=30)).strftime(load_data_basic.date_time_format)[:-3]
 
 				tmp_audio_df = audio_sec_df[start_loc:end_loc]
-				
 				day_arousal_df.loc[loc_time_str, 'loc'] = location
 				
-				if len(tmp_audio_df) < 10:
+				if len(tmp_audio_df.dropna()) < 10:
 					continue
 				
 				for feat in feat_list:
-				
 					median_value = np.nanmedian(np.array(tmp_audio_df[feat]))
-					percentage = np.mean(np.array(audio_sec_df[feat]) <= median_value)
+
+					if feat == 'F0_sma':
+						percentage = np.nanmean(log_pitch_array<= median_value)
+					elif feat == 'fft':
+						percentage = np.nanmean(fft_array <= median_value)
+					else:
+						percentage = np.nanmean(intensity_array <= median_value)
 					
 					day_arousal_df.loc[loc_time_str, feat] = percentage
 			

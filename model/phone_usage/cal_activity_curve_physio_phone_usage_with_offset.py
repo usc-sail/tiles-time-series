@@ -29,12 +29,20 @@ warnings.filterwarnings('ignore')
 icu_list = ['4 South', '5 North', '5 South ICU', '5 West', '7 West', '7 East', '7 South', '8 West']
 
 
+def moving_average(a, n=3) :
+	ret = np.cumsum(a, dtype=float)
+	ret[n:] = ret[n:] - ret[:-n]
+	return ret[n - 1:] / n
+
 def cal_dist(first_cluster_array, second_cluster_array, unique_cluster_list, num_of_interval, interval_offset):
 	
 	first_distribution, second_distribution = np.zeros([num_of_interval, len(unique_cluster_list)]), np.zeros([num_of_interval, len(unique_cluster_list)])
 	kl_dist_array = np.zeros([1, num_of_interval])
 	
 	for i in range(num_of_interval):
+
+		first_distribution[i, :], second_distribution[i, :] = 1, 1
+
 		# realizd
 		tmp_cluster_array = first_cluster_array[i * interval_offset:(i + 1) * interval_offset]
 		counter_dict = Counter(tmp_cluster_array)
@@ -49,13 +57,41 @@ def cal_dist(first_cluster_array, second_cluster_array, unique_cluster_list, num
 				second_distribution[i, unique_cluster_list.index(cluster_id)] = counter_dict[cluster_id]
 		
 		epsilon = 0.00001
-		
+
+	first_pdf = np.divide(first_distribution, np.sum(first_distribution, axis=1).reshape([num_of_interval, 1]))
+	second_pdf = np.divide(second_distribution, np.sum(second_distribution, axis=1).reshape([num_of_interval, 1]))
+
+	first_filter_pdf, second_filter_pdf = np.zeros(first_pdf.shape), np.zeros(first_pdf.shape)
+	for i in range(len(unique_cluster_list)):
+		for j in range(num_of_interval):
+			if j == 0:
+				first_filter_pdf[j, i] = (first_pdf[j, i] + first_pdf[j + 1, i] + first_pdf[-1, i]) / 3
+				second_filter_pdf[j, i] = (second_pdf[j, i] + second_pdf[j + 1, i] + second_pdf[-1, i]) / 3
+			elif j == num_of_interval-1:
+				first_filter_pdf[j, i] = (first_pdf[j, i] + first_pdf[j - 1, i] + first_pdf[0, i]) / 3
+				second_filter_pdf[j, i] = (second_pdf[j, i] + second_pdf[j - 1, i] + second_pdf[0, i]) / 3
+			else:
+				first_filter_pdf[j, i] = np.nanmean(first_pdf[j - 1:j + 2, i])
+				second_filter_pdf[j, i] = np.nanmean(second_pdf[j - 1:j + 2, i])
+
+	first_filter_pdf = np.divide(first_filter_pdf, np.sum(first_filter_pdf, axis=1).reshape([num_of_interval, 1]))
+	second_filter_pdf = np.divide(second_filter_pdf, np.sum(second_filter_pdf, axis=1).reshape([num_of_interval, 1]))
+
+	for i in range(num_of_interval):
+		first_pdf, second_pdf = first_filter_pdf[i, :], second_filter_pdf[i, :]
+		kl_dist = entropy(first_pdf, second_pdf) + entropy(second_pdf, first_pdf)
+		kl_dist = kl_dist / 2
+		kl_dist_array[0, i] = kl_dist
+
+	'''
+	for i in range(num_of_interval):
 		first_pdf, second_pdf = first_distribution[i, :], second_distribution[i, :]
 		first_pdf, second_pdf = first_pdf / np.sum(first_pdf), second_pdf / np.sum(second_pdf)
 		kl_dist = entropy(first_pdf + epsilon, second_pdf + epsilon) + entropy(second_pdf + epsilon, first_pdf + epsilon)
 		kl_dist = kl_dist / 2
 		kl_dist_array[0, i] = kl_dist
-	
+	'''
+
 	return kl_dist_array
 	
 
@@ -75,8 +111,8 @@ def main(tiles_data_path, config_path, experiment):
 										   segmentation_data_identifier='segmentation',
 										   filter_data_identifier='filter_data',
 										   clustering_data_identifier='clustering')
-	agg, sliding = 20, 2
-	interval_offset = 30
+	agg, sliding = 8, 2
+	interval_offset = 60
 	interval = int(1440 / interval_offset)
 	threshold = 0.3
 
@@ -209,12 +245,12 @@ def main(tiles_data_path, config_path, experiment):
 					p_physio_sort_array = np.sort(p_physio_array)
 					p_realizd_sort_array = np.sort(p_realizd_array)
 					for p_idx in range(len(p_physio_sort_array[0]), 0, -1):
-						if p_physio_sort_array[0][p_idx-1] <= p_idx * 0.05 / interval:
+						if p_physio_sort_array[0][p_idx-1] <= p_idx * 0.1 / interval:
 							physio_change = p_idx
 							break
 					
 					for p_idx in range(len(p_realizd_sort_array[0]), 0, -1):
-						if p_realizd_sort_array[0][p_idx-1] <= p_idx * 0.05 / interval:
+						if p_realizd_sort_array[0][p_idx-1] <= p_idx * 0.1 / interval:
 							realizd_change = p_idx
 							break
 					
@@ -260,8 +296,24 @@ def main(tiles_data_path, config_path, experiment):
 		final_df = final_df.dropna()
 		final_df.to_csv(os.path.join(save_path, 'offset_' + str(interval_offset) + '.csv.gz'), compression='gzip')
 	else:
-		final_df = pd.read_csv(os.path.join(save_path, 'offset_' + str(interval_offset) + '.csv.gz'))
-	
+		final_df = pd.read_csv(os.path.join(save_path, 'offset_' + str(interval_offset) + '.csv.gz'), index_col=0)
+
+	add_cols = ['Emotional_Wellbeing', 'Pain', 'LifeSatisfaction', 'General_Health',
+	            'Flexbility', 'Inflexbility', 'Perceivedstress',
+	            'energy_fatigue', 'energy', 'fatigue', 'Engage']
+
+	for participant_id in list(final_df.index):
+		for col in add_cols:
+			data_str = str(igtb_df.loc[igtb_df['ParticipantID'] == participant_id][col][0])
+			if len(data_str) == 0:
+				final_df.loc[participant_id, col] = np.nan
+				continue
+
+			if 'a' in data_str or ' ' in data_str:
+				final_df.loc[participant_id, col] = np.nan
+			else:
+				final_df.loc[participant_id, col] = float(data_str)
+
 	non_nurse_df = final_df.loc[final_df['job'] == 'non_nurse']
 	lab_df = non_nurse_df.loc[non_nurse_df['icu'] == 'lab']
 
@@ -314,7 +366,7 @@ def main(tiles_data_path, config_path, experiment):
 	data1_df = final_df.loc[(final_df['chi_p'] > 0.05)]
 	data2_df = final_df.loc[(final_df['chi_p'] <= 0.05)]
 	'''
-	for col in igtb_cols:
+	for col in igtb_cols+add_cols:
 		print(col)
 		stat, p = stats.ks_2samp(data1_df[col].dropna(), data2_df[col].dropna())
 		print('High sync: mean = %.2f, std = %.2f' % (np.mean(data1_df[col]), np.std(data1_df[col])))
