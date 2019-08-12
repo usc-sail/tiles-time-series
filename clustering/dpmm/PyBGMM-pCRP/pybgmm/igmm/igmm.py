@@ -5,7 +5,7 @@ Date: 2017
 """
 
 from numpy.linalg import cholesky, det, inv, slogdet
-from scipy.misc import logsumexp
+from scipy.special import logsumexp
 from scipy.special import gammaln
 import logging
 import math

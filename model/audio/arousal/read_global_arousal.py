@@ -52,7 +52,7 @@ def main(tiles_data_path, config_path, experiment):
 	num_of_sec = 4
 	window = int(12 / num_of_sec)
 
-	for idx, participant_id in enumerate(top_participant_id_list[100:]):
+	for idx, participant_id in enumerate(top_participant_id_list[:]):
 
 		print('read_preprocess_data: participant: %s, process: %.2f' % (participant_id, idx * 100 / len(top_participant_id_list)))
 
@@ -141,21 +141,21 @@ def main(tiles_data_path, config_path, experiment):
 				tmp_dict[i]['speak_min_list'].append(len(sec_df.dropna()))
 				tmp_dict['global']['speak_min_list'].append(len(sec_df.dropna()))
 
-				for value in np.nanmean(np.array(sec_df[feat_list].dropna()), axis=1):
-					tmp_dict[i]['arousal_list'].append(value)
-					tmp_dict['global']['arousal_list'].append(value)
+				for value in np.nanmean(np.array(sec_df[['F0_sma', 'pcm_intensity_sma']].dropna()), axis=1):
+					tmp_dict[i]['arousal_list'].append(value * 2 - 1)
+					tmp_dict['global']['arousal_list'].append(value * 2 - 1)
 
 				for value in np.array(sec_df['F0_sma'].dropna()):
-					tmp_dict[i]['pitch_arousal_list'].append(value)
-					tmp_dict['global']['pitch_arousal_list'].append(value)
+					tmp_dict[i]['pitch_arousal_list'].append(value * 2 - 1)
+					tmp_dict['global']['pitch_arousal_list'].append(value * 2 - 1)
 
 				for value in np.array(sec_df['fft'].dropna()):
-					tmp_dict[i]['fft_arousal_list'].append(value)
-					tmp_dict['global']['fft_arousal_list'].append(value)
+					tmp_dict[i]['fft_arousal_list'].append(value * 2 - 1)
+					tmp_dict['global']['fft_arousal_list'].append(value * 2 - 1)
 
 				for value in np.array(sec_df['pcm_intensity_sma'].dropna()):
-					tmp_dict[i]['intensity_arousal_list'].append(value)
-					tmp_dict['global']['intensity_arousal_list'].append(value)
+					tmp_dict[i]['intensity_arousal_list'].append(value * 2 - 1)
+					tmp_dict['global']['intensity_arousal_list'].append(value * 2 - 1)
 
 				for loc in unique_list:
 					loc_df = sec_df.loc[sec_df['loc'] == loc]
@@ -189,62 +189,205 @@ def main(tiles_data_path, config_path, experiment):
 						loc_dict['global'][loc]['speak_min_list'].append(len(loc_df.dropna()))
 
 						if len(loc_df.dropna()) != 0:
-							daily_dict[data_str][i][loc]['arousal'] = np.nanmean(np.mean(np.array(loc_df[feat_list] * 2 - 1), axis=1))
-							daily_dict[data_str][i][loc]['pitch_arousal'] = np.nanmean(np.array(loc_df['F0_sma'] * 2 - 1))
+							daily_dict[data_str][i][loc]['arousal'] = np.nanmean(np.mean(np.array(loc_df[['F0_sma', 'pcm_intensity_sma']]), axis=1))
+							daily_dict[data_str][i][loc]['pitch_arousal'] = np.nanmean(np.array(loc_df['F0_sma']))
 
-							for value in np.nanmean(np.array(loc_df[feat_list].dropna()), axis=1):
-								daily_dict[data_str][i][loc]['arousal_list'].append(value)
-								loc_dict[i][loc]['arousal_list'].append(value)
-								loc_dict['global'][loc]['arousal_list'].append(value)
+							for value in np.nanmean(np.array(loc_df[['F0_sma', 'pcm_intensity_sma']].dropna()), axis=1):
+								daily_dict[data_str][i][loc]['arousal_list'].append(value * 2 - 1)
+								loc_dict[i][loc]['arousal_list'].append(value * 2 - 1)
+								loc_dict['global'][loc]['arousal_list'].append(value * 2 - 1)
 
 							for value in np.array(loc_df['F0_sma'].dropna()):
-								daily_dict[data_str][i][loc]['pitch_arousal_list'].append(value)
-								loc_dict[i][loc]['pitch_arousal_list'].append(value)
-								loc_dict['global'][loc]['pitch_arousal_list'].append(value)
+								daily_dict[data_str][i][loc]['pitch_arousal_list'].append(value * 2 - 1)
+								loc_dict[i][loc]['pitch_arousal_list'].append(value * 2 - 1)
+								loc_dict['global'][loc]['pitch_arousal_list'].append(value * 2 - 1)
 
 							for value in np.array(loc_df['fft'].dropna()):
-								daily_dict[data_str][i][loc]['fft_arousal_list'].append(value)
-								loc_dict[i][loc]['fft_arousal_list'].append(value)
-								loc_dict['global'][loc]['fft_arousal_list'].append(value)
+								daily_dict[data_str][i][loc]['fft_arousal_list'].append(value * 2 - 1)
+								loc_dict[i][loc]['fft_arousal_list'].append(value * 2 - 1)
+								loc_dict['global'][loc]['fft_arousal_list'].append(value * 2 - 1)
 
 							for value in np.array(loc_df['pcm_intensity_sma'].dropna()):
-								daily_dict[data_str][i][loc]['intensity_arousal_list'].append(value)
-								loc_dict[i][loc]['intensity_arousal_list'].append(value)
-								loc_dict['global'][loc]['intensity_arousal_list'].append(value)
+								daily_dict[data_str][i][loc]['intensity_arousal_list'].append(value * 2 - 1)
+								loc_dict[i][loc]['intensity_arousal_list'].append(value * 2 - 1)
+								loc_dict['global'][loc]['intensity_arousal_list'].append(value * 2 - 1)
 						else:
 							daily_dict[data_str][i][loc]['arousal'] = np.nan
 							daily_dict[data_str][i][loc]['pitch_arousal'] = np.nan
 
 		global_dict['speak_rate'] = np.nansum(np.array(tmp_dict['global']['speak_min_list'])) / np.nansum(np.array(tmp_dict['global']['sec_min_list']))
 		global_dict['pitch_arousal'] = np.nanmean(np.array(tmp_dict['global']['pitch_arousal_list']))
+		global_dict['pitch_arousal_90_percentile'] = np.nanpercentile(np.array(tmp_dict['global']['pitch_arousal_list']), 90)
+		global_dict['pitch_arousal_75_percentile'] = np.nanpercentile(np.array(tmp_dict['global']['pitch_arousal_list']), 75)
+		global_dict['pitch_arousal_25_percentile'] = np.nanpercentile(np.array(tmp_dict['global']['pitch_arousal_list']), 25)
+		global_dict['pitch_arousal_10_percentile'] = np.nanpercentile(np.array(tmp_dict['global']['pitch_arousal_list']), 10)
+		global_dict['pitch_arousal_std'] = np.nanstd(np.array(tmp_dict['global']['pitch_arousal_list']))
+		global_dict['pitch_arousal_high'] = np.nanmean(np.array(tmp_dict['global']['pitch_arousal_list']) > 0)
+		global_dict['pitch_arousal_low'] = np.nanmean(np.array(tmp_dict['global']['pitch_arousal_list']) <= 0)
+		global_dict['pitch_arousal_ratio'] = global_dict['pitch_arousal_high'] / global_dict['pitch_arousal_low']
+
 		global_dict['intensity_arousal'] = np.nanmean(np.array(tmp_dict['global']['intensity_arousal_list']))
+		global_dict['intensity_arousal_90_percentile'] = np.nanpercentile(np.array(tmp_dict['global']['intensity_arousal_list']), 90)
+		global_dict['intensity_arousal_75_percentile'] = np.nanpercentile(np.array(tmp_dict['global']['intensity_arousal_list']), 75)
+		global_dict['intensity_arousal_25_percentile'] = np.nanpercentile(np.array(tmp_dict['global']['intensity_arousal_list']), 25)
+		global_dict['intensity_arousal_10_percentile'] = np.nanpercentile(np.array(tmp_dict['global']['intensity_arousal_list']), 10)
+		global_dict['intensity_arousal_std'] = np.nanstd(np.array(tmp_dict['global']['intensity_arousal_list']))
+		global_dict['intensity_arousal_high'] = np.nanmean(np.array(tmp_dict['global']['intensity_arousal_list']) > 0)
+		global_dict['intensity_arousal_low'] = np.nanmean(np.array(tmp_dict['global']['intensity_arousal_list']) <= 0)
+		global_dict['intensity_arousal_ratio'] = global_dict['intensity_arousal_high'] / global_dict['intensity_arousal_low']
+
 		global_dict['fft_arousal'] = np.nanmean(np.array(tmp_dict['global']['fft_arousal_list']))
-		global_dict['arousal_mean'] = np.nanmean(np.array(tmp_dict['global']['arousal_list']))
+		global_dict['fft_arousal_90_percentile'] = np.nanpercentile(np.array(tmp_dict['global']['fft_arousal_list']), 90)
+		global_dict['fft_arousal_75_percentile'] = np.nanpercentile(np.array(tmp_dict['global']['fft_arousal_list']), 75)
+		global_dict['fft_arousal_25_percentile'] = np.nanpercentile(np.array(tmp_dict['global']['fft_arousal_list']), 25)
+		global_dict['fft_arousal_10_percentile'] = np.nanpercentile(np.array(tmp_dict['global']['fft_arousal_list']), 10)
+		global_dict['fft_arousal_std'] = np.nanstd(np.array(tmp_dict['global']['fft_arousal_list']))
+		global_dict['fft_arousal_high'] = np.nanmean(np.array(tmp_dict['global']['fft_arousal_list']) > 0)
+		global_dict['fft_arousal_low'] = np.nanmean(np.array(tmp_dict['global']['fft_arousal_list']) <= 0)
+		global_dict['fft_arousal_ratio'] = global_dict['fft_arousal_high'] / global_dict['fft_arousal_low']
+
+		global_dict['arousal'] = np.nanmean(np.array(tmp_dict['global']['arousal_list']))
+		global_dict['arousal_90_percentile'] = np.nanpercentile(np.array(tmp_dict['global']['arousal_list']), 90)
+		global_dict['arousal_75_percentile'] = np.nanpercentile(np.array(tmp_dict['global']['arousal_list']), 75)
+		global_dict['arousal_25_percentile'] = np.nanpercentile(np.array(tmp_dict['global']['arousal_list']), 25)
+		global_dict['arousal_10_percentile'] = np.nanpercentile(np.array(tmp_dict['global']['arousal_list']), 10)
+		global_dict['arousal_std'] = np.nanstd(np.array(tmp_dict['global']['arousal_list']))
+		global_dict['arousal_high'] = np.nanmean(np.array(tmp_dict['global']['arousal_list']) > 0)
+		global_dict['arousal_low'] = np.nanmean(np.array(tmp_dict['global']['arousal_list']) <= 0)
+		global_dict['arousal_ratio'] = global_dict['arousal_high'] / global_dict['arousal_low']
 
 		for loc in unique_list:
 			loc_dict['global'][loc]['stay_rate'] = np.nansum(np.array(loc_dict['global'][loc]['stay_min_list'])) / np.nansum(np.array(loc_dict['global'][loc]['sec_min_list']))
 			loc_dict['global'][loc]['speak_rate'] = np.nansum(np.array(loc_dict['global'][loc]['speak_min_list'])) / np.nansum(np.array(loc_dict['global'][loc]['stay_min_list']))
 			loc_dict['global'][loc]['speak_arousal'] = np.nansum(np.array(loc_dict['global'][loc]['speak_min_list'])) / np.nansum(np.array(loc_dict['global'][loc]['stay_min_list']))
+
 			loc_dict['global'][loc]['pitch_arousal'] = np.nanmean(np.array(loc_dict['global'][loc]['pitch_arousal_list']))
+			loc_dict['global'][loc]['pitch_arousal_90_percentile'] = np.nanpercentile(np.array(loc_dict['global'][loc]['pitch_arousal_list']), 90)
+			loc_dict['global'][loc]['pitch_arousal_75_percentile'] = np.nanpercentile(np.array(loc_dict['global'][loc]['pitch_arousal_list']), 75)
+			loc_dict['global'][loc]['pitch_arousal_25_percentile'] = np.nanpercentile(np.array(loc_dict['global'][loc]['pitch_arousal_list']), 25)
+			loc_dict['global'][loc]['pitch_arousal_10_percentile'] = np.nanpercentile(np.array(loc_dict['global'][loc]['pitch_arousal_list']), 10)
+			loc_dict['global'][loc]['pitch_arousal_std'] = np.nanstd(np.array(loc_dict['global'][loc]['pitch_arousal_list']))
+			loc_dict['global'][loc]['pitch_arousal_high'] = np.nanmean(np.array(loc_dict['global'][loc]['pitch_arousal_list']) > 0)
+			loc_dict['global'][loc]['pitch_arousal_low'] = np.nanmean(np.array(loc_dict['global'][loc]['pitch_arousal_list']) <= 0)
+			loc_dict['global'][loc]['pitch_arousal_ratio'] = loc_dict['global'][loc]['pitch_arousal_high'] / loc_dict['global'][loc]['pitch_arousal_low']
+
 			loc_dict['global'][loc]['intensity_arousal'] = np.nanmean(np.array(loc_dict['global'][loc]['intensity_arousal_list']))
+			loc_dict['global'][loc]['intensity_arousal_90_percentile'] = np.nanpercentile(np.array(loc_dict['global'][loc]['intensity_arousal_list']), 90)
+			loc_dict['global'][loc]['intensity_arousal_75_percentile'] = np.nanpercentile(np.array(loc_dict['global'][loc]['intensity_arousal_list']), 75)
+			loc_dict['global'][loc]['intensity_arousal_25_percentile'] = np.nanpercentile(np.array(loc_dict['global'][loc]['intensity_arousal_list']), 25)
+			loc_dict['global'][loc]['intensity_arousal_10_percentile'] = np.nanpercentile(np.array(loc_dict['global'][loc]['intensity_arousal_list']), 10)
+			loc_dict['global'][loc]['intensity_arousal_std'] = np.nanstd(np.array(loc_dict['global'][loc]['intensity_arousal_list']))
+			loc_dict['global'][loc]['intensity_arousal_high'] = np.nanmean(np.array(loc_dict['global'][loc]['intensity_arousal_list']) > 0)
+			loc_dict['global'][loc]['intensity_arousal_low'] = np.nanmean(np.array(loc_dict['global'][loc]['intensity_arousal_list']) <= 0)
+			loc_dict['global'][loc]['intensity_arousal_ratio'] = loc_dict['global'][loc]['intensity_arousal_high'] / loc_dict['global'][loc]['intensity_arousal_low']
+
 			loc_dict['global'][loc]['fft_arousal'] = np.nanmean(np.array(loc_dict['global'][loc]['fft_arousal_list']))
-			loc_dict['global'][loc]['arousal_mean'] = np.nanmean(np.array(loc_dict['global'][loc]['arousal_list']))
+			loc_dict['global'][loc]['fft_arousal_90_percentile'] = np.nanpercentile(np.array(loc_dict['global'][loc]['fft_arousal_list']), 90)
+			loc_dict['global'][loc]['fft_arousal_75_percentile'] = np.nanpercentile(np.array(loc_dict['global'][loc]['fft_arousal_list']), 75)
+			loc_dict['global'][loc]['fft_arousal_25_percentile'] = np.nanpercentile(np.array(loc_dict['global'][loc]['fft_arousal_list']), 25)
+			loc_dict['global'][loc]['fft_arousal_10_percentile'] = np.nanpercentile(np.array(loc_dict['global'][loc]['fft_arousal_list']), 10)
+			loc_dict['global'][loc]['fft_arousal_std'] = np.nanstd(np.array(loc_dict['global'][loc]['fft_arousal_list']))
+			loc_dict['global'][loc]['fft_arousal_high'] = np.nanmean(np.array(loc_dict['global'][loc]['fft_arousal_list']) > 0)
+			loc_dict['global'][loc]['fft_arousal_low'] = np.nanmean(np.array(loc_dict['global'][loc]['fft_arousal_list']) <= 0)
+			loc_dict['global'][loc]['fft_arousal_ratio'] = loc_dict['global'][loc]['fft_arousal_high'] / loc_dict['global'][loc]['fft_arousal_low']
+
+			loc_dict['global'][loc]['arousal'] = np.nanmean(np.array(loc_dict['global'][loc]['arousal_list']))
+			loc_dict['global'][loc]['arousal_90_percentile'] = np.nanpercentile(np.array(loc_dict['global'][loc]['arousal_list']), 90)
+			loc_dict['global'][loc]['arousal_75_percentile'] = np.nanpercentile(np.array(loc_dict['global'][loc]['arousal_list']), 75)
+			loc_dict['global'][loc]['arousal_25_percentile'] = np.nanpercentile(np.array(loc_dict['global'][loc]['arousal_list']), 25)
+			loc_dict['global'][loc]['arousal_10_percentile'] = np.nanpercentile(np.array(loc_dict['global'][loc]['arousal_list']), 10)
+			loc_dict['global'][loc]['arousal_std'] = np.nanstd(np.array(loc_dict['global'][loc]['arousal_list']))
+			loc_dict['global'][loc]['arousal_high'] = np.nanmean(np.array(loc_dict['global'][loc]['arousal_list']) > 0)
+			loc_dict['global'][loc]['arousal_low'] = np.nanmean(np.array(loc_dict['global'][loc]['arousal_list']) <= 0)
+			loc_dict['global'][loc]['arousal_ratio'] = loc_dict['global'][loc]['arousal_high'] / loc_dict['global'][loc]['arousal_low']
 
 		for i in range(num_of_sec):
 			global_dict[i] = {}
 			global_dict[i]['speak_rate'] = np.nansum(np.array(tmp_dict[i]['speak_min_list'])) / np.nansum(np.array(tmp_dict[i]['sec_min_list']))
+
 			global_dict[i]['pitch_arousal'] = np.nanmean(np.array(tmp_dict[i]['pitch_arousal_list']))
+			global_dict[i]['pitch_arousal_90_percentile'] = np.nanpercentile(np.array(tmp_dict[i]['pitch_arousal_list']), 90)
+			global_dict[i]['pitch_arousal_75_percentile'] = np.nanpercentile(np.array(tmp_dict[i]['pitch_arousal_list']), 75)
+			global_dict[i]['pitch_arousal_25_percentile'] = np.nanpercentile(np.array(tmp_dict[i]['pitch_arousal_list']), 25)
+			global_dict[i]['pitch_arousal_10_percentile'] = np.nanpercentile(np.array(tmp_dict[i]['pitch_arousal_list']), 10)
+			global_dict[i]['pitch_arousal_std'] = np.nanstd(np.array(tmp_dict[i]['pitch_arousal_list']))
+			global_dict[i]['pitch_arousal_high'] = np.nanmean(np.array(tmp_dict[i]['pitch_arousal_list']) > 0)
+			global_dict[i]['pitch_arousal_low'] = np.nanmean(np.array(tmp_dict[i]['pitch_arousal_list']) <= 0)
+			global_dict[i]['pitch_arousal_ratio'] = global_dict[i]['pitch_arousal_high'] / global_dict[i]['pitch_arousal_low']
+
 			global_dict[i]['intensity_arousal'] = np.nanmean(np.array(tmp_dict[i]['intensity_arousal_list']))
+			global_dict[i]['intensity_arousal_90_percentile'] = np.nanpercentile(np.array(tmp_dict[i]['intensity_arousal_list']), 90)
+			global_dict[i]['intensity_arousal_75_percentile'] = np.nanpercentile(np.array(tmp_dict[i]['intensity_arousal_list']), 75)
+			global_dict[i]['intensity_arousal_25_percentile'] = np.nanpercentile(np.array(tmp_dict[i]['intensity_arousal_list']), 25)
+			global_dict[i]['intensity_arousal_10_percentile'] = np.nanpercentile(np.array(tmp_dict[i]['intensity_arousal_list']), 10)
+			global_dict[i]['intensity_arousal_std'] = np.nanstd(np.array(tmp_dict[i]['intensity_arousal_list']))
+			global_dict[i]['intensity_arousal_high'] = np.nanmean(np.array(tmp_dict[i]['intensity_arousal_list']) > 0)
+			global_dict[i]['intensity_arousal_low'] = np.nanmean(np.array(tmp_dict[i]['intensity_arousal_list']) <= 0)
+			global_dict[i]['intensity_arousal_ratio'] = global_dict[i]['intensity_arousal_high'] / global_dict[i]['intensity_arousal_low']
+
 			global_dict[i]['fft_arousal'] = np.nanmean(np.array(tmp_dict[i]['fft_arousal_list']))
+			global_dict[i]['fft_arousal_90_percentile'] = np.nanpercentile(np.array(tmp_dict[i]['fft_arousal_list']), 90)
+			global_dict[i]['fft_arousal_75_percentile'] = np.nanpercentile(np.array(tmp_dict[i]['fft_arousal_list']), 75)
+			global_dict[i]['fft_arousal_25_percentile'] = np.nanpercentile(np.array(tmp_dict[i]['fft_arousal_list']), 25)
+			global_dict[i]['fft_arousal_10_percentile'] = np.nanpercentile(np.array(tmp_dict[i]['fft_arousal_list']), 10)
+			global_dict[i]['fft_arousal_std'] = np.nanstd(np.array(tmp_dict[i]['fft_arousal_list']))
+			global_dict[i]['fft_arousal_high'] = np.nanmean(np.array(tmp_dict[i]['fft_arousal_list']) > 0)
+			global_dict[i]['fft_arousal_low'] = np.nanmean(np.array(tmp_dict[i]['fft_arousal_list']) <= 0)
+			global_dict[i]['fft_arousal_ratio'] = global_dict[i]['fft_arousal_high'] / global_dict[i]['fft_arousal_low']
+
 			global_dict[i]['arousal'] = np.nanmean(np.array(tmp_dict[i]['arousal_list']))
+			global_dict[i]['arousal_90_percentile'] = np.nanpercentile(np.array(tmp_dict[i]['arousal_list']), 90)
+			global_dict[i]['arousal_75_percentile'] = np.nanpercentile(np.array(tmp_dict[i]['arousal_list']), 75)
+			global_dict[i]['arousal_25_percentile'] = np.nanpercentile(np.array(tmp_dict[i]['arousal_list']), 25)
+			global_dict[i]['arousal_10_percentile'] = np.nanpercentile(np.array(tmp_dict[i]['arousal_list']), 10)
+			global_dict[i]['arousal_std'] = np.nanstd(np.array(tmp_dict[i]['arousal_list']))
+			global_dict[i]['arousal_high'] = np.nanmean(np.array(tmp_dict[i]['arousal_list']) > 0)
+			global_dict[i]['arousal_low'] = np.nanmean(np.array(tmp_dict[i]['arousal_list']) <= 0)
+			global_dict[i]['arousal_ratio'] = global_dict[i]['arousal_high'] / global_dict[i]['arousal_low']
 
 			for loc in unique_list:
 				loc_dict[i][loc]['stay_rate'] = np.nansum(np.array(loc_dict[i][loc]['stay_min'])) / np.nansum(np.array(loc_dict[i][loc]['sec_min']))
 				loc_dict[i][loc]['speak_rate'] = np.nansum(np.array(loc_dict[i][loc]['speak_min'])) / np.nansum(np.array(loc_dict[i][loc]['stay_min']))
+
 				loc_dict[i][loc]['pitch_arousal'] = np.nanmean(np.array(loc_dict[i][loc]['pitch_arousal_list']))
+				loc_dict[i][loc]['pitch_arousal_90_percentile'] = np.nanpercentile(np.array(loc_dict[i][loc]['pitch_arousal_list']), 90)
+				loc_dict[i][loc]['pitch_arousal_75_percentile'] = np.nanpercentile(np.array(loc_dict[i][loc]['pitch_arousal_list']), 75)
+				loc_dict[i][loc]['pitch_arousal_25_percentile'] = np.nanpercentile(np.array(loc_dict[i][loc]['pitch_arousal_list']), 25)
+				loc_dict[i][loc]['pitch_arousal_10_percentile'] = np.nanpercentile(np.array(loc_dict[i][loc]['pitch_arousal_list']), 10)
+				loc_dict[i][loc]['pitch_arousal_std'] = np.nanstd(np.array(loc_dict[i][loc]['pitch_arousal_list']))
+				loc_dict[i][loc]['pitch_arousal_high'] = np.nanmean(np.array(loc_dict[i][loc]['pitch_arousal_list']) > 0)
+				loc_dict[i][loc]['pitch_arousal_low'] = np.nanmean(np.array(loc_dict[i][loc]['pitch_arousal_list']) <= 0)
+				loc_dict[i][loc]['pitch_arousal_ratio'] = loc_dict[i][loc]['pitch_arousal_high'] / loc_dict[i][loc]['pitch_arousal_low']
+
 				loc_dict[i][loc]['intensity_arousal'] = np.nanmean(np.array(loc_dict[i][loc]['intensity_arousal_list']))
+				loc_dict[i][loc]['intensity_arousal_90_percentile'] = np.nanpercentile(np.array(loc_dict[i][loc]['intensity_arousal_list']), 90)
+				loc_dict[i][loc]['intensity_arousal_75_percentile'] = np.nanpercentile(np.array(loc_dict[i][loc]['intensity_arousal_list']), 75)
+				loc_dict[i][loc]['intensity_arousal_25_percentile'] = np.nanpercentile(np.array(loc_dict[i][loc]['intensity_arousal_list']), 25)
+				loc_dict[i][loc]['intensity_arousal_10_percentile'] = np.nanpercentile(np.array(loc_dict[i][loc]['intensity_arousal_list']), 10)
+				loc_dict[i][loc]['intensity_arousal_std'] = np.nanstd(np.array(loc_dict[i][loc]['intensity_arousal_list']))
+				loc_dict[i][loc]['intensity_arousal_high'] = np.nanmean(np.array(loc_dict[i][loc]['intensity_arousal_list']) > 0)
+				loc_dict[i][loc]['intensity_arousal_low'] = np.nanmean(np.array(loc_dict[i][loc]['intensity_arousal_list']) <= 0)
+				loc_dict[i][loc]['intensity_arousal_ratio'] = loc_dict[i][loc]['intensity_arousal_high'] / loc_dict[i][loc]['intensity_arousal_low']
+
 				loc_dict[i][loc]['fft_arousal'] = np.nanmean(np.array(loc_dict[i][loc]['fft_arousal_list']))
+				loc_dict[i][loc]['fft_arousal_90_percentile'] = np.nanpercentile(np.array(loc_dict[i][loc]['fft_arousal_list']), 90)
+				loc_dict[i][loc]['fft_arousal_75_percentile'] = np.nanpercentile(np.array(loc_dict[i][loc]['fft_arousal_list']), 75)
+				loc_dict[i][loc]['fft_arousal_25_percentile'] = np.nanpercentile(np.array(loc_dict[i][loc]['fft_arousal_list']), 25)
+				loc_dict[i][loc]['fft_arousal_10_percentile'] = np.nanpercentile(np.array(loc_dict[i][loc]['fft_arousal_list']), 10)
+				loc_dict[i][loc]['fft_arousal_std'] = np.nanstd(np.array(loc_dict[i][loc]['fft_arousal_list']))
+				loc_dict[i][loc]['fft_arousal_high'] = np.nanmean(np.array(loc_dict[i][loc]['fft_arousal_list']) > 0)
+				loc_dict[i][loc]['fft_arousal_low'] = np.nanmean(np.array(loc_dict[i][loc]['fft_arousal_list']) <= 0)
+				loc_dict[i][loc]['fft_arousal_ratio'] = loc_dict[i][loc]['fft_arousal_high'] / loc_dict[i][loc]['fft_arousal_low']
+
 				loc_dict[i][loc]['arousal'] = np.nanmean(np.array(loc_dict[i][loc]['arousal_list']))
+				loc_dict[i][loc]['arousal_90_percentile'] = np.nanpercentile(np.array(loc_dict[i][loc]['arousal_list']), 90)
+				loc_dict[i][loc]['arousal_75_percentile'] = np.nanpercentile(np.array(loc_dict[i][loc]['arousal_list']), 75)
+				loc_dict[i][loc]['arousal_25_percentile'] = np.nanpercentile(np.array(loc_dict[i][loc]['arousal_list']), 25)
+				loc_dict[i][loc]['arousal_10_percentile'] = np.nanpercentile(np.array(loc_dict[i][loc]['arousal_list']), 10)
+				loc_dict[i][loc]['arousal_std'] = np.nanstd(np.array(loc_dict[i][loc]['arousal_list']))
+				loc_dict[i][loc]['arousal_high'] = np.nanmean(np.array(loc_dict[i][loc]['arousal_list']) > 0)
+				loc_dict[i][loc]['arousal_low'] = np.nanmean(np.array(loc_dict[i][loc]['arousal_list']) <= 0)
+				loc_dict[i][loc]['arousal_ratio'] = loc_dict[i][loc]['arousal_high'] / loc_dict[i][loc]['arousal_low']
 
 		final_dict = {}
 		final_dict['global'] = global_dict

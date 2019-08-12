@@ -4,7 +4,7 @@ Gibbs sampler for Chinese restaurant process mixture model (CRPMM)
 Date: 2017
 """
 
-from scipy.misc import logsumexp
+from scipy.special import logsumexp
 import numpy as np
 import time
 import math

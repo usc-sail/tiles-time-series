@@ -4,7 +4,7 @@ Gibbs sampler for powered Chinese restaurant process mixture model (PCRPMM)
 Date: 2017
 """
 
-from scipy.misc import logsumexp
+from scipy.special import logsumexp
 import numpy as np
 import time
 import math

@@ -433,7 +433,7 @@ def load_chi_clustering_path(chi_data_config, process_data_path, experiment='chi
 	tmp_path = os.path.join(process_data_path, experiment, 'clustering', agg)
 	create_folder(tmp_path)
 	
-	if chi_data_config.cluster_dict['cluster_method'] == 'dpkmeans':
+	if chi_data_config.cluster_dict['cluster_method'] == 'dpkmeans' or chi_data_config.cluster_dict['cluster_method'] == 'dpgmm':
 		chi_clustering_str = 'method_' + chi_data_config.cluster_dict['cluster_method']
 	else:
 		chi_clustering_str = 'method_' + chi_data_config.cluster_dict['cluster_method'] + '_alpha_' + str(chi_data_config.cluster_dict['cluster_alpha'])
@@ -449,24 +449,27 @@ def load_chi_clustering_path(chi_data_config, process_data_path, experiment='chi
 def load_chi_activity_curve_path(chi_data_config, process_data_path, experiment='chi', agg=10, sliding=2):
 	tmp_path = os.path.join(process_data_path, experiment)
 	create_folder(tmp_path)
-	
+
 	tmp_path = os.path.join(process_data_path, experiment, 'activity_curve')
 	create_folder(tmp_path)
-	
-	tmp_path = os.path.join(process_data_path, experiment, 'activity_curve', 'agg_' + str(agg) + '_sliding_' + str(sliding))
-	create_folder(tmp_path)
-	
+
 	if chi_data_config.cluster_dict['cluster_method'] == 'dpkmeans' or chi_data_config.cluster_dict['cluster_method'] == 'dpgmm':
 		chi_clustering_str = 'method_' + chi_data_config.cluster_dict['cluster_method']
 	else:
 		chi_clustering_str = 'method_' + chi_data_config.cluster_dict['cluster_method'] + '_alpha_' + str(chi_data_config.cluster_dict['cluster_alpha'])
-	
+
 	if chi_data_config.cluster_dict['cluster_method'] == 'pcrpmm':
 		chi_clustering_str += '_power_' + str(chi_data_config.cluster_dict['power'])
-	tmp_path = os.path.join(process_data_path, experiment, 'activity_curve', 'agg_' + str(agg) + '_sliding_' + str(sliding), chi_clustering_str)
+	tmp_path = os.path.join(process_data_path, experiment, 'activity_curve', chi_clustering_str)
 	create_folder(tmp_path)
-	
-	chi_data_config.activity_curve_path = os.path.join(process_data_path, experiment, 'activity_curve', 'agg_' + str(agg) + '_sliding_' + str(sliding), chi_clustering_str)
+
+	tmp_path = os.path.join(tmp_path, 'offset_' + str(chi_data_config.offset) + '_window_' + str(chi_data_config.window))
+	create_folder(tmp_path)
+
+	tmp_path = os.path.join(tmp_path, 'agg_' + str(agg) + '_sliding_' + str(sliding))
+	create_folder(tmp_path)
+
+	chi_data_config.activity_curve_path = tmp_path
 
 
 def load_all_available_path(data_config, process_data_path, filter_data=False,

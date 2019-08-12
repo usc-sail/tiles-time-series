@@ -155,8 +155,14 @@ class Config(object):
         # Read global parameters
         ###########################################################
         self.num_point_per_day = int(self.getSetting('global', 'num_point_per_day'))
-        self.window = int(self.getSetting('global', 'window'))
+        # self.window = int(self.getSetting('global', 'window'))
         self.save_path = ''
+
+        ###########################################################
+        # Read activity curve
+        ###########################################################
+        self.offset = int(self.getSetting('activity_curve', 'offset'))
+        self.window = int(self.getSetting('activity_curve', 'window'))
 
     def readUbicompConfigFile(self, dataDir, experiement='ubicomp'):
         ###########################################################

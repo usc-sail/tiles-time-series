@@ -54,9 +54,10 @@ def main(tiles_data_path, config_path, experiment):
 	top_participant_id_list.sort()
 
 	# feat_list = ['F0_sma', 'fft', 'pcm_intensity_sma'] # pcm_loudness_sma, pcm_intensity_sma, pcm_RMSenergy_sma, pcm_zcr_sma
-	num_of_sec = 6
-	compare_method = 'language'
-	alpha = 0.5
+	num_of_sec = 4
+	compare_list = ['shift', 'icu', 'gender', 'supervise', 'language']
+	# compare_method = 'shift'
+	feat_type = 'prob'
 
 	# final_df = pd.DataFrame()
 	data_df = pd.DataFrame()
@@ -105,71 +106,48 @@ def main(tiles_data_path, config_path, experiment):
 			row_df['gender'] = gender_str
 			row_df['time'] = i
 
-			row_df['F0 Arousal'] = global_dict[i]['pitch_arousal']
-			row_df['Intensity Arousal'] = global_dict[i]['intensity_arousal']
-			row_df['HF Arousal'] = global_dict[i]['fft_arousal']
+			row_df['Log-Pitch Pos|Neg Arousal Ratio'] = global_dict[i]['pitch_arousal_ratio']
+			row_df['Intensity Pos|Neg Arousal Ratio'] = global_dict[i]['intensity_arousal_ratio']
+			row_df['Combined Pos|Neg Arousal Ratio'] = global_dict[i]['arousal_ratio']
+			row_df['Speaking Probability'] = global_dict[i]['speak_rate']
+			row_df['Mean Log-Pitch Arousal'] = global_dict[i]['pitch_arousal']
+			row_df['Mean Intensity Arousal'] = global_dict[i]['intensity_arousal']
+			row_df['Mean Combined Arousal'] = global_dict[i]['arousal']
 
-			row_df['Speak Ratio'] = global_dict[i]['speak_rate']
-			row_df['Speech Feat Arousal'] = global_dict[i]['arousal']
-			row_df['Combined Arousal'] = alpha * global_dict[i]['arousal'] + (1 - alpha) * global_dict[i]['speak_rate']
-
-			'''
-			row_df['F0 Arousal'] = global_dict[i]['pitch_arousal_75_percentile']
-			row_df['Intensity Arousal'] = global_dict[i]['intensity_arousal_75_percentile']
-			row_df['HF Arousal'] = global_dict[i]['fft_arousal_75_percentile']
-
-			row_df['Speak Ratio'] = global_dict[i]['speak_rate']
-			row_df['Speech Feat Arousal'] = global_dict[i]['arousal_75_percentile']
-			row_df['Combined Arousal'] = alpha * global_dict[i]['arousal_75_percentile'] + (1 - alpha) * global_dict[i]['speak_rate']
-			'''
-
-			'''
-			row_df['F0 Arousal'] = global_dict[i]['pitch_arousal_std']
-			row_df['Intensity Arousal'] = global_dict[i]['intensity_arousal_std']
-			row_df['HF Arousal'] = global_dict[i]['fft_arousal_std']
-
-			row_df['Speak Ratio'] = global_dict[i]['speak_rate']
-			row_df['Speech Feat Arousal'] = global_dict[i]['arousal_std']
-			row_df['Combined Arousal'] = alpha * global_dict[i]['arousal_90_percentile'] + (1 - alpha) * global_dict[i]['speak_rate']
-			'''
 			data_df = data_df.append(row_df)
 
-	fig = plt.figure(figsize=(28, 6))
-	axes = fig.subplots(nrows=2, ncols=3)
+	data_cols = ['Mean Log-Pitch Arousal', 'Mean Intensity Arousal', 'Mean Combined Arousal',
+	             'Log-Pitch Pos|Neg Arousal Ratio', 'Intensity Pos|Neg Arousal Ratio', 'Combined Pos|Neg Arousal Ratio',
+	             'Speaking Probability']
 
-	data_cols = ['F0 Arousal', 'Intensity Arousal', 'HF Arousal', 'Speak Ratio', 'Speech Feat Arousal', 'Combined Arousal']
-	sns.lineplot(x="time", y=data_cols[0], dashes=False, marker="o", hue=compare_method, data=data_df, palette="seismic", ax=axes[0][0])
-	sns.lineplot(x="time", y=data_cols[1], dashes=False, marker="o", hue=compare_method, data=data_df, palette="seismic", ax=axes[0][1])
-	sns.lineplot(x="time", y=data_cols[2], dashes=False, marker="o", hue=compare_method, data=data_df, palette="seismic", ax=axes[0][2])
-	sns.lineplot(x="time", y=data_cols[3], dashes=False, marker="o", hue=compare_method, data=data_df, palette="seismic", ax=axes[1][0])
-	sns.lineplot(x="time", y=data_cols[4], dashes=False, marker="o", hue=compare_method, data=data_df, palette="seismic", ax=axes[1][1])
-	sns.lineplot(x="time", y=data_cols[5], dashes=False, marker="o", hue=compare_method, data=data_df, palette="seismic", ax=axes[1][2])
+	for j, data_col in enumerate(data_cols):
 
-	nurse_df = data_df.loc[data_df['job'] == 'nurse']
-	if compare_method == 'shift':
-		first_data_df = nurse_df.loc[nurse_df['shift'] == 'day']
-		second_data_df = nurse_df.loc[nurse_df['shift'] == 'night']
-	elif compare_method == 'supervise':
-		first_data_df = nurse_df.loc[nurse_df['supervise'] == 'Supervise']
-		second_data_df = nurse_df.loc[nurse_df['supervise'] == 'Non-Supervise']
-	elif compare_method == 'language':
-		first_data_df = nurse_df.loc[nurse_df['language'] == 'English']
-		second_data_df = nurse_df.loc[nurse_df['language'] == 'Non-English']
-	elif compare_method == 'gender':
-		first_data_df = nurse_df.loc[nurse_df['gender'] == 'Male']
-		second_data_df = nurse_df.loc[nurse_df['gender'] == 'Female']
-	else:
-		first_data_df = nurse_df.loc[nurse_df['icu'] == 'icu']
-		second_data_df = nurse_df.loc[nurse_df['icu'] == 'non_icu']
+		fig = plt.figure(figsize=(24, 4))
+		axes = fig.subplots(nrows=1, ncols=5)
 
-	print('First: %d, Second: %d' % (int(len(first_data_df)) / num_of_sec, int(len(second_data_df) / 6)))
+		for i, compare_method in enumerate(compare_list):
 
-	for i in range(2):
-		for j in range(3):
-			axes[i][j].set_xlim([-0.25, num_of_sec - 0.75])
-			axes[i][j].set_xlabel('')
-			axes[i][j].set_ylabel('')
-			axes[i][j].set_xticks(range(num_of_sec))
+			nurse_df = data_df.loc[data_df['job'] == 'nurse']
+			if compare_method == 'shift':
+				first_data_df = nurse_df.loc[nurse_df['shift'] == 'day']
+				second_data_df = nurse_df.loc[nurse_df['shift'] == 'night']
+			elif compare_method == 'supervise':
+				first_data_df = nurse_df.loc[nurse_df['supervise'] == 'Supervise']
+				second_data_df = nurse_df.loc[nurse_df['supervise'] == 'Non-Supervise']
+			elif compare_method == 'language':
+				first_data_df = nurse_df.loc[nurse_df['language'] == 'English']
+				second_data_df = nurse_df.loc[nurse_df['language'] == 'Non-English']
+			elif compare_method == 'gender':
+				first_data_df = nurse_df.loc[nurse_df['gender'] == 'Male']
+				second_data_df = nurse_df.loc[nurse_df['gender'] == 'Female']
+			else:
+				first_data_df = nurse_df.loc[nurse_df['icu'] == 'icu']
+				second_data_df = nurse_df.loc[nurse_df['icu'] == 'non_icu']
+
+			first_analysis_df = first_data_df
+			second_analysis_df = second_data_df
+			plt_df = nurse_df
+			sns.lineplot(x="time", y=data_cols[j], dashes=False, marker="o", hue=compare_method, data=plt_df, palette="seismic", ax=axes[i])
 
 			if num_of_sec == 4:
 				plot_list = ['0-3', '3-6', '6-9', '9-12']
@@ -178,15 +156,15 @@ def main(tiles_data_path, config_path, experiment):
 			elif num_of_sec == 3:
 				plot_list = ['0-4', '4-8', '8-12']
 			else:
-				# plot_list = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
-				plot_list = ['0-1', '1-2', '2-3', '3-4', '4-5', '5-6',
-				             '6-7', '7-8', '8-9', '9-10', '10-11', '11-12']
+				plot_list = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+				# plot_list = ['0-1', '1-2', '2-3', '3-4', '4-5', '5-6',
+				#              '6-7', '7-8', '8-9', '9-10', '10-11', '11-12']
 
 			for time in range(num_of_sec):
-				first_tmp_df = first_data_df.loc[first_data_df['time'] == time]
-				second_tmp_df = second_data_df.loc[second_data_df['time'] == time]
+				first_tmp_df = first_analysis_df.loc[first_analysis_df['time'] == time]
+				second_tmp_df = second_analysis_df.loc[second_analysis_df['time'] == time]
 
-				data_col = data_cols[i * 3 + j]
+				data_col = data_cols[j]
 				stat, p = stats.ks_2samp(first_tmp_df[data_col].dropna(), second_tmp_df[data_col].dropna())
 				cohens_d = (np.nanmean(first_tmp_df[data_col]) - np.nanmean(second_tmp_df[data_col]))
 				cohens_d = cohens_d / np.sqrt((np.nanstd(first_tmp_df[data_col]) ** 2 + np.nanstd(second_tmp_df[data_col] ** 2)) / 2)
@@ -196,34 +174,50 @@ def main(tiles_data_path, config_path, experiment):
 				else:
 					cohens_d = str(cohens_d)[:4]
 
-				if p < 0.01:
-					plot_list[time] = plot_list[time] + '\n(p<0.01, \nd=' + cohens_d + ')'
-				else:
-					plot_list[time] = plot_list[time] + '\n(p=' + str(p)[:4] + ', \nd=' + cohens_d + ')'
+				if num_of_sec != 12:
+					if p < 0.01:
+						plot_list[time] = plot_list[time] + '\n(p<0.01, \nd=' + cohens_d + ')'
+					else:
+						plot_list[time] = plot_list[time] + '\n(p=' + str(p)[:4] + ', \nd=' + cohens_d + ')'
+				# sns.lineplot(x="time", y=data_cols[1], dashes=False, marker="o", hue=compare_method, data=plt_df, palette="seismic", ax=axes[1])
+				# sns.lineplot(x="time", y=data_cols[2], dashes=False, marker="o", hue=compare_method, data=plt_df, palette="seismic", ax=axes[2])
+				# sns.lineplot(x="time", y=data_cols[3], dashes=False, marker="o", hue=compare_method, data=plt_df, palette="seismic", ax=axes[3])
+				axes[i].set_xticklabels(plot_list, fontdict={'fontweight': 'bold', 'fontsize': 12})
 
-			axes[i][j].set_xticklabels(plot_list, fontdict={'fontweight': 'bold', 'fontsize': 14})
-			axes[i][j].yaxis.set_tick_params(size=1)
-			axes[i][j].grid(linestyle='--')
-			axes[i][j].grid(False, axis='y')
+		for i in range(5):
+			axes[i].set_xlim([-0.25, num_of_sec - 0.75])
+			axes[i].set_xlabel('')
+			axes[i].set_ylabel('')
+			axes[i].set_xticks(range(num_of_sec))
 
-			handles, labels = axes[i][j].get_legend_handles_labels()
-			axes[i][j].legend(handles=handles[1:], labels=labels[1:], prop={'size': 10.5})
-			axes[i][j].lines[0].set_linestyle("--")
-			axes[i][j].lines[1].set_linestyle("--")
-			axes[i][j].tick_params(axis="y", labelsize=14)
+			axes[i].yaxis.set_tick_params(size=1)
+			axes[i].grid(linestyle='--')
+			axes[i].grid(False, axis='y')
 
-			axes[i][j].set_title(data_cols[i * 3 + j], fontweight='bold', fontsize=15)
+			handles, labels = axes[i].get_legend_handles_labels()
+			axes[i].legend(handles=handles[1:], labels=labels[1:], prop={'size': 10.5})
+			axes[i].lines[0].set_linestyle("--")
+			axes[i].lines[1].set_linestyle("--")
+			axes[i].tick_params(axis="y", labelsize=14)
 
-			# axes[i][j].set_ylim([0.0, 0.25])
-			axes[i][j].set_ylim([0.4, 0.6])
+			axes[i].set_title(compare_list[i], fontweight='bold', fontsize=14)
 
-	axes[1][0].set_ylim([0.15, 0.55])
-	axes[1][2].set_ylim([0.15, 0.55])
-	plt.tight_layout()
-	plt.show()
+			if 'Ratio' in data_cols[j]:
+				axes[i].set_ylim([0, 2])
+			elif 'Mean' in data_cols[j]:
+				axes[i].set_ylim([-0.25, 0.15])
+			else:
+				axes[i].set_ylim([0.1, 0.6])
 
-	# plt.savefig(os.path.join('plot', 'daily', 'offday_diurnal'), dpi=300)
-	# plt.close()
+		plt.suptitle(data_cols[j], fontsize=14, fontweight='bold')
+		plt.tight_layout()
+		fig.subplots_adjust(top=0.85)
+
+		if os.path.exists(os.path.join('plot')) is False:
+			os.mkdir(os.path.join('plot'))
+
+		plt.savefig(os.path.join('plot', data_cols[j] + '_' + str(num_of_sec) + '.png'), dpi=300)
+		plt.close()
 
 
 if __name__ == '__main__':

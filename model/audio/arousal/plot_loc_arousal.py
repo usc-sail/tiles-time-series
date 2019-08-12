@@ -54,9 +54,9 @@ def main(tiles_data_path, config_path, experiment):
 	top_participant_id_list.sort()
 
 	# feat_list = ['F0_sma', 'fft', 'pcm_intensity_sma'] # pcm_loudness_sma, pcm_intensity_sma, pcm_RMSenergy_sma, pcm_zcr_sma
-	num_of_sec = 12
-	compare_method = 'shift'
-	alpha = 0.75
+	num_of_sec = 6
+	compare_method = 'gender'
+	alpha = 0.5
 
 	# final_df = pd.DataFrame()
 	data_df = pd.DataFrame()
@@ -73,6 +73,7 @@ def main(tiles_data_path, config_path, experiment):
 			language = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].language[0]
 			primary_unit = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].PrimaryUnit[0]
 			shift = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].Shift[0]
+			gender_str = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].Sex[0]
 
 			job_str = 'nurse' if nurse == 1 else 'non_nurse'
 			shift_str = 'day' if shift == 'Day shift' else 'night'
@@ -103,19 +104,30 @@ def main(tiles_data_path, config_path, experiment):
 				row_df['shift'] = shift_str
 				row_df['supervise'] = supervise_str
 				row_df['language'] = language_str
+				row_df['gender'] = gender_str
 				row_df['time'] = i
 
-				row_df['F0 Arousal'] = loc_dict[i][loc]['pitch_arousal']
-				row_df['Intensity Arousal'] = loc_dict[i][loc]['intensity_arousal']
-				row_df['HF Arousal'] = loc_dict[i][loc]['fft_arousal']
+				row_df['F0 Arousal'] = global_dict[i]['pitch_arousal']
+				row_df['Intensity Arousal'] = global_dict[i]['intensity_arousal']
+				row_df['HF Arousal'] = global_dict[i]['fft_arousal']
+
+				row_df['Speak Ratio'] = global_dict[i]['speak_rate']
+				row_df['Speech Feat Arousal'] = global_dict[i]['arousal']
+				row_df['Combined Arousal'] = alpha * global_dict[i]['arousal'] + (1 - alpha) * global_dict[i]['speak_rate']
+
+				'''
+				row_df['F0 Arousal'] = loc_dict[i][loc]['pitch_arousal_75_percentile']
+				row_df['Intensity Arousal'] = loc_dict[i][loc]['intensity_arousal_75_percentile']
+				row_df['HF Arousal'] = loc_dict[i][loc]['fft_arousal_75_percentile']
 
 				row_df['Speak Ratio'] = loc_dict[i][loc]['speak_rate']
-				row_df['Speech Feat Arousal'] = loc_dict[i][loc]['arousal']
-				row_df['Combined Arousal'] = alpha * loc_dict[i][loc]['arousal'] + (1 - alpha) * loc_dict[i][loc]['speak_rate']
+				row_df['Speech Feat Arousal'] = loc_dict[i][loc]['arousal_75_percentile']
+				row_df['Combined Arousal'] = alpha * loc_dict[i][loc]['arousal_75_percentile'] + (1 - alpha) * loc_dict[i][loc]['speak_rate']
+				'''
 
 				data_df = data_df.append(row_df)
 
-		fig = plt.figure(figsize=(20, 6))
+		fig = plt.figure(figsize=(24, 6))
 		axes = fig.subplots(nrows=2, ncols=3)
 
 		data_cols = ['F0 Arousal', 'Intensity Arousal', 'HF Arousal', 'Speak Ratio', 'Speech Feat Arousal', 'Combined Arousal']
@@ -136,6 +148,9 @@ def main(tiles_data_path, config_path, experiment):
 		elif compare_method == 'language':
 			first_data_df = nurse_df.loc[nurse_df['language'] == 'English']
 			second_data_df = nurse_df.loc[nurse_df['language'] == 'Non-English']
+		elif compare_method == 'gender':
+			first_data_df = nurse_df.loc[nurse_df['gender'] == 'Male']
+			second_data_df = nurse_df.loc[nurse_df['gender'] == 'Female']
 		else:
 			first_data_df = nurse_df.loc[nurse_df['icu'] == 'icu']
 			second_data_df = nurse_df.loc[nurse_df['icu'] == 'non_icu']
@@ -199,6 +214,8 @@ def main(tiles_data_path, config_path, experiment):
 				axes[i][j].set_ylim([0.4, 0.6])
 
 		axes[1][0].set_ylim([0.15, 0.55])
+		axes[1][2].set_ylim([0.15, 0.55])
+
 		plt.suptitle(loc, fontsize=14, fontweight='bold')
 		plt.tight_layout()
 		fig.subplots_adjust(top=0.88)
