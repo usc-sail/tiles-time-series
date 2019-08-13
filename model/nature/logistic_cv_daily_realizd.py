@@ -19,13 +19,17 @@ import config
 import load_sensor_data, load_data_path, load_data_basic, parser
 import numpy as np
 import pandas as pd
-import pickle
-import preprocess
-from scipy import stats
-from datetime import timedelta
-import collections
 
 import statsmodels.api as sm
+
+from sklearn.datasets import load_iris
+from sklearn.linear_model import LogisticRegressionCV
+from sklearn.model_selection import cross_val_score
+from sklearn import svm
+from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import GridSearchCV
+from sklearn.ensemble import RandomForestRegressor
 
 row_cols = ['Total Usage Time', 'Mean Session Length', 'Mean Inter-session Time',
 			'Session Frequency', 'Session Frequency (<1min)', 'Session Frequency (>1min)']
@@ -160,59 +164,89 @@ def main(tiles_data_path, config_path, experiment):
 		for col in ana_igtb_cols:
 			row_df = pd.DataFrame(index=[col])
 
+			# svm.SVR(kernel='linear', C=1).fit(X_train, y_train)
+
 			# predictions = model.predict(X)
 			# model.summary()
 			data_df = work_day_df[[ana_igtb_dict[col]]+feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
 			x = data_df[feat_cols]
-			model = sm.OLS(y, x).fit()
-			row_df['rsquared_day_work'] = model.rsquared
+			logisticRegr = LogisticRegression()
+			svmModel = svm.SVR(kernel='linear', C=0.1)
+			scores = cross_val_score(svmModel, x, y, cv=5)
+			row_df['rsquared_day_work'] = np.mean(scores)
 
 			# work night
 			data_df = work_night_df[[ana_igtb_dict[col]] + feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
 			x = data_df[feat_cols]
-			model = sm.OLS(y, x).fit()
-			row_df['rsquared_night_work'] = model.rsquared
+			logisticRegr = LogisticRegression()
+			svmModel = svm.SVR(kernel='linear', C=0.1)
+			scores = cross_val_score(svmModel, x, y, cv=5)
+			row_df['rsquared_night_work'] = np.mean(scores)
 
 			# off day
 			data_df = off_day_df[[ana_igtb_dict[col]] + feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
 			x = data_df[feat_cols]
-			model = sm.OLS(y, x).fit()
-			row_df['rsquared_day_off'] = model.rsquared
+			logisticRegr = LogisticRegression()
+			svmModel = svm.SVR(kernel='linear', C=0.1)
+			scores = cross_val_score(svmModel, x, y, cv=5)
+			row_df['rsquared_day_off'] = np.mean(scores)
 
 			# off night
 			data_df = off_night_df[[ana_igtb_dict[col]] + feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
 			x = data_df[feat_cols]
-			model = sm.OLS(y, x).fit()
-			row_df['rsquared_night_off'] = model.rsquared
+			logisticRegr = LogisticRegression()
+			svmModel = svm.SVR(kernel='linear', C=0.1)
+			scores = cross_val_score(svmModel, x, y, cv=5)
+			row_df['rsquared_night_off'] = np.mean(scores)
 
 			# work
 			data_df = work_df[[ana_igtb_dict[col]] + feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
 			x = data_df[feat_cols]
-			model = sm.OLS(y, x).fit()
-			row_df['rsquared_work'] = model.rsquared
+			logisticRegr = LogisticRegression()
+			svmModel = svm.SVR(kernel='linear', C=0.1)
+			scores = cross_val_score(svmModel, x, y, cv=5)
+			row_df['rsquared_work'] = np.mean(scores)
 
 			# off
 			data_df = off_df[[ana_igtb_dict[col]] + feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
 			x = data_df[feat_cols]
-			model = sm.OLS(y, x).fit()
-			row_df['rsquared_off'] = model.rsquared
+			logisticRegr = LogisticRegression()
+			svmModel = svm.SVR(kernel='linear', C=0.1)
+			scores = cross_val_score(svmModel, x, y, cv=5)
+			row_df['rsquared_off'] = np.mean(scores)
 
 			# overall
 			data_df = plot_df[[ana_igtb_dict[col]] + feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
 			x = data_df[feat_cols]
-			model = sm.OLS(y, x).fit()
-			row_df['rsquared_all'] = model.rsquared
+			logisticRegr = LogisticRegression()
+			svmModel = svm.SVR(kernel='linear', C=0.1)
+			scores = cross_val_score(svmModel, x, y, cv=5)
+			row_df['rsquared_all'] = np.mean(scores)
 
 			rsquared_df = rsquared_df.append(row_df)
 
-		rsquared_df.to_csv(os.path.join('rsquared_df.csv.gz'), compression='gzip')
+		# Create the parameter grid based on the results of random search
+		param_grid = {
+			'bootstrap': [True],
+			'max_depth': [80, 90, 100, 110],
+			'max_features': [2, 3],
+			'min_samples_leaf': [3, 4, 5],
+			'min_samples_split': [8, 10, 12],
+			'n_estimators': [100, 200, 300, 1000]
+		}
+		# Create a based model
+		rf = RandomForestRegressor()
+		# Instantiate the grid search model
+		grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=5, n_jobs=-1, verbose=2)
+
+		rsquared_df.to_csv(os.path.join('lr_cv.csv.gz'), compression='gzip')
 		print()
 
 
