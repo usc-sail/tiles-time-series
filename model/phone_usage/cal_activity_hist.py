@@ -29,8 +29,8 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # Read basic
-agg, sliding = 6, 3
-threshold = 0.3
+agg, sliding = 7, 2
+threshold = 0.2
 
 icu_list = ['4 South', '5 North', '5 South ICU', '5 West', '7 West', '7 East', '7 South', '8 West']
 
@@ -177,6 +177,7 @@ def main(tiles_data_path, config_path, experiment):
 				dist_array[:, 0] = fitbit_change_score_array[0]
 				dist_array[:, 1] = realizd_change_score_array[0]
 
+				'''
 				test_stats = grangercausalitytests(dist_array, maxlag=3, verbose=False)
 				ssr_chi2test = test_stats[2][0]['ssr_chi2test']
 
@@ -193,7 +194,7 @@ def main(tiles_data_path, config_path, experiment):
 
 				print('chi test: %.3f' % (ssr_chi2test[1]))
 				final_dict['chi realizd->fitbit'] = ssr_chi2test[1]
-
+				'''
 			else:
 				final_dict['chi fitbit->realizd'] = np.nan
 				final_dict['chi realizd->fitbit'] = np.nan
@@ -255,8 +256,11 @@ def main(tiles_data_path, config_path, experiment):
 	print('icu nurse (%d): %.2f' % (len(icu_nurse_df), len5 / len(icu_nurse_df) * 100))
 	print('non_icu nurse (%d): %.2f\n' % (len(non_icu_nurse_df), len6 / len(non_icu_nurse_df) * 100))
 
-	data1_df = final_df.loc[(final_df['p'] > threshold)]
-	data2_df = final_df.loc[(final_df['p'] <= threshold)]
+	# data1_df = final_df.loc[(final_df['p'] > threshold)]
+	# data2_df = final_df.loc[(final_df['p'] <= threshold)]
+
+	data1_df = nurse_df.loc[(nurse_df['p'] > threshold)]
+	data2_df = nurse_df.loc[(nurse_df['p'] <= threshold)]
 
 	'''
 	data1_df = final_df.loc[(final_df['chi_p'] > 0.05)]

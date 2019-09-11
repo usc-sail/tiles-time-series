@@ -55,7 +55,7 @@ def main(tiles_data_path, config_path, experiment):
 	top_participant_id_list.sort()
 
 	# feat_list = ['F0_sma', 'fft', 'pcm_intensity_sma'] # pcm_loudness_sma, pcm_intensity_sma, pcm_RMSenergy_sma, pcm_zcr_sma
-	num_of_sec = 6
+	num_of_sec = 4
 	compare_list = ['shift', 'icu', 'gender', 'supervise', 'language']
 	# compare_method = 'shift'
 	feat_type = 'ratio'
@@ -76,14 +76,14 @@ def main(tiles_data_path, config_path, experiment):
 		gender_str = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].Sex[0]
 
 		job_str = 'nurse' if nurse == 1 else 'non_nurse'
-		shift_str = 'Day' if shift == 'Day shift' else 'Night'
-		supervise_str = 'Manage' if supervise == 1 else 'Not Manage'
+		shift_str = 'Day Shift' if shift == 'Day shift' else 'Night Shift'
+		supervise_str = 'Nurse Manager' if supervise == 1 else 'Non-nurse Manager'
 		language_str = 'English' if language == 1 else 'Not English'
 
 		if job_str == 'non_nurse':
 			continue
 
-		icu_str = 'Normal'
+		icu_str = 'Non-ICU'
 		for unit in icu_list:
 			if unit in primary_unit:
 				icu_str = 'ICU'
@@ -129,11 +129,11 @@ def main(tiles_data_path, config_path, experiment):
 
 		nurse_df = data_df.loc[data_df['job'] == 'nurse']
 		if compare_method == 'shift':
-			first_data_df = nurse_df.loc[nurse_df['shift'] == 'Day']
-			second_data_df = nurse_df.loc[nurse_df['shift'] == 'Night']
+			first_data_df = nurse_df.loc[nurse_df['shift'] == 'Day Shift']
+			second_data_df = nurse_df.loc[nurse_df['shift'] == 'Night Shift']
 		elif compare_method == 'supervise':
-			first_data_df = nurse_df.loc[nurse_df['supervise'] == 'Manage']
-			second_data_df = nurse_df.loc[nurse_df['supervise'] == 'Not Manage']
+			first_data_df = nurse_df.loc[nurse_df['supervise'] == 'Nurse Manager']
+			second_data_df = nurse_df.loc[nurse_df['supervise'] == 'Non-nurse Manager']
 		elif compare_method == 'language':
 			first_data_df = nurse_df.loc[nurse_df['language'] == 'English']
 			second_data_df = nurse_df.loc[nurse_df['language'] == 'Not English']
@@ -142,7 +142,7 @@ def main(tiles_data_path, config_path, experiment):
 			second_data_df = nurse_df.loc[nurse_df['gender'] == 'Female']
 		else:
 			first_data_df = nurse_df.loc[nurse_df['icu'] == 'ICU']
-			second_data_df = nurse_df.loc[nurse_df['icu'] == 'Normal']
+			second_data_df = nurse_df.loc[nurse_df['icu'] == 'Non-ICU']
 
 		'''
 		print('Day:')
@@ -159,7 +159,7 @@ def main(tiles_data_path, config_path, experiment):
 		# shift_list = ['both']
 		for shift_str in shift_list:
 
-			fig = plt.figure(figsize=(26, 4))
+			fig = plt.figure(figsize=(26, 4.5))
 			axes = fig.subplots(nrows=1, ncols=4)
 
 			'''
@@ -226,23 +226,23 @@ def main(tiles_data_path, config_path, experiment):
 						else:
 							plot_list[time] = plot_list[time] + '\n(p=' + str(p)[:4] + ', \nd=' + cohens_d + ')'
 
-				axes[i].set_xticklabels(plot_list, fontdict={'fontweight': 'bold', 'fontsize': 14})
+				axes[i].set_xticklabels(plot_list, fontdict={'fontweight': 'bold', 'fontsize': 20})
 				axes[i].yaxis.set_tick_params(size=1)
 				axes[i].grid(linestyle='--')
 				axes[i].grid(False, axis='y')
 
 				handles, labels = axes[i].get_legend_handles_labels()
-				axes[i].legend(handles=handles[1:], labels=labels[1:], prop={'size': 14, 'weight': 'bold'})
+				axes[i].legend(handles=handles[1:], labels=labels[1:], prop={'size': 15, 'weight': 'bold'})
 				axes[i].lines[0].set_linestyle("--")
 				axes[i].lines[1].set_linestyle("--")
-				axes[i].tick_params(axis="y", labelsize=15)
+				axes[i].tick_params(axis="y", labelsize=20)
 
-				axes[i].set_title(data_cols[i], fontweight='bold', fontsize=18)
+				axes[i].set_title(data_cols[i], fontweight='bold', fontsize=20)
 
 				# axes[i][j].set_ylim([0.0, 0.25])
 				# axes[i].set_ylim([-0.2, 0.2])
 				if feat_type == 'ratio':
-					axes[i].set_ylim([0, 2])
+					axes[i].set_ylim([0, 2.5])
 				else:
 					axes[i].set_ylim([-0.25, 0.15])
 

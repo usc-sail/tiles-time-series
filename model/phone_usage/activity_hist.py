@@ -28,10 +28,10 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # Read basic
-agg, sliding = 8, 3
+agg, sliding = 7, 2
 
 
-def read_data(chi_data_config, data_df, start_str, end_str, agg, sliding):
+def read_data(chi_data_config, data_df, start_str, end_str, agg,  ):
 	# Unique list
 	unique_list = list(set(list(np.array(data_df['cluster']))))
 
