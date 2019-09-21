@@ -67,6 +67,10 @@ def main(tiles_data_path, config_path, experiement):
 
 		# read shift type
 		shift = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].Shift[0]
+		nurse = igtb_df.loc[igtb_df['ParticipantID'] == participant_id].currentposition[0]
+
+		if nurse != 1:
+			continue
 
 		###########################################################
 		# 3. Create segmentation class

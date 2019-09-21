@@ -7,7 +7,7 @@ class dpmeans:
         # Initialize parameters for DP means
         
         self.K = 1
-        self.K_init = 10
+        self.K_init = 5
         self.d = X.shape[1]
         self.z = np.mod(np.random.permutation(X.shape[0]), self.K) + 1
         self.mu = np.random.standard_normal((self.K, self.d))

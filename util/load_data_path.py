@@ -253,12 +253,12 @@ def load_segmentation_path(data_config, process_data_path, data_name='segmentati
 	tmp_path = os.path.join(tmp_path, data_config.fitbit_sensor_dict['name'])
 	create_folder(tmp_path)
 
-	if data_config.fitbit_sensor_dict['segmentation_method'] == 'gaussian':
+	if data_config.fitbit_sensor_dict['segmentation_method'] == 'ggs':
 		preprocess_str = 'ggs_' + str(data_config.fitbit_sensor_dict['segmentation_lamb'])
 	else:
 		return
 
-	if data_config.fitbit_sensor_dict['imputation'] != None:
+	if data_config.fitbit_sensor_dict['imputation'] != '':
 		preprocess_str = preprocess_str + '_impute_' + data_config.fitbit_sensor_dict['imputation'] + '_' + str(data_config.fitbit_sensor_dict['imputation_threshold'])
 	else:
 		preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['feature']
@@ -301,24 +301,34 @@ def load_clustering_path(data_config, process_data_path, data_name='clustering',
 	tmp_path = os.path.join(tmp_path, data_config.fitbit_sensor_dict['name'])
 	create_folder(tmp_path)
 
-	preprocess_str = data_config.fitbit_sensor_dict['cluster_method'] + '_num_cluster_' + str(data_config.fitbit_sensor_dict['num_cluster'])
-	if data_config.fitbit_sensor_dict['cluster_method'] == 'ticc':
-		preprocess_str = preprocess_str + '_window_' + str(data_config.fitbit_sensor_dict['ticc_window'])
-		preprocess_str = preprocess_str + '_penalty_' + str(data_config.fitbit_sensor_dict['ticc_switch_penalty'])
-		preprocess_str = preprocess_str + '_sparsity_' + str(data_config.fitbit_sensor_dict['ticc_sparsity'])
-	if filter_data == True:
-		preprocess_str = preprocess_str + '_cluster_days_' + str(data_config.fitbit_sensor_dict['ticc_cluster_days'])
+	if data_config.fitbit_sensor_dict['segmentation_method'] == 'ggs':
+		tmp_path = os.path.join(tmp_path, 'ggs_' + str(data_config.fitbit_sensor_dict['segmentation_lamb']))
+		create_folder(tmp_path)
 
-	if data_config.fitbit_sensor_dict['segmentation_method'] == 'gaussian':
-		preprocess_str = preprocess_str + '_ggs_' + str(data_config.fitbit_sensor_dict['segmentation_lamb'])
-
-	if data_config.fitbit_sensor_dict['imputation'] != None:
-		preprocess_str = preprocess_str + '_impute_' + data_config.fitbit_sensor_dict['imputation'] + '_' + str(data_config.fitbit_sensor_dict['imputation_threshold'])
+	if data_config.fitbit_sensor_dict['imputation'] != '':
+		data_str = 'impute_' + data_config.fitbit_sensor_dict['imputation'] + '_' + str(data_config.fitbit_sensor_dict['imputation_threshold'])
 	else:
-		preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['feature']
-	preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['preprocess_setting']
-	preprocess_str = preprocess_str + '_' + data_config.fitbit_sensor_dict['preprocess_cols']
-	tmp_path = os.path.join(tmp_path, preprocess_str)
+		data_str = data_config.fitbit_sensor_dict['feature']
+
+	data_str = data_str + '_' + data_config.fitbit_sensor_dict['preprocess_setting']
+	data_str = data_str + '_' + data_config.fitbit_sensor_dict['preprocess_cols']
+	tmp_path = os.path.join(tmp_path, data_str)
+	create_folder(tmp_path)
+
+	cluster_str = data_config.fitbit_sensor_dict['cluster_method'] + '_num_cluster_' + str(data_config.fitbit_sensor_dict['num_cluster'])
+	if 'bgm' in data_config.fitbit_sensor_dict['cluster_method'] or 'kmeans' in data_config.fitbit_sensor_dict['cluster_method'] or 'dpgmm' in data_config.fitbit_sensor_dict['cluster_method']:
+		cluster_str = data_config.fitbit_sensor_dict['cluster_method']
+	elif data_config.fitbit_sensor_dict['cluster_method'] == 'ticc':
+		cluster_str = cluster_str + '_window_' + str(data_config.fitbit_sensor_dict['ticc_window'])
+		cluster_str = cluster_str + '_penalty_' + str(data_config.fitbit_sensor_dict['ticc_switch_penalty'])
+		cluster_str = cluster_str + '_sparsity_' + str(data_config.fitbit_sensor_dict['ticc_sparsity'])
+	else:
+		cluster_str = data_config.fitbit_sensor_dict['cluster_method'] + '_alpha_' + data_config.fitbit_sensor_dict['cluster_alpha']
+
+	if filter_data == True:
+		cluster_str = cluster_str + '_cluster_days_' + str(data_config.fitbit_sensor_dict['ticc_cluster_days'])
+
+	tmp_path = os.path.join(tmp_path, cluster_str)
 	create_folder(tmp_path)
 	data_config.fitbit_sensor_dict['clustering_path'] = tmp_path
 

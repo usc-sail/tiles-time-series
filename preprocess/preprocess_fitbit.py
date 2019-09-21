@@ -37,7 +37,7 @@ def main(tiles_data_path, config_path, experiment):
     ###########################################################
     # 2. Iterate all participant
     ###########################################################
-    for i, participant_id in enumerate(participant_id_list[:]):
+    for i, participant_id in enumerate(participant_id_list[150:]):
     
         print('Complete process for %s: %.2f' % (participant_id, 100 * i / len(participant_id_list)))
         
@@ -72,7 +72,7 @@ def main(tiles_data_path, config_path, experiment):
             ###########################################################
             # 2.2 Preprocess fitbit raw data array (No slice)
             ###########################################################
-            fitbit_preprocess.process_fitbit(ppg_df, step_df)
+            fitbit_preprocess.process_fitbit(ppg_df, step_df, imputation=data_config.fitbit_sensor_dict['imputation'])
             
             ###########################################################
             # 2.3 Delete current fitbit preprocess object
@@ -90,7 +90,7 @@ if __name__ == "__main__":
     
     tiles_data_path = '../../../../data/keck_wave_all/' if args.tiles_path is None else args.tiles_path
     config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'config_file')) if args.config is None else args.config
-    experiment = 'ticc' if args.config is None else args.config
+    experiment = 'dpmm' if args.config is None else args.config
     
     main(tiles_data_path, config_path, experiment)
 

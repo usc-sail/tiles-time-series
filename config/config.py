@@ -236,7 +236,8 @@ class Config(object):
         self.fitbit_sensor_dict['segmentation_lamb'] = float(self.getSetting('fitbit', 'segmentation_lamb'))
         self.fitbit_sensor_dict['cluster_method'] = self.getSetting('fitbit', 'cluster_method')
         self.fitbit_sensor_dict['num_cluster'] = int(self.getSetting('fitbit', 'num_cluster'))
-        
+        self.fitbit_sensor_dict['cluster_alpha'] = self.getSetting('fitbit', 'cluster_alpha')
+
         if self.fitbit_sensor_dict['cluster_method'] == 'ticc':
             self.fitbit_sensor_dict['ticc_window'] = int(self.getSetting('fitbit', 'ticc_window'))
             self.fitbit_sensor_dict['ticc_switch_penalty'] = float(self.getSetting('fitbit', 'ticc_switch_penalty'))
