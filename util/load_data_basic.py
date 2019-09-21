@@ -259,7 +259,8 @@ def read_AllBasic(main_data_directory):
 
     # Read IGTB info
     IGTB = read_IGTB(os.path.join(main_data_directory))
-
+    IGTB_sub = read_IGTB_sub(main_data_directory)
+    
     # Demographic
     Demographic = read_Demographic(os.path.join(main_data_directory))
 
@@ -270,6 +271,18 @@ def read_AllBasic(main_data_directory):
 
     UserInfo = UserInfo.set_index('uid')
     
+    for uid in list(UserInfo.index):
+        if uid not in list(IGTB_sub.index):
+            continue
+        UserInfo.loc[uid, 'gender'] = int(IGTB_sub.loc[uid, 'gender']) if len(str(IGTB_sub.loc[uid, 'gender'])) < 3 else np.nan
+        UserInfo.loc[uid, 'age'] = int(IGTB_sub.loc[uid, 'age']) if len(str(IGTB_sub.loc[uid, 'age'])) < 3 else np.nan
+        UserInfo.loc[uid, 'bornUS'] = int(IGTB_sub.loc[uid, 'bornUS']) if len(str(IGTB_sub.loc[uid, 'bornUS'])) < 3 else np.nan
+        UserInfo.loc[uid, 'language'] = int(IGTB_sub.loc[uid, 'lang']) if len(str(IGTB_sub.loc[uid, 'lang'])) < 3 else np.nan
+        UserInfo.loc[uid, 'education'] = int(IGTB_sub.loc[uid, 'educ']) if len(str(IGTB_sub.loc[uid, 'educ'])) < 2 else np.nan
+        UserInfo.loc[uid, 'supervise'] = int(IGTB_sub.loc[uid, 'supervise']) if len(str(IGTB_sub.loc[uid, 'supervise'])) < 3 else np.nan
+        UserInfo.loc[uid, 'employer_duration'] = int(IGTB_sub.loc[uid, 'duration']) if len(str(IGTB_sub.loc[uid, 'duration'])) < 3 else np.nan
+        UserInfo.loc[uid, 'income'] = int(IGTB_sub.loc[uid, 'income']) if len(str(IGTB_sub.loc[uid, 'income'])) < 3 else np.nan
+
     return UserInfo
 
 

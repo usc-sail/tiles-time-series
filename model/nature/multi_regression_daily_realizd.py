@@ -5,9 +5,6 @@ from __future__ import print_function
 
 import os
 import sys
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-from scipy.stats import spearmanr
 
 ###########################################################
 # Change to your own library path
@@ -19,13 +16,9 @@ import config
 import load_sensor_data, load_data_path, load_data_basic, parser
 import numpy as np
 import pandas as pd
-import pickle
-import preprocess
-from scipy import stats
-from datetime import timedelta
-import collections
 
 import statsmodels.api as sm
+
 
 row_cols = ['Total Usage Time', 'Mean Session Length', 'Mean Inter-session Time',
 			'Session Frequency', 'Session Frequency (<1min)', 'Session Frequency (>1min)']
@@ -155,8 +148,131 @@ def main(tiles_data_path, config_path, experiment):
 		work_df, off_df = plot_df.loc[plot_df['Data Type'] == 'Workday'], plot_df.loc[plot_df['Data Type'] == 'Off-day']
 
 		feat_cols = ['Total Usage Time', 'Mean Session Length', 'Session Frequency', 'Mean Inter-session Time', 'Session Frequency (<1min)', 'Session Frequency (>1min)']
+		feat_cols = ['Total Usage Time', 'Mean Session Length', 'Session Frequency (<1min)', 'Session Frequency (>1min)']
+		
+		# 'Session Frequency', 'Mean Inter-session Time',
+		
 		rsquared_df = pd.DataFrame()
-
+		day_pvalue_df, night_pvalue_df, overall_pvalue_df = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+		
+		norm = 'z_norm'
+		
+		for col in ana_igtb_cols:
+			
+			row_df = pd.DataFrame(index=[col])
+			day_row_df = pd.DataFrame(index=[col])
+			night_row_df = pd.DataFrame(index=[col])
+			overall_row_df = pd.DataFrame(index=[col])
+			
+			# day shift nurse
+			# work day
+			data_df_work = work_day_df[[ana_igtb_dict[col]] + feat_cols].dropna()
+			# off day
+			data_df_off = off_day_df[[ana_igtb_dict[col]] + feat_cols].dropna()
+			
+			participant_list = [index[:-3] for index in list(data_df_off.index)][:]
+			print(len(participant_list))
+			
+			final_df = pd.DataFrame(index=participant_list)
+			feat_final_cols = []
+			for participant_id in participant_list:
+				final_df.loc[participant_id, ana_igtb_dict[col]] = data_df_work.loc[participant_id + 'work', ana_igtb_dict[col]]
+				for feat_col in feat_cols:
+					feat_final_cols.append(feat_col + '_work')
+					feat_final_cols.append(feat_col + '_off')
+					
+					# if 'Total' in feat_col:
+					#	final_df.loc[participant_id, feat_col + '_work'] = np.log(data_df_work.loc[participant_id + 'work', feat_col])
+					#	final_df.loc[participant_id, feat_col + '_off'] = np.log(data_df_off.loc[participant_id + 'off', feat_col])
+					# else:
+					final_df.loc[participant_id, feat_col + '_work'] = data_df_work.loc[participant_id+'work', feat_col]
+					final_df.loc[participant_id, feat_col + '_off'] = data_df_off.loc[participant_id+'off', feat_col]
+			
+			feat_final_cols = list(set(feat_final_cols))
+			y = final_df[[ana_igtb_dict[col]]]
+			x = final_df[feat_final_cols].copy()
+			if norm == 'z_norm':
+				x = (x - x.mean()) / x.std()
+			elif norm == 'min_max':
+				x = (x - x.min()) / (x.max() - x.min())
+			x = sm.add_constant(x)  # adding a constant
+			model = sm.OLS(y, x).fit()
+			day_row_df['rsquared_day'] = model.rsquared_adj
+			day_row_df['mse_resid_day'] = model.mse_resid
+			
+			for p_col in list(model.pvalues.index):
+				day_row_df[p_col] = model.pvalues[p_col]
+			day_pvalue_df = day_pvalue_df.append(day_row_df)
+			print(model.summary())
+			
+			# night shift nurse
+			# work day
+			data_df_work = work_night_df[[ana_igtb_dict[col]] + feat_cols].dropna()
+			# off day
+			data_df_off = off_night_df[[ana_igtb_dict[col]] + feat_cols].dropna()
+			
+			participant_list = [index[:-3] for index in list(data_df_off.index)]
+			final_df = pd.DataFrame(index=participant_list)
+			for participant_id in participant_list:
+				final_df.loc[participant_id, ana_igtb_dict[col]] = data_df_work.loc[
+					participant_id + 'work', ana_igtb_dict[col]]
+				for feat_col in feat_cols:
+					final_df.loc[participant_id, feat_col + '_work'] = data_df_work.loc[
+						participant_id + 'work', feat_col]
+					final_df.loc[participant_id, feat_col + '_off'] = data_df_off.loc[participant_id + 'off', feat_col]
+			
+			y = final_df[[ana_igtb_dict[col]]]
+			x = final_df[feat_final_cols].copy()
+			if norm == 'z_norm':
+				x = (x - x.mean()) / x.std()
+			elif norm == 'min_max':
+				x = (x - x.min()) / (x.max() - x.min())
+			x = sm.add_constant(x)  # adding a constant
+			model = sm.OLS(y, x).fit()
+			night_row_df['rsquared_night'] = model.rsquared_adj
+			night_row_df['mse_resid_night'] = model.mse_resid
+			for p_col in list(model.pvalues.index):
+				night_row_df[p_col] = model.pvalues[p_col]
+			night_pvalue_df = night_pvalue_df.append(night_row_df)
+			print(model.summary())
+			
+			# overall shift nurse
+			# work day
+			data_df_work = work_df[[ana_igtb_dict[col]] + feat_cols].dropna()
+			# off day
+			data_df_off = off_df[[ana_igtb_dict[col]] + feat_cols].dropna()
+			
+			participant_list = [index[:-3] for index in list(data_df_off.index)]
+			final_df = pd.DataFrame(index=participant_list)
+			for participant_id in participant_list:
+				final_df.loc[participant_id, ana_igtb_dict[col]] = data_df_work.loc[participant_id + 'work', ana_igtb_dict[col]]
+				for feat_col in feat_cols:
+					final_df.loc[participant_id, feat_col + '_work'] = data_df_work.loc[participant_id + 'work', feat_col]
+					final_df.loc[participant_id, feat_col + '_off'] = data_df_off.loc[participant_id + 'off', feat_col]
+			
+			y = final_df[[ana_igtb_dict[col]]]
+			x = final_df[feat_final_cols].copy()
+			if norm == 'z_norm':
+				x = (x - x.mean()) / x.std()
+			elif norm == 'min_max':
+				x = (x - x.min()) / (x.max() - x.min())
+			x = sm.add_constant(x)  # adding a constant
+			model = sm.OLS(y, x).fit()
+			overall_row_df['rsquared_overall'] = model.rsquared_adj
+			overall_row_df['mse_resid_overall'] = model.mse_resid
+			
+			for p_col in list(model.pvalues.index):
+				overall_row_df[p_col] = model.pvalues[p_col]
+			overall_pvalue_df = overall_pvalue_df.append(overall_row_df)
+			print(model.summary())
+			# rsquared_df = rsquared_df.append(row_df)
+		
+		# rsquared_df.to_csv(os.path.join('rsquared_df_all.csv'))
+		day_pvalue_df.to_csv(os.path.join('day_p_value.csv'))
+		night_pvalue_df.to_csv(os.path.join('night_p_value.csv'))
+		overall_pvalue_df.to_csv(os.path.join('overall_p_value.csv'))
+		
+		rsquared_df = pd.DataFrame()
 		for col in ana_igtb_cols:
 			row_df = pd.DataFrame(index=[col])
 
@@ -164,55 +280,91 @@ def main(tiles_data_path, config_path, experiment):
 			# model.summary()
 			data_df = work_day_df[[ana_igtb_dict[col]]+feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
-			x = data_df[feat_cols]
+			x = data_df[feat_cols].copy()
+			if norm == 'z_norm':
+				x = (x - x.mean()) / x.std()
+			elif norm == 'min_max':
+				x = (x - x.min()) / (x.max() - x.min())
+			x = sm.add_constant(x)  # adding a constant
 			model = sm.OLS(y, x).fit()
-			row_df['rsquared_day_work'] = model.rsquared
+			row_df['rsquared_day_work'] = model.rsquared_adj
+			print(model.summary())
 
 			# work night
 			data_df = work_night_df[[ana_igtb_dict[col]] + feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
-			x = data_df[feat_cols]
+			x = data_df[feat_cols].copy()
+			if norm == 'z_norm':
+				x = (x - x.mean()) / x.std()
+			elif norm == 'min_max':
+				x = (x - x.min()) / (x.max() - x.min())
+			x = sm.add_constant(x)  # adding a constant
 			model = sm.OLS(y, x).fit()
-			row_df['rsquared_night_work'] = model.rsquared
+			row_df['rsquared_night_work'] = model.rsquared_adj
 
 			# off day
 			data_df = off_day_df[[ana_igtb_dict[col]] + feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
-			x = data_df[feat_cols]
+			x = data_df[feat_cols].copy()
+			if norm == 'z_norm':
+				x = (x - x.mean()) / x.std()
+			elif norm == 'min_max':
+				x = (x - x.min()) / (x.max() - x.min())
+			x = sm.add_constant(x)  # adding a constant
 			model = sm.OLS(y, x).fit()
-			row_df['rsquared_day_off'] = model.rsquared
+			row_df['rsquared_day_off'] = model.rsquared_adj
 
 			# off night
 			data_df = off_night_df[[ana_igtb_dict[col]] + feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
-			x = data_df[feat_cols]
+			x = data_df[feat_cols].copy()
+			if norm == 'z_norm':
+				x = (x - x.mean()) / x.std()
+			elif norm == 'min_max':
+				x = (x - x.min()) / (x.max() - x.min())
+			x = sm.add_constant(x)  # adding a constant
 			model = sm.OLS(y, x).fit()
-			row_df['rsquared_night_off'] = model.rsquared
+			row_df['rsquared_night_off'] = model.rsquared_adj
 
 			# work
 			data_df = work_df[[ana_igtb_dict[col]] + feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
-			x = data_df[feat_cols]
+			x = data_df[feat_cols].copy()
+			if norm == 'z_norm':
+				x = (x - x.mean()) / x.std()
+			elif norm == 'min_max':
+				x = (x - x.min()) / (x.max() - x.min())
+			x = sm.add_constant(x)  # adding a constant
 			model = sm.OLS(y, x).fit()
-			row_df['rsquared_work'] = model.rsquared
-
+			row_df['rsquared_work'] = model.rsquared_adj
+			
 			# off
 			data_df = off_df[[ana_igtb_dict[col]] + feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
-			x = data_df[feat_cols]
+			x = data_df[feat_cols].copy()
+			if norm == 'z_norm':
+				x = (x - x.mean()) / x.std()
+			elif norm == 'min_max':
+				x = (x - x.min()) / (x.max() - x.min())
+			x = sm.add_constant(x)  # adding a constant
 			model = sm.OLS(y, x).fit()
-			row_df['rsquared_off'] = model.rsquared
+			row_df['rsquared_off'] = model.rsquared_adj
 
 			# overall
 			data_df = plot_df[[ana_igtb_dict[col]] + feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
-			x = data_df[feat_cols]
+			x = data_df[feat_cols].copy()
+			if norm == 'z_norm':
+				x = (x - x.mean()) / x.std()
+			elif norm == 'min_max':
+				x = (x - x.min()) / (x.max() - x.min())
+			x = sm.add_constant(x)  # adding a constant
 			model = sm.OLS(y, x).fit()
-			row_df['rsquared_all'] = model.rsquared
+			row_df['rsquared_all'] = model.rsquared_adj
 
 			rsquared_df = rsquared_df.append(row_df)
 
-		rsquared_df.to_csv(os.path.join('rsquared_df.csv.gz'), compression='gzip')
+		rsquared_df.to_csv(os.path.join('rsquared_df.csv'))
 		print()
 
 

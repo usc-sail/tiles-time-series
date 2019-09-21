@@ -5,9 +5,6 @@ from __future__ import print_function
 
 import os
 import sys
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-from scipy.stats import spearmanr
 
 ###########################################################
 # Change to your own library path
@@ -20,9 +17,6 @@ import load_sensor_data, load_data_path, load_data_basic, parser
 import numpy as np
 import pandas as pd
 
-import statsmodels.api as sm
-
-from sklearn.datasets import load_iris
 from sklearn.linear_model import LogisticRegressionCV
 from sklearn.model_selection import cross_val_score
 from sklearn import svm
@@ -30,6 +24,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import Ridge
+from sklearn.linear_model import Lasso
 
 row_cols = ['Total Usage Time', 'Mean Session Length', 'Mean Inter-session Time',
 			'Session Frequency', 'Session Frequency (<1min)', 'Session Frequency (>1min)']
@@ -160,93 +156,133 @@ def main(tiles_data_path, config_path, experiment):
 
 		feat_cols = ['Total Usage Time', 'Mean Session Length', 'Session Frequency', 'Mean Inter-session Time', 'Session Frequency (<1min)', 'Session Frequency (>1min)']
 		rsquared_df = pd.DataFrame()
+		
+		# Create the parameter grid based on the results of random search
+		param_grid = {
+			'bootstrap': [True],
+			'max_depth': [20, 30, 40],
+			'max_features': [3, 4, 5],
+			'min_samples_split': [2, 3, 4, 5],
+			'n_estimators': [50, 100, 200]
+		}
+		
+		param_grid = {'alpha': [1e-3, 1e-2, 1e-1, 1, 5, 10, 20]}
 
 		for col in ana_igtb_cols:
 			row_df = pd.DataFrame(index=[col])
 
-			# svm.SVR(kernel='linear', C=1).fit(X_train, y_train)
-
-			# predictions = model.predict(X)
-			# model.summary()
 			data_df = work_day_df[[ana_igtb_dict[col]]+feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
 			x = data_df[feat_cols]
-			logisticRegr = LogisticRegression()
-			svmModel = svm.SVR(kernel='linear', C=0.1)
-			scores = cross_val_score(svmModel, x, y, cv=5)
-			row_df['rsquared_day_work'] = np.mean(scores)
-
+			
+			# Create a based model
+			# rf = RandomForestRegressor()
+			# Instantiate the grid search model
+			# grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=5, n_jobs=-1, verbose=2, scoring='r2')
+			# rf = Ridge()
+			rf = Lasso()
+			grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=3, n_jobs=-1, verbose=2, scoring='r2')
+			grid_search.fit(x, y)
+			row_df['rsquared_day_work'] = grid_search.best_score_
+			
 			# work night
 			data_df = work_night_df[[ana_igtb_dict[col]] + feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
 			x = data_df[feat_cols]
-			logisticRegr = LogisticRegression()
-			svmModel = svm.SVR(kernel='linear', C=0.1)
-			scores = cross_val_score(svmModel, x, y, cv=5)
-			row_df['rsquared_night_work'] = np.mean(scores)
+			
+			# Create a based model
+			# rf = RandomForestRegressor()
+			# Instantiate the grid search model
+			# grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=5, n_jobs=-1, verbose=2, scoring='r2')
+			# rf = Ridge()
+			rf = Lasso()
+			grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=3, n_jobs=-1, verbose=2, scoring='r2')
+			grid_search.fit(x, y)
+		
+			row_df['rsquared_night_work'] = grid_search.best_score_
 
 			# off day
 			data_df = off_day_df[[ana_igtb_dict[col]] + feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
 			x = data_df[feat_cols]
-			logisticRegr = LogisticRegression()
-			svmModel = svm.SVR(kernel='linear', C=0.1)
-			scores = cross_val_score(svmModel, x, y, cv=5)
-			row_df['rsquared_day_off'] = np.mean(scores)
+			
+			# Create a based model
+			# rf = RandomForestRegressor()
+			# Instantiate the grid search model
+			# grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=5, n_jobs=-1, verbose=2, scoring='r2')
+			# rf = Ridge()
+			rf = Lasso()
+			grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=3, n_jobs=-1, verbose=2, scoring='r2')
+			grid_search.fit(x, y)
+		
+			row_df['rsquared_day_off'] = grid_search.best_score_
 
 			# off night
 			data_df = off_night_df[[ana_igtb_dict[col]] + feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
 			x = data_df[feat_cols]
-			logisticRegr = LogisticRegression()
-			svmModel = svm.SVR(kernel='linear', C=0.1)
-			scores = cross_val_score(svmModel, x, y, cv=5)
-			row_df['rsquared_night_off'] = np.mean(scores)
+			
+			# Create a based model
+			# rf = RandomForestRegressor()
+			# Instantiate the grid search model
+			# grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=5, n_jobs=-1, verbose=2, scoring='r2')
+			# rf = Ridge()
+			rf = Lasso()
+			grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=3, n_jobs=-1, verbose=2, scoring='r2')
+			grid_search.fit(x, y)
+			
+			row_df['rsquared_night_off'] = grid_search.best_score_
 
 			# work
 			data_df = work_df[[ana_igtb_dict[col]] + feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
 			x = data_df[feat_cols]
-			logisticRegr = LogisticRegression()
-			svmModel = svm.SVR(kernel='linear', C=0.1)
-			scores = cross_val_score(svmModel, x, y, cv=5)
-			row_df['rsquared_work'] = np.mean(scores)
+			
+			# Create a based model
+			# rf = RandomForestRegressor()
+			# Instantiate the grid search model
+			# grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=5, n_jobs=-1, verbose=2, scoring='r2')
+			# rf = Ridge()
+			rf = Lasso()
+			grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=3, n_jobs=-1, verbose=2, scoring='r2')
+			grid_search.fit(x, y)
+			
+			row_df['rsquared_work'] = grid_search.best_score_
 
 			# off
 			data_df = off_df[[ana_igtb_dict[col]] + feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
 			x = data_df[feat_cols]
-			logisticRegr = LogisticRegression()
-			svmModel = svm.SVR(kernel='linear', C=0.1)
-			scores = cross_val_score(svmModel, x, y, cv=5)
-			row_df['rsquared_off'] = np.mean(scores)
+			
+			# Create a based model
+			# rf = RandomForestRegressor()
+			# Instantiate the grid search model
+			# grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=5, n_jobs=-1, verbose=2, scoring='r2')
+			# rf = Ridge()
+			rf = Lasso()
+			grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=3, n_jobs=-1, verbose=2, scoring='r2')
+			grid_search.fit(x, y)
+			
+			row_df['rsquared_off'] = grid_search.best_score_
 
 			# overall
 			data_df = plot_df[[ana_igtb_dict[col]] + feat_cols].dropna()
 			y = data_df[[ana_igtb_dict[col]]]
 			x = data_df[feat_cols]
-			logisticRegr = LogisticRegression()
-			svmModel = svm.SVR(kernel='linear', C=0.1)
-			scores = cross_val_score(svmModel, x, y, cv=5)
-			row_df['rsquared_all'] = np.mean(scores)
+			
+			# Create a based model
+			# rf = RandomForestRegressor()
+			# Instantiate the grid search model
+			# grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=5, n_jobs=-1, verbose=2, scoring='r2')
+			# rf = Ridge()
+			rf = Lasso()
+			grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=3, n_jobs=-1, verbose=2, scoring='r2')
+			grid_search.fit(x, y)
+			
+			row_df['rsquared_all'] = grid_search.best_score_
 
 			rsquared_df = rsquared_df.append(row_df)
-
-		# Create the parameter grid based on the results of random search
-		param_grid = {
-			'bootstrap': [True],
-			'max_depth': [80, 90, 100, 110],
-			'max_features': [2, 3],
-			'min_samples_leaf': [3, 4, 5],
-			'min_samples_split': [8, 10, 12],
-			'n_estimators': [100, 200, 300, 1000]
-		}
-		# Create a based model
-		rf = RandomForestRegressor()
-		# Instantiate the grid search model
-		grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, cv=5, n_jobs=-1, verbose=2)
-
-		rsquared_df.to_csv(os.path.join('lr_cv.csv.gz'), compression='gzip')
+			rsquared_df.to_csv(os.path.join('tree_rg_cv.csv'))
 		print()
 
 

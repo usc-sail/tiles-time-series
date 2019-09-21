@@ -28,6 +28,7 @@ warnings.filterwarnings("ignore")
 
 icu_list = ['4 South', '5 North', '5 South ICU', '5 West', '7 West', '7 East', '7 South', '8 West']
 
+
 def main(tiles_data_path, config_path, experiment):
 
 	# Create Config
