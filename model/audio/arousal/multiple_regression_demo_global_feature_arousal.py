@@ -286,6 +286,9 @@ def main(tiles_data_path, config_path, experiment):
 			if col in remain_cols or col in compare_list:
 				continue
 
+			if 'mean' in col or 'std' in col:
+				continue
+
 			if feature_col == 'pitch' or feature_col == 'intensity':
 				if feature_col in col:
 					data_cols.append(col)
@@ -320,6 +323,10 @@ def main(tiles_data_path, config_path, experiment):
 			final_df = final_df.append(row_df)
 
 		result_dict[feature_col] = final_df
+
+	for i in range(4):
+		result_df = result_dict[i]
+		print()
 
 	# 'speak_rate_0', 'arousal_ratio_1', 'intensity_ratio_1', 'speak_ratio_1', 'speak_ratio_2', 'arousal_ratio_2'
 
