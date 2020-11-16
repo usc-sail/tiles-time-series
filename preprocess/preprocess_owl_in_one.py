@@ -28,6 +28,10 @@ def main(tiles_data_path, config_path, experiment):
 
     # Load preprocess folder
     load_data_path.load_preprocess_path(data_config, process_data_path, data_name='preprocess')
+    
+    if os.path.exists(os.join(process_data_path, 'tiles-phase1-wav123-processed', 'owl_in_one')) is False:
+        download_data(os.join(process_data_path, 'tiles-phase1-wav123-processed', '3_preprocessed_data/owl_in_one'), s3.Bucket(processed_bucket_str), simulated_data=False, prefix='3_preprocessed_data/owl_in_one')
+
 
     ###########################################################
     # 1. Read all participant
