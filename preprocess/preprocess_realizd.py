@@ -30,7 +30,7 @@ def main(tiles_data_path, config_path, experiment):
     load_data_path.load_preprocess_path(data_config, process_data_path, data_name='preprocess')
     
     if os.path.exists(os.join(process_data_path, 'tiles-phase1-wav123-processed', 'realizd')) is False:
-        download_data(os.join(process_data_path, 'tiles-phase1-wav123-processed', '3_preprocessed_data/realizd'), s3.Bucket(processed_bucket_str), simulated_data=False, prefix='3_preprocessed_data/realizd')
+        load_sensor_data.download_data(os.join(process_data_path, 'tiles-phase1-wav123-processed', '3_preprocessed_data/realizd'), s3.Bucket(processed_bucket_str), simulated_data=False, prefix='3_preprocessed_data/realizd')
 
     
     ###########################################################
