@@ -10,6 +10,23 @@ date_only_date_time_format = '%Y-%m-%d'
 from datetime import timedelta
 
 
+def download_data(save_path, bucket, simulated_data=False, prefix='', file_extension='.csv.gz'):
+    if simulated_data == True:
+        return
+
+    try:
+        os.system('aws s3 cp --recursive s3://' + bucket.name + '/' + prefix + ' ' + str(save_path))
+        # if we accidentally downloaded data, this will remove it,
+        # always keep the line, disable on lab PC, cuz many time work on simulated data
+        shutil.rmtree(save_path)
+
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == '404':
+            print('The object does not exist.')
+        else:
+            raise
+
+
 def read_raw_audio(path, participant_id):
 	# Read data and participant id first
 	raw_audio_file_abs_path = os.path.join(path, '4_extracted_features', 'jelly_audio_feats_fixed', participant_id + '.csv.gz')
