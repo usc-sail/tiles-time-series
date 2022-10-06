@@ -10,6 +10,6 @@ The related papers are:
 
 3. Feng, T. and Narayanan, S., 2020, July. Modeling Human Movement Behavior Among Nursing Profession. In 2020 42nd Annual International Conference of the IEEE Engineering in Medicine & Biology Society (EMBC) (pp. 4256-4260). IEEE.
 
-4. Imputing missing data in large-scale multivariate biomedical wearable recordings using bidirectional recurrent neural networks with temporal activation regularization
+4. Feng, T. and Narayanan, S., 2019, July. Imputing missing data in large-scale multivariate biomedical wearable recordings using bidirectional recurrent neural networks with temporal activation regularization. In 2019 41st Annual International Conference of the IEEE Engineering in Medicine and Biology Society (EMBC) (pp. 2529-2534). IEEE.
 
 #### One thing we have found from this study is that wearable data modeling is still a very challenging task, we are still in the process learning about the limitation of the wearable data, what, how, and when should we sample, and also most importantly ensuring the trustworthy aspect of the wearable data computing.
